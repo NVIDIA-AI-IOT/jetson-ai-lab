@@ -11,7 +11,17 @@ memory_requirements: "8GB RAM"
 precision: "W4A16"
 model_size: "4.5GB"
 hf_checkpoint: "RedHatAI/Qwen3-8B-quantized.w4a16"
+huggingface_url: "https://huggingface.co/Qwen/Qwen3-8B"
 minimum_jetson: "Orin NX"
+benchmark:
+  orin:
+    concurrency1: 26.53
+    concurrency8: 142.99
+    ttftMs: 0
+  thor:
+    concurrency1: 41.55
+    concurrency8: 229.38
+    ttftMs: 0
 supported_inference_engines:
   - engine: "vLLM"
     type: "Container"

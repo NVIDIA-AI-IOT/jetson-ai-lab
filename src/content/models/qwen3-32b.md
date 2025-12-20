@@ -11,7 +11,17 @@ memory_requirements: "24GB RAM"
 precision: "W4A16"
 model_size: "18GB"
 hf_checkpoint: "RedHatAI/Qwen3-32B-quantized.w4a16"
+huggingface_url: "https://huggingface.co/Qwen/Qwen3-32B"
 minimum_jetson: "Thor"
+benchmark:
+  orin:
+    concurrency1: 6.22
+    concurrency8: 16.84
+    ttftMs: 0
+  thor:
+    concurrency1: 13.19
+    concurrency8: 79.1
+    ttftMs: 0
 supported_inference_engines:
   - engine: "vLLM"
     type: "Container"

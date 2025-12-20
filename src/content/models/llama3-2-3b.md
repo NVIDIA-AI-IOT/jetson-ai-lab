@@ -11,7 +11,17 @@ memory_requirements: "4GB RAM"
 precision: "W4A16"
 model_size: "2.0GB"
 hf_checkpoint: "espressor/meta-llama.Llama-3.2-3B-Instruct_W4A16"
+huggingface_url: "https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct"
 minimum_jetson: "Orin Nano"
+benchmark:
+  orin:
+    concurrency1: 52.58
+    concurrency8: 240.68
+    ttftMs: 0
+  thor:
+    concurrency1: 65.83
+    concurrency8: 330.72
+    ttftMs: 0
 supported_inference_engines:
   - engine: "Ollama"
     type: "Container"

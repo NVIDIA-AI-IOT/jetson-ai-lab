@@ -11,6 +11,7 @@ memory_requirements: "1GB RAM"
 precision: "FP8"
 model_size: "0.5GB"
 hf_checkpoint: "ggml-org/functiongemma-270m-it-GGUF"
+huggingface_url: "https://huggingface.co/google/functiongemma-270m-it"
 minimum_jetson: "Orin Nano"
 supported_inference_engines:
   - engine: "llama.cpp"

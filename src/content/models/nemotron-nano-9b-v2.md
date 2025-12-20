@@ -11,6 +11,7 @@ memory_requirements: "12GB RAM"
 precision: "NVFP4"
 model_size: "6GB"
 hf_checkpoint: "nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4"
+huggingface_url: "https://huggingface.co/nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4"
 minimum_jetson: "Thor"
 supported_inference_engines:
   - engine: "vLLM"

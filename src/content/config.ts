@@ -28,6 +28,8 @@ const models = defineCollection({
     order: z.number().optional(), // For ordering within family (smaller = first)
     type: z.string().optional(), // e.g. "Multimodal", "Text"
     hf_checkpoint: z.string().optional(),
+    huggingface_url: z.string().url().optional(), // Link to HuggingFace model page
+    build_nvidia_url: z.string().url().optional(), // Link to build.nvidia.com model page
     memory_requirements: z.string(),
     precision: z.string(),
     model_size: z.string(),
