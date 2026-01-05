@@ -15,7 +15,7 @@ minimum_jetson: "Thor"
 supported_inference_engines:
   - engine: "vLLM"
     type: "Container"
-    run_command_thor: "sudo docker run -it --rm --pull always --runtime=nvidia --network host ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 --trust-remote-code --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser-plugin nano_v3_reasoning_parser.py --reasoning-parser nano_v3 --kv-cache-dtype fp8"
+    run_command_thor: "sudo docker run -it --rm --pull always --runtime=nvidia --network host ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor bash -c \"wget https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8/resolve/main/nano_v3_reasoning_parser.py && vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8 --trust-remote-code --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser-plugin nano_v3_reasoning_parser.py --reasoning-parser nano_v3 --kv-cache-dtype fp8\""
 ---
 
 NVIDIA Nemotron Nano 30B-A3B is a general purpose reasoning and chat model designed as a unified model for both reasoning and non-reasoning tasks. It responds to user queries by first generating a reasoning trace and then concluding with a final response.
