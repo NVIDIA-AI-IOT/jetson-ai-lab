@@ -212,7 +212,7 @@ Now that your UEFI firmware is updated to 35.5.0 (= JetPack 5.1.3), it is capabl
 
 ## 6️⃣ Boot with JetPack 6.x SD Card
 
-1. **Download JetPack 6.2 image** from the official [JetPack page](https://developer.nvidia.com/embedded/jetpack)
+1. **Download JetPack 6.2 image** from the official [JetPack Archive page](https://developer.nvidia.com/embedded/jetpack-archive)
 
 2. **Use Balena Etcher** to flash image to SD card
 
