@@ -11,7 +11,17 @@ memory_requirements: "16GB RAM"
 precision: "W4A16"
 model_size: "16GB"
 hf_checkpoint: "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
+huggingface_url: "https://huggingface.co/Qwen/Qwen3-30B-A3B"
 minimum_jetson: "Orin AGX"
+benchmark:
+  orin:
+    concurrency1: 31.43
+    concurrency8: 76.69
+    ttftMs: 0
+  thor:
+    concurrency1: 61.01
+    concurrency8: 226.42
+    ttftMs: 0
 supported_inference_engines:
   - engine: "vLLM"
     type: "Container"

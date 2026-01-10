@@ -1,6 +1,6 @@
 ---
 title: "Nemotron3 Nano 30B-A3B"
-model_id: "nemotron-nano-30b-a3b"
+model_id: "nemotron-3-nano-30b-a3b"
 short_description: "NVIDIA's flagship hybrid MoE reasoning model with 30B total / 3.5B active parameters"
 family: "NVIDIA Nemotron"
 icon: "⚡"
@@ -11,6 +11,8 @@ memory_requirements: "32GB RAM"
 precision: "FP8"
 model_size: "30GB"
 hf_checkpoint: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8"
+huggingface_url: "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8"
+build_nvidia_url: "https://build.nvidia.com/nvidia/nemotron-3-nano-30b-a3b"
 minimum_jetson: "Thor"
 supported_inference_engines:
   - engine: "vLLM"
