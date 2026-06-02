@@ -1,0 +1,145 @@
+---
+title: "Getting Started with Jetson"
+description: "An onboarding guide for new NVIDIA Jetson developers, covering the official developer kit user guides and remote development with VS Code or Cursor over SSH."
+category: "Setup"
+section: "Jetson Setup"
+order: 1
+tags: ["setup", "getting-started", "ssh", "cursor", "vscode", "user-guide"]
+featured: true
+---
+
+import Tabs from '../../../components/Tabs.astro';
+
+This guide is the recommended starting point once you have an NVIDIA Jetson developer kit in hand. It first directs you to the official Quick Start Guide for your developer kit to complete the initial hardware and software setup, then walks through establishing a remote development workflow from your workstation over SSH, including a full IDE experience with VS Code or Cursor.
+
+If you are new to the Jetson platform, review [Introduction to NVIDIA Jetson](/tutorials/intro-to-jetson/) first for an overview of the hardware generations, developer kits, and the JetPack software stack.
+
+## Official Developer Kit Quick Start Guides
+
+Firmware flashing, first boot, and JetPack installation are documented in the official Quick Start Guides on **docs.nvidia.com**. Select the guide that corresponds to your developer kit and complete the setup before continuing.
+
+<div class="grid md:grid-cols-1 gap-5 my-6 not-prose">
+  <a href="https://docs.nvidia.com/jetson/agx-thor-devkit/user-guide/latest/quick_start.html" target="_blank" rel="noopener" class="flex items-stretch overflow-hidden bg-slate-50 border border-slate-200 rounded-xl hover:border-nvidia-green/50 hover:shadow-lg transition-all group min-h-[7.5rem]">
+    <div class="w-28 sm:w-36 flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center p-4 border-r border-slate-200">
+      <img src="/images/hero/isometric_jat-devkit.png" alt="Jetson AGX Thor Developer Kit" class="h-24 sm:h-28 w-auto max-w-full object-contain drop-shadow-md" />
+    </div>
+    <div class="flex flex-1 items-center justify-between gap-4 p-6">
+      <div>
+        <p class="text-xs font-semibold text-nvidia-green uppercase tracking-wider mb-1.5">Thor Generation</p>
+        <p class="text-lg font-bold text-slate-900 group-hover:text-nvidia-green transition-colors">Jetson AGX Thor Developer Kit — Quick Start Guide</p>
+      </div>
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-nvidia-green flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+    </div>
+  </a>
+
+  <a href="https://docs.nvidia.com/jetson/agx-orin-devkit/user-guide/latest/quick_start.html" target="_blank" rel="noopener" class="flex items-stretch overflow-hidden bg-slate-50 border border-slate-200 rounded-xl hover:border-purple-400/60 hover:shadow-lg transition-all group min-h-[7.5rem]">
+    <div class="w-28 sm:w-36 flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center p-4 border-r border-slate-200">
+      <img src="/images/hero/isometric_jao-devkit.png" alt="Jetson AGX Orin Developer Kit" class="h-14 sm:h-16 w-auto max-w-full object-contain drop-shadow-md" />
+    </div>
+    <div class="flex flex-1 items-center justify-between gap-4 p-6">
+      <div>
+        <p class="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-1.5">Orin Generation</p>
+        <p class="text-lg font-bold text-slate-900 group-hover:text-purple-600 transition-colors">Jetson AGX Orin Developer Kit — Quick Start Guide</p>
+      </div>
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+    </div>
+  </a>
+
+  <a href="https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/quick_start.html" target="_blank" rel="noopener" class="flex items-stretch overflow-hidden bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-400/60 hover:shadow-lg transition-all group min-h-[7.5rem]">
+    <div class="w-28 sm:w-36 flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center p-4 border-r border-slate-200">
+      <img src="/images/hero/isometric_jon-devkit.png" alt="Jetson Orin Nano Developer Kit" class="h-10 sm:h-12 w-auto max-w-full object-contain drop-shadow-md" />
+    </div>
+    <div class="flex flex-1 items-center justify-between gap-4 p-6">
+      <div>
+        <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1.5">Orin Generation</p>
+        <p class="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">Jetson Orin Nano Developer Kit — Quick Start Guide</p>
+      </div>
+      <svg class="w-5 h-5 text-slate-400 group-hover:text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+    </div>
+  </a>
+</div>
+
+After your Jetson has been flashed and has completed its first boot, continue to the next section to establish a remote development workflow from your workstation.
+
+## Remote Development
+
+Development on Jetson is typically done remotely over **SSH**, so no monitor or keyboard is required on the device itself.
+
+<ol>
+  <li>
+    <p><strong>Connect over SSH.</strong> Open a terminal on your workstation (PowerShell or Command Prompt on Windows; Terminal on Mac/Linux) and connect, replacing <code>USERNAME</code> and <code>JETSON_IP</code> with your values:</p>
+    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"ssh USERNAME@JETSON_IP"}</code></pre>
+    <div class="admonition note">
+      <p class="admonition-title">📘 Tip</p>
+      <p>Orin developer kits expose a fixed address <code>192.168.55.1</code> over USB-C (USB Device Mode), which is convenient for a first connection before the device is on your network. If that address is not reachable, connect the Jetson to Wi-Fi or Ethernet and SSH using its network IP instead.</p>
+    </div>
+  </li>
+  <li>
+    <p><strong>Connect to a network</strong> so the Jetson has internet access for downloading models, packages, and skills:</p>
+    <Tabs labels={["Wi-Fi", "Ethernet (wired)"]}>
+      <div class="nv-tab-panel active">
+        <p>While SSH'd into the Jetson, connect to Wi-Fi:</p>
+        <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"sudo nmcli device wifi connect WIFI_SSID password WIFI_PASSWORD"}</code></pre>
+      </div>
+      <div class="nv-tab-panel">
+        <p>Plug an Ethernet cable into the Jetson. Most networks assign an IP address automatically via DHCP.</p>
+      </div>
+    </Tabs>
+  </li>
+  <li>
+    <p><strong>Find the Jetson's network IP</strong> and reconnect using it (ignore <code>192.168.55.1</code>, which is the USB connection):</p>
+    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"hostname -I"}</code></pre>
+  </li>
+</ol>
+
+<div class="admonition tip">
+  <p class="admonition-title">💡 Tip</p>
+  <p>Some Wi-Fi networks block device-to-device connections. If SSH fails over Wi-Fi, use Ethernet or a dedicated local router.</p>
+</div>
+
+## Use VS Code or Cursor for Remote Development
+
+For a complete development experience, connect **VS Code** or **Cursor** directly to the Jetson over SSH. This provides file browsing, syntax highlighting, an integrated terminal, and editor extensions running on your workstation, while the code itself executes on the Jetson.
+
+<ol>
+  <li>
+    <p>Install the <strong>Remote - SSH</strong> extension:</p>
+    <ul>
+      <li><strong>VS Code</strong>: Open Extensions (<code>Ctrl+Shift+X</code>), search for <strong>"Remote - SSH"</strong> by Microsoft, and install it.</li>
+      <li><strong>Cursor</strong>: The Remote - SSH extension is built-in — no installation needed.</li>
+    </ul>
+    <img src="/images/workshops/vscode-remote-ssh-extension.png" alt="Remote - SSH extension in VS Code marketplace" class="tutorial-img" style="max-width: 100%; margin-top: 0.75rem;" />
+  </li>
+  <li>
+    <p>Open the Command Palette (<code>Ctrl+Shift+P</code> / <code>Cmd+Shift+P</code> on Mac) and select <strong>"Remote-SSH: Connect to Host..."</strong></p>
+    <p>Enter the SSH connection string — for example: <code>jetson@192.168.1.42</code></p>
+    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"USERNAME@JETSON_IP"}</code></pre>
+  </li>
+  <li>
+    <p>When prompted, select <strong>Linux</strong> as the platform for the remote host:</p>
+    <img src="/images/workshops/vscode-remote-ssh-platform-select.png" alt="Select Linux as the remote host platform" class="tutorial-img" style="max-width: 520px; margin-top: 0.75rem;" />
+  </li>
+  <li>
+    <p>Enter the password when prompted:</p>
+    <img src="/images/workshops/vscode-remote-ssh-password.png" alt="Password prompt for SSH connection" class="tutorial-img" style="max-width: 520px; margin-top: 0.75rem;" />
+    <p>The editor connects and installs a lightweight server on the Jetson automatically.</p>
+  </li>
+  <li>
+    <p>Once connected, you'll see <strong>"SSH: &lt;IP address&gt;"</strong> in the bottom-left corner. Use <strong>Open Folder</strong> to browse and edit files on the Jetson, and open the integrated terminal (<code>Ctrl+`</code>) to run commands.</p>
+    <img src="/images/workshops/vscode-remote-ssh-connected.png" alt="VS Code connected to Jetson via SSH showing Open Folder and SSH indicator" class="tutorial-img" style="max-width: 200px; margin-top: 0.75rem;" />
+  </li>
+</ol>
+
+<div class="admonition tip">
+  <p class="admonition-title">💡 Tip — Save your SSH config for one-click access</p>
+  <p>Add the Jetson to your SSH config file (<code>~/.ssh/config</code>):</p>
+  <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"Host jetson\n    HostName 192.168.1.42\n    User jetson"}</code></pre>
+  <p>Replace the IP and username with your values. After this, select <strong>"jetson"</strong> from the host list in VS Code/Cursor — or type <code>ssh jetson</code> in a terminal.</p>
+</div>
+
+## Next Steps
+
+- [SSD + Docker Setup](/tutorials/ssd-docker-setup/) — move Docker storage to NVMe for faster container performance
+- [RAM Optimization](/tutorials/ram-optimization/) — free memory for large model workloads
+- [Introduction to GenAI on Jetson](/tutorials/genai-on-jetson-llms-vlms/) — run LLMs and VLMs on-device
+- [Browse all tutorials](/tutorials/) — explore models, applications, and workshops

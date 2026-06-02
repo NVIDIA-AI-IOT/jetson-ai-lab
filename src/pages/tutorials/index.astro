@@ -59,11 +59,6 @@ const featuredCount = allTutorials.filter(t => t.data.featured).length;
   {featuredTutorials.length > 0 && (
     <section class="py-12 bg-nvidia-gray-50 border-b border-nvidia-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-8">
-          <h2 class="text-2xl font-bold text-nvidia-black">Featured Guides</h2>
-          <p class="text-nvidia-gray-600 mt-1">Hand-picked tutorials to get you started</p>
-        </div>
-
         <div class="relative -mx-4 px-4 sm:mx-0 sm:px-0">
           <div id="featured-carousel" class="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide justify-center">
             {featuredTutorials.map(tutorial => (
