@@ -62,8 +62,7 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 
 ## Getting Started
 
-- [Initial Setup Guide for Jetson Orin Nano](${SITE}/tutorials/initial-setup-jetson-orin-nano/): Complete setup guide covering firmware updates, JetPack 6.2 flashing via microSD card, and enabling MAXN SUPER performance mode
-- [Initial Setup using SDK Manager](${SITE}/tutorials/initial-setup-sdk-manager/): Alternative setup method using NVIDIA SDK Manager to flash firmware and JetPack, including NVMe SSD support
+- [Getting Started with Jetson](${SITE}/tutorials/getting-started-with-jetson/): Official developer kit user guides, remote SSH setup with VS Code or Cursor, and Jetson agentic skills for AI-assisted development
 - [SSD + Docker Setup](${SITE}/tutorials/ssd-docker-setup/): Set up NVMe SSD storage and configure Docker on Jetson for optimal performance with AI containers
 - [RAM Optimization](${SITE}/tutorials/ram-optimization/): Optimize system RAM by disabling desktop GUI, unnecessary services, and mounting swap for large model workloads
 

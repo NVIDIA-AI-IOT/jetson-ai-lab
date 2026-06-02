@@ -34,10 +34,14 @@ const groupedTutorials = tutorials.reduce((acc, tutorial) => {
 
 // Sort tutorials within each section by order
 Object.keys(groupedTutorials).forEach(section => {
-  groupedTutorials[section].sort((a, b) => (a.data.order || 99) - (b.data.order || 99));
+  groupedTutorials[section].sort((a, b) => (a.data.order ?? 99) - (b.data.order ?? 99));
 });
 
-const sectionNames = Object.keys(groupedTutorials);
+const sectionNames = Object.keys(groupedTutorials).sort((a, b) => {
+  const aOrder = Math.min(...groupedTutorials[a].map(t => t.data.order ?? 99));
+  const bOrder = Math.min(...groupedTutorials[b].map(t => t.data.order ?? 99));
+  return aOrder - bOrder;
+});
 ---
 
 <div class="tutorial-section" data-section={sectionId}>

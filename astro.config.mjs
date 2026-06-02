@@ -32,10 +32,12 @@ export default defineConfig({
   },
   redirects: {
     // Jetson Setup Guide
-    '/initial_setup_jon.html': '/tutorials/initial-setup-jetson-orin-nano/',
-    '/initial_setup_jon': '/tutorials/initial-setup-jetson-orin-nano/',
-    '/initial_setup_jon_sdkm.html': '/tutorials/initial-setup-sdk-manager/',
-    '/initial_setup_jon_sdkm': '/tutorials/initial-setup-sdk-manager/',
+    '/initial_setup_jon.html': '/tutorials/getting-started-with-jetson/',
+    '/initial_setup_jon': '/tutorials/getting-started-with-jetson/',
+    '/initial_setup_jon_sdkm.html': '/tutorials/getting-started-with-jetson/',
+    '/initial_setup_jon_sdkm': '/tutorials/getting-started-with-jetson/',
+    '/tutorials/initial-setup-jetson-orin-nano/': '/tutorials/getting-started-with-jetson/',
+    '/tutorials/initial-setup-sdk-manager/': '/tutorials/getting-started-with-jetson/',
     '/tips_ssd-docker.html': '/tutorials/ssd-docker-setup/',
     '/tips_ssd-docker': '/tutorials/ssd-docker-setup/',
     '/tips_ram-optimization.html': '/tutorials/ram-optimization/',

@@ -5,7 +5,7 @@ category: "Applications"
 section: "Vision Language Models"
 order: 1
 tags: ["vlm", "vision", "camera", "live-streaming", "webrtc", "ollama", "gemma", "qwen", "llama-vision", "multimodal"]
-featured: true
+featured: false
 authors:
   - name: "Chitoku YATO"
     github: "tokk-nv"

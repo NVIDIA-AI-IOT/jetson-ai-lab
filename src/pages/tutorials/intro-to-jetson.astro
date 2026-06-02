@@ -1,0 +1,715 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout
+  title="Introduction to NVIDIA Jetson"
+  description="Introduction to the NVIDIA Jetson platform: generations (Thor, Orin), series, developer kits, production modules, JetPack 7.2 on Jetson Linux, and how Jetson Thor compares to NVIDIA DGX Spark."
+>
+  <!-- =========================================================
+       HERO
+       ========================================================= -->
+  <section class="relative bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 text-white py-20 overflow-hidden">
+    <div class="absolute inset-0 overflow-hidden">
+      <div class="absolute top-1/4 -right-20 w-96 h-96 bg-nvidia-green/30 rounded-full blur-3xl animate-pulse"></div>
+      <div class="absolute bottom-1/4 -left-20 w-80 h-80 bg-nvidia-green/20 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-nvidia-green/10 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="absolute inset-0 opacity-15" style="background-image: linear-gradient(rgba(118,185,0,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(118,185,0,0.15) 1px, transparent 1px); background-size: 50px 50px;"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col lg:flex-row items-center gap-12">
+        <div class="flex-1 text-center lg:text-left">
+          <div class="flex items-center gap-4 mb-6 text-sm font-medium text-nvidia-green justify-center lg:justify-start">
+            <a href="/tutorials" class="hover:text-white transition-colors flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              Back to Tutorials
+            </a>
+          </div>
+
+          <div class="inline-flex items-center gap-3 bg-nvidia-green/20 backdrop-blur-sm border border-nvidia-green/40 rounded-full px-5 py-2 mb-8">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-nvidia-green opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-nvidia-green"></span>
+            </span>
+            <span class="text-sm font-semibold text-nvidia-green tracking-wider uppercase">Introduction to Jetson</span>
+          </div>
+
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-8">
+            <span class="bg-clip-text text-transparent bg-gradient-to-r from-white via-nvidia-green to-white">
+              NVIDIA Jetson
+            </span>
+            <br />
+            <span class="text-white">The Platform for Physical AI</span>
+          </h1>
+
+          <div class="flex flex-wrap gap-3 justify-center lg:justify-start">
+            <a href="#developer-kits" class="px-6 py-3 bg-nvidia-green text-nvidia-black font-bold rounded-lg hover:bg-nvidia-green/90 transition-all">
+              Explore Developer Kits
+            </a>
+            <a href="#software" class="px-6 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/20 transition-all border border-white/10">
+              Software Stack
+            </a>
+            <a href="https://www.nvidia.com/en-in/autonomous-machines/embedded-systems/" target="_blank" rel="noopener" class="px-6 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/20 transition-all border border-white/10">
+              Product Page
+            </a>
+          </div>
+        </div>
+
+        <div class="flex-1 flex justify-center lg:justify-end">
+          <img
+            src="/images/hero/jetson-family-line_50pcnt.png"
+            alt="NVIDIA Jetson family of developer kits and modules"
+            class="w-full max-w-md lg:max-w-lg drop-shadow-2xl"
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SECTION NAV (anchor jumps)
+       ========================================================= -->
+  <nav aria-label="On-page sections" class="sticky top-16 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <ul class="flex flex-wrap items-center gap-x-1 gap-y-1 py-2 text-xs sm:text-sm">
+        <li><a href="#overview" class="px-3 py-1.5 rounded-full text-slate-600 hover:text-nvidia-green hover:bg-nvidia-green/10 font-medium transition-colors">Overview</a></li>
+        <li><a href="#software" class="px-3 py-1.5 rounded-full text-slate-600 hover:text-nvidia-green hover:bg-nvidia-green/10 font-medium transition-colors">Software Stack</a></li>
+        <li><a href="#devkits-vs-modules" class="px-3 py-1.5 rounded-full text-slate-600 hover:text-nvidia-green hover:bg-nvidia-green/10 font-medium transition-colors">Devkits vs Modules</a></li>
+        <li><a href="#developer-kits" class="px-3 py-1.5 rounded-full text-slate-600 hover:text-nvidia-green hover:bg-nvidia-green/10 font-medium transition-colors">Developer Kits</a></li>
+        <li><a href="#modules" class="px-3 py-1.5 rounded-full text-slate-600 hover:text-nvidia-green hover:bg-nvidia-green/10 font-medium transition-colors">Production Modules</a></li>
+        <li><a href="#thor-vs-spark" class="px-3 py-1.5 rounded-full text-slate-600 hover:text-nvidia-green hover:bg-nvidia-green/10 font-medium transition-colors">Thor vs DGX Spark</a></li>
+        <li><a href="#igx" class="px-3 py-1.5 rounded-full text-slate-600 hover:text-nvidia-green hover:bg-nvidia-green/10 font-medium transition-colors">What About IGX?</a></li>
+        <li><a href="#next-steps" class="px-3 py-1.5 rounded-full text-slate-600 hover:text-nvidia-green hover:bg-nvidia-green/10 font-medium transition-colors">Next Steps</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- =========================================================
+       WHAT IS JETSON?
+       ========================================================= -->
+  <section id="overview" class="py-20 bg-white border-b border-slate-200 scroll-mt-32">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12">
+        <span class="text-sm font-semibold text-nvidia-green uppercase tracking-wider">Overview</span>
+        <p class="text-lg text-slate-600 max-w-5xl mx-auto leading-relaxed mt-4">
+          <span class="block lg:whitespace-nowrap">NVIDIA Jetson™ is a powerful platform for developing innovative edge AI and robotics solutions across industries.</span>
+          <span class="block max-w-4xl mx-auto">It delivers the compact, energy-efficient modules and developer kits with a robust AI software stack you need to deploy next-generation physical AI solutions.</span>
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+          <div class="w-12 h-12 bg-nvidia-green/10 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">Physical AI Platform</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">
+            NVIDIA Jetson brings accelerated AI compute to the edge for robotics, autonomous machines, industrial systems, cameras, and other embedded applications.
+          </p>
+        </div>
+
+        <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+          <div class="w-12 h-12 bg-nvidia-green/10 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">Unified Software</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">
+            JetPack provides a common software foundation across Jetson platforms, including Jetson Linux, CUDA, TensorRT, multimedia APIs, and developer tools.
+          </p>
+        </div>
+
+        <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+          <div class="w-12 h-12 bg-nvidia-green/10 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">From Devkit to Production</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">
+            Start development on a Jetson developer kit, then move to a production Jetson module integrated with the carrier board and enclosure for your product.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =========================================================
+       SOFTWARE STACK: Jetson Linux r39
+       ========================================================= -->
+  <section id="software" class="py-16 bg-slate-900 border-y border-slate-800 scroll-mt-32">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-10">
+        <span class="text-sm font-semibold text-nvidia-green uppercase tracking-wider">Software</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-white mt-2 mb-3">Software Stack</h2>
+      </div>
+
+      <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 p-8 md:p-10">
+        <div class="space-y-8">
+          <div class="space-y-5 text-base text-slate-300 leading-relaxed">
+            <p>
+              <strong class="text-white">Jetson Linux, formerly Linux for Tegra (L4T),</strong> is NVIDIA's official board support package for Jetson, comprising the kernel, UEFI bootloader, NVIDIA drivers, flashing tools, and an Ubuntu-based root filesystem. Use this path for developer kits, reference platforms, and production software built directly on the NVIDIA-supported BSP.
+            </p>
+            <p>
+              <strong class="text-white">JetPack SDK</strong> packages Jetson Linux with CUDA, cuDNN, TensorRT, multimedia APIs, developer tools, and sample applications. JetPack 7.2 is the SDK release built on Jetson Linux r39.
+            </p>
+          </div>
+
+          <div class="bg-nvidia-green/10 border border-nvidia-green/30 rounded-xl p-6 space-y-3">
+            <p class="text-base text-slate-200 leading-relaxed">
+              <strong class="text-nvidia-green">One software foundation across generations.</strong> JetPack 7.2 extends the <strong class="text-white">Ubuntu 24.04</strong>, <strong class="text-white">Linux kernel 6.8</strong>, and <strong class="text-white">NVIDIA CUDA 13</strong> compute stack introduced with Jetson Thor to the Jetson Orin family, bringing both platforms onto a single unified software foundation.
+            </p>
+            <p class="text-base text-slate-200 leading-relaxed">
+              <strong class="text-nvidia-green">Agentic-ready for real-world deployment.</strong> With optimized memory and performance, JetPack 7.2 adds one-command deployment of <strong class="text-white">NVIDIA NemoClaw</strong> and introduces <strong class="text-white">Jetson Agentic Skills</strong>, extending the latest compute stack and agentic capabilities to Jetson Orin.
+            </p>
+          </div>
+        </div>
+        <div class="mt-8 text-center">
+          <a href="https://developer.nvidia.com/embedded/jetson-linux" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-5 py-3 bg-nvidia-green text-nvidia-black font-bold rounded-lg hover:bg-nvidia-green/90 transition-all">
+            Jetson Linux
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =========================================================
+       DEVKITS vs MODULES EXPLAINER
+       ========================================================= -->
+  <section id="devkits-vs-modules" class="py-16 bg-slate-50 border-b border-slate-200 scroll-mt-32">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-white rounded-2xl border-l-4 border-nvidia-green shadow-sm p-8">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-12 h-12 bg-nvidia-green/10 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-xl font-bold text-slate-900 mb-4">Developer Kits vs Modules: What's the difference?</h3>
+            <div class="space-y-3">
+              <p class="text-slate-700 text-sm leading-relaxed">
+                <strong class="text-slate-900">Jetson Developer Kits</strong> accelerate application development and prototyping with a Jetson module on a reference carrier board, ready to build on out of the box.
+              </p>
+              <p class="text-slate-700 text-sm leading-relaxed">
+                <strong class="text-slate-900">Jetson Modules</strong> help you get to market faster with production System-on-Modules you mount onto a carrier board designed for your end product.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       DEVELOPER KITS
+       ========================================================= -->
+  <section id="developer-kits" class="py-20 bg-white scroll-mt-32">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <span class="text-sm font-semibold text-nvidia-green uppercase tracking-wider">Hardware</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-4">Developer Kits</h2>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">Reference platforms built for prototyping, evaluation, and software development. Start here to build on Jetson.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- AGX Thor Developer Kit -->
+        <article class="group relative bg-white rounded-2xl border border-slate-200 hover:border-nvidia-green/50 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col">
+          <div class="aspect-[4/3] bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center p-6">
+            <img src="/images/hero/isometric_jat-devkit.png" alt="Jetson AGX Thor Developer Kit" class="h-64 w-auto max-w-full object-contain drop-shadow-lg" />
+          </div>
+          <div class="p-6 flex flex-col flex-grow">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-medium text-nvidia-green bg-nvidia-green/10 px-2 py-0.5 rounded">New</span>
+              <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Thor Generation</span>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-3 group-hover:text-nvidia-green transition-colors">Jetson AGX Thor Developer Kit</h3>
+            <ul class="text-sm text-slate-600 space-y-1.5 mb-5 flex-grow">
+              <li>• 2070 TFLOPS (FP4 sparse) AI performance</li>
+              <li>• 128GB LPDDR5X unified memory</li>
+              <li>• 14-core Arm Neoverse-V3AE CPU</li>
+              <li>• 40–130W power envelope</li>
+            </ul>
+            <div class="space-y-2 pt-4 border-t border-slate-100">
+              <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-thor/" target="_blank" rel="noopener" class="flex items-center justify-between text-base font-semibold text-nvidia-green hover:gap-3 transition-all">
+                <span>Product page</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+              <a href="https://developer.nvidia.com/embedded/buy-jetson" target="_blank" rel="noopener" class="flex items-center justify-between text-base font-semibold text-slate-700 hover:text-nvidia-green hover:gap-3 transition-all">
+                <span>Where to buy</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+              <a href="https://docs.nvidia.com/jetson/agx-thor-devkit/user-guide/latest/" target="_blank" rel="noopener" class="flex items-center justify-between text-base font-semibold text-slate-700 hover:text-nvidia-green hover:gap-3 transition-all">
+                <span>Developer Kit - User Guide</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+            </div>
+          </div>
+        </article>
+
+        <!-- AGX Orin Developer Kit -->
+        <article class="group relative bg-white rounded-2xl border border-slate-200 hover:border-purple-400/60 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col">
+          <div class="aspect-[4/3] bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center p-6">
+            <img src="/images/hero/isometric_jao-devkit.png" alt="Jetson AGX Orin Developer Kit" class="h-48 w-auto max-w-full object-contain drop-shadow-lg" />
+          </div>
+          <div class="p-6 flex flex-col flex-grow">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Orin Generation</span>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-3 group-hover:text-purple-600 transition-colors">Jetson AGX Orin Developer Kit</h3>
+            <ul class="text-sm text-slate-600 space-y-1.5 mb-5 flex-grow">
+              <li>• Up to 275 TOPS AI performance</li>
+              <li>• 64GB LPDDR5 unified memory</li>
+              <li>• 12-core Arm Cortex-A78AE CPU</li>
+              <li>• 15–60W power envelope</li>
+            </ul>
+            <div class="space-y-2 pt-4 border-t border-slate-100">
+              <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/" target="_blank" rel="noopener" class="flex items-center justify-between text-base font-semibold text-purple-600 hover:gap-3 transition-all">
+                <span>Product page</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+              <a href="https://developer.nvidia.com/embedded/buy-jetson" target="_blank" rel="noopener" class="flex items-center justify-between text-base font-semibold text-slate-700 hover:text-purple-600 hover:gap-3 transition-all">
+                <span>Where to buy</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+              <a href="https://docs.nvidia.com/jetson/agx-orin-devkit/user-guide/latest/" target="_blank" rel="noopener" class="flex items-center justify-between text-base font-semibold text-slate-700 hover:text-purple-600 hover:gap-3 transition-all">
+                <span>Developer Kit - User Guide</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Orin Nano Super Developer Kit -->
+        <article class="group relative bg-white rounded-2xl border border-slate-200 hover:border-blue-400/60 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col">
+          <div class="aspect-[4/3] bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center p-6">
+            <img src="/images/hero/isometric_jon-devkit.png" alt="Jetson Orin Nano Super Developer Kit" class="h-32 w-auto max-w-full object-contain drop-shadow-lg" />
+          </div>
+          <div class="p-6 flex flex-col flex-grow">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Orin Generation</span>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">Jetson Orin Nano Super Developer Kit</h3>
+            <ul class="text-sm text-slate-600 space-y-1.5 mb-5 flex-grow">
+              <li>• 67 TOPS (Super Mode) AI performance</li>
+              <li>• 8GB LPDDR5 unified memory</li>
+              <li>• 6-core Arm Cortex-A78AE CPU</li>
+              <li>• 7–25W power envelope</li>
+            </ul>
+            <div class="space-y-2 pt-4 border-t border-slate-100">
+              <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/" target="_blank" rel="noopener" class="flex items-center justify-between text-base font-semibold text-blue-600 hover:gap-3 transition-all">
+                <span>Product page</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+              <a href="https://developer.nvidia.com/embedded/buy-jetson" target="_blank" rel="noopener" class="flex items-center justify-between text-base font-semibold text-slate-700 hover:text-blue-600 hover:gap-3 transition-all">
+                <span>Where to buy</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+              <a href="https://developer.nvidia.com/embedded/learn/get-started-jetson-orin-nano-devkit" target="_blank" rel="noopener" class="flex items-center justify-between text-base font-semibold text-slate-700 hover:text-blue-600 hover:gap-3 transition-all">
+                <span>Developer Kit - User Guide</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       PRODUCTION MODULES (SoMs)
+       ========================================================= -->
+  <section id="modules" class="py-20 bg-slate-50 border-y border-slate-200 scroll-mt-32">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <span class="text-sm font-semibold text-nvidia-green uppercase tracking-wider">Hardware</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-4">Production Modules</h2>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">System-on-Module (SOM) SKUs for shipping products, grouped by series.</p>
+      </div>
+
+      <!-- Thor series -->
+      <div class="mb-12">
+        <div class="flex items-baseline justify-between mb-6 pb-3 border-b-2 border-nvidia-green/30">
+          <h3 class="text-2xl font-bold text-slate-900">Jetson Thor Series</h3>
+          <span class="text-sm text-slate-500">Blackwell GPU • LPDDR5X</span>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- T5000 -->
+          <article class="group bg-white rounded-xl border border-slate-200 hover:border-nvidia-green/50 hover:shadow-lg transition-all overflow-hidden">
+            <div class="flex">
+              <div class="w-32 sm:w-40 flex-shrink-0 bg-slate-100 flex items-center justify-center p-3">
+                <img src="/images/jetson-soms/thor_t5000.png" alt="Jetson T5000 module" class="max-h-full max-w-full object-contain" />
+              </div>
+              <div class="flex-1 p-5">
+                <h4 class="text-lg font-bold text-slate-900 mb-3 group-hover:text-nvidia-green transition-colors">Jetson T5000</h4>
+                <ul class="text-xs text-slate-600 space-y-1 mb-3">
+                  <li>• 2070 TFLOPS FP4 sparse • 2560-core Blackwell GPU</li>
+                  <li>• 128GB LPDDR5X • 273 GB/s</li>
+                  <li>• 14-core Arm Neoverse-V3AE • 40–130W</li>
+                </ul>
+                <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-thor/" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-semibold text-nvidia-green hover:gap-2 transition-all">
+                  Module page <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <!-- T4000 -->
+          <article class="group bg-white rounded-xl border border-slate-200 hover:border-nvidia-green/50 hover:shadow-lg transition-all overflow-hidden">
+            <div class="flex">
+              <div class="w-32 sm:w-40 flex-shrink-0 bg-slate-100 flex items-center justify-center p-3">
+                <img src="/images/jetson-soms/thor_t4000.png" alt="Jetson T4000 module" class="max-h-full max-w-full object-contain" />
+              </div>
+              <div class="flex-1 p-5">
+                <h4 class="text-lg font-bold text-slate-900 mb-3 group-hover:text-nvidia-green transition-colors">Jetson T4000</h4>
+                <ul class="text-xs text-slate-600 space-y-1 mb-3">
+                  <li>• 1200 TFLOPS FP4 sparse • 1536-core Blackwell GPU</li>
+                  <li>• 64GB LPDDR5X • 273 GB/s</li>
+                  <li>• 12-core Arm Neoverse-V3AE • 40–70W</li>
+                </ul>
+                <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-thor/" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-semibold text-nvidia-green hover:gap-2 transition-all">
+                  Module page <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <!-- AGX Orin series -->
+      <div class="mb-12">
+        <div class="flex items-baseline justify-between mb-6 pb-3 border-b-2 border-purple-400/40">
+          <h3 class="text-2xl font-bold text-slate-900">Jetson AGX Orin Series</h3>
+          <span class="text-sm text-slate-500">Ampere GPU • LPDDR5</span>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+          <article class="group bg-white rounded-xl border border-slate-200 hover:border-purple-400/60 hover:shadow-lg transition-all overflow-hidden">
+            <div class="flex">
+              <div class="w-32 sm:w-40 flex-shrink-0 bg-slate-100 flex items-center justify-center p-3">
+                <img src="/images/jetson-soms/orin_agx_64.png" alt="Jetson AGX Orin 64GB module" class="max-h-full max-w-full object-contain" />
+              </div>
+              <div class="flex-1 p-5">
+                <h4 class="text-lg font-bold text-slate-900 mb-3 group-hover:text-purple-600 transition-colors">Jetson AGX Orin 64GB</h4>
+                <ul class="text-xs text-slate-600 space-y-1 mb-3">
+                  <li>• 275 TOPS • 2048-core Ampere GPU</li>
+                  <li>• 64GB LPDDR5 • 204.8 GB/s</li>
+                  <li>• 12-core Arm Cortex-A78AE • 15–60W</li>
+                </ul>
+                <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 hover:gap-2 transition-all">
+                  Module page <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </a>
+              </div>
+            </div>
+          </article>
+          <div class="hidden md:block"></div>
+        </div>
+      </div>
+
+      <!-- Orin NX series -->
+      <div class="mb-12">
+        <div class="flex items-baseline justify-between mb-6 pb-3 border-b-2 border-indigo-400/40">
+          <h3 class="text-2xl font-bold text-slate-900">Jetson Orin NX Series</h3>
+          <span class="text-sm text-slate-500">Ampere GPU • LPDDR5</span>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+          <article class="group bg-white rounded-xl border border-slate-200 hover:border-indigo-400/60 hover:shadow-lg transition-all overflow-hidden">
+            <div class="flex">
+              <div class="w-32 sm:w-40 flex-shrink-0 bg-slate-100 flex items-center justify-center p-3">
+                <img src="/images/jetson-soms/orin_nx_16.png" alt="Jetson Orin NX 16GB module" class="max-h-full max-w-full object-contain" />
+              </div>
+              <div class="flex-1 p-5">
+                <h4 class="text-lg font-bold text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors">Jetson Orin NX 16GB</h4>
+                <ul class="text-xs text-slate-600 space-y-1 mb-3">
+                  <li>• 157 TOPS (Super Mode) • 1024-core Ampere GPU</li>
+                  <li>• 16GB LPDDR5 • 102.4 GB/s</li>
+                  <li>• 8-core Arm Cortex-A78AE • 10–40W</li>
+                </ul>
+                <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:gap-2 transition-all">
+                  Module page <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </a>
+              </div>
+            </div>
+          </article>
+          <div class="hidden md:block"></div>
+        </div>
+      </div>
+
+      <!-- Orin Nano series -->
+      <div>
+        <div class="flex items-baseline justify-between mb-6 pb-3 border-b-2 border-blue-400/40">
+          <h3 class="text-2xl font-bold text-slate-900">Jetson Orin Nano Series</h3>
+          <span class="text-sm text-slate-500">Ampere GPU • LPDDR5</span>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+          <article class="group bg-white rounded-xl border border-slate-200 hover:border-blue-400/60 hover:shadow-lg transition-all overflow-hidden">
+            <div class="flex">
+              <div class="w-32 sm:w-40 flex-shrink-0 bg-slate-100 flex items-center justify-center p-3">
+                <img src="/images/jetson-soms/orin_nano_8.png" alt="Jetson Orin Nano 8GB module" class="max-h-full max-w-full object-contain" />
+              </div>
+              <div class="flex-1 p-5">
+                <h4 class="text-lg font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">Jetson Orin Nano 8GB</h4>
+                <ul class="text-xs text-slate-600 space-y-1 mb-3">
+                  <li>• 67 TOPS (Super Mode) • 1024-core Ampere GPU</li>
+                  <li>• 8GB LPDDR5 • 102 GB/s</li>
+                  <li>• 6-core Arm Cortex-A78AE • 7–25W</li>
+                </ul>
+                <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:gap-2 transition-all">
+                  Module page <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </a>
+              </div>
+            </div>
+          </article>
+          <div class="hidden md:block"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       JETSON THOR vs DGX SPARK
+       ========================================================= -->
+  <section id="thor-vs-spark" class="py-20 bg-white scroll-mt-32">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12">
+        <span class="text-sm font-semibold text-nvidia-green uppercase tracking-wider">Platform Comparison</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-4">Jetson AGX Thor vs DGX Spark</h2>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto">
+          Both are compact Blackwell-class systems with <strong>128 GB</strong> unified memory and <strong>273 GB/s</strong> memory bandwidth, but they serve different development goals.
+        </p>
+      </div>
+
+      <!-- ===== AI workflow positioning block ===== -->
+      <div class="bg-slate-50 rounded-2xl border border-slate-200 p-6 md:p-10 mb-10">
+        <div class="text-center mb-8">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">AI Development Workflow</span>
+          <h3 class="text-2xl font-bold text-slate-900 mt-2">From model development to edge deployment</h3>
+          <p class="text-sm text-slate-600 mt-2 max-w-2xl mx-auto">
+            Use <strong class="text-blue-600">DGX Spark</strong> to build and iterate on generative AI models locally. Use <strong class="text-nvidia-green">Jetson AGX Thor</strong> to develop, validate, and deploy physical AI workloads at the edge.
+          </p>
+        </div>
+
+        <!-- Stage labels -->
+        <div class="grid grid-cols-3 gap-3 mb-4 text-center">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-700">Create Models</p>
+            <p class="text-[11px] leading-snug text-slate-500 mt-1">Train and experiment</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-700">Customize</p>
+            <p class="text-[11px] leading-snug text-slate-500 mt-1">Fine-tune for your use case</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-700">Run & Deploy</p>
+            <p class="text-[11px] leading-snug text-slate-500 mt-1">Test locally or move to edge</p>
+          </div>
+        </div>
+
+        <!-- DGX Spark coverage: Create + Customize + into Run & Deploy -->
+        <div class="grid grid-cols-6 gap-2 mb-2">
+          <div></div>
+          <div class="col-span-4 h-2 rounded-full bg-blue-500"></div>
+          <div></div>
+        </div>
+        <div class="grid grid-cols-6 gap-2 mb-5">
+          <div></div>
+          <div class="col-span-4 text-center">
+            <span class="inline-block px-3 py-1 bg-blue-500/10 border border-blue-500/30 rounded-full text-xs font-bold text-blue-700">DGX Spark zone</span>
+          </div>
+          <div></div>
+        </div>
+
+        <!-- Jetson Thor coverage: starts inside Customize + Run and deploy at the edge -->
+        <div class="grid grid-cols-6 gap-2 mb-2">
+          <div class="col-span-3"></div>
+          <div class="col-span-3 h-2 rounded-full bg-nvidia-green"></div>
+        </div>
+        <div class="grid grid-cols-6 gap-2 mb-3">
+          <div class="col-span-3"></div>
+          <div class="col-span-3 text-center">
+            <span class="inline-block px-3 py-1 bg-nvidia-green/10 border border-nvidia-green/30 rounded-full text-xs font-bold text-nvidia-green">Jetson Thor zone</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-10">
+        <!-- Jetson AGX Thor Developer Kit -->
+        <article class="bg-gradient-to-br from-emerald-50 to-white rounded-2xl border-2 border-nvidia-green/30 p-8">
+          <div class="flex items-center gap-4 mb-6">
+            <div class="w-14 h-14 bg-nvidia-green/10 rounded-xl flex items-center justify-center">
+              <svg class="w-7 h-7 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-nvidia-green uppercase tracking-wider">Edge / Robotics Devkit</span>
+              <h3 class="text-2xl font-bold text-slate-900">Jetson AGX Thor Developer Kit</h3>
+            </div>
+          </div>
+
+          <p class="text-slate-700 text-sm leading-relaxed mb-5">
+            A <strong>reference carrier board</strong> with a Jetson T5000 module attached. It lives on your desk for development and emulates the robot, drone, or autonomous machine that will eventually run a production Thor module.
+          </p>
+
+          <dl class="space-y-3 text-sm mb-5">
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">Purpose</dt>
+              <dd class="font-semibold text-slate-900 text-right">Prototype before embedding in a robot</dd>
+            </div>
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">Compute</dt>
+              <dd class="font-semibold text-slate-900 text-right">2070 TFLOPS FP4 sparse (Jetson T5000)</dd>
+            </div>
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">Memory</dt>
+              <dd class="font-semibold text-slate-900 text-right">128 GB LPDDR5X (273 GB/s)</dd>
+            </div>
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">Power</dt>
+              <dd class="font-semibold text-slate-900 text-right">40–130 W</dd>
+            </div>
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">I/O highlights</dt>
+              <dd class="font-semibold text-slate-900 text-right">QSFP28 (4×25GbE), CAN, USB-C, NVMe</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Software</dt>
+              <dd class="font-semibold text-slate-900 text-right">Jetson Linux / JetPack 7.2</dd>
+            </div>
+          </dl>
+
+          <div class="bg-white rounded-lg p-4 border border-nvidia-green/20">
+            <p class="text-xs font-semibold text-nvidia-green uppercase tracking-wider mb-2">Choose Jetson AGX Thor when</p>
+            <ul class="text-sm text-slate-700 space-y-1.5">
+              <li>• You are building a robot, drone, AMR, or autonomous machine</li>
+              <li>• Your workload depends on real-time perception, sensor fusion, or physical AI control</li>
+              <li>• You need to prototype on a developer kit before integrating a Jetson module</li>
+              <li>• Your system requires edge I/O such as CAN, MIPI, GbE, or GMSL</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- NVIDIA DGX Spark -->
+        <article class="bg-gradient-to-br from-blue-50 to-white rounded-2xl border-2 border-blue-400/30 p-8">
+          <div class="flex items-center gap-4 mb-6">
+            <div class="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center">
+              <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-blue-600 uppercase tracking-wider">Personal AI Workstation</span>
+              <h3 class="text-2xl font-bold text-slate-900">NVIDIA DGX Spark</h3>
+            </div>
+          </div>
+
+          <p class="text-slate-700 text-sm leading-relaxed mb-5">
+            A <strong>personal AI computer</strong>. Built around the Grace Blackwell <strong>GB10</strong> superchip, it is a finished desktop appliance with no carrier board or production module path. Designed to be the developer's local LLM and AI sandbox.
+          </p>
+
+          <dl class="space-y-3 text-sm mb-5">
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">Purpose</dt>
+              <dd class="font-semibold text-slate-900 text-right">Desktop AI dev, fine-tuning, local LLMs</dd>
+            </div>
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">Compute</dt>
+              <dd class="font-semibold text-slate-900 text-right">1000 TOPS FP4 sparse (GB10)</dd>
+            </div>
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">Memory</dt>
+              <dd class="font-semibold text-slate-900 text-right">128 GB LPDDR5x (273 GB/s)</dd>
+            </div>
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">Power</dt>
+              <dd class="font-semibold text-slate-900 text-right">240 W power supply (140 W GB10 TDP)</dd>
+            </div>
+            <div class="flex justify-between gap-3 border-b border-slate-200 pb-2">
+              <dt class="text-slate-500">I/O highlights</dt>
+              <dd class="font-semibold text-slate-900 text-right">ConnectX-7 networking, USB, NVMe</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Software</dt>
+              <dd class="font-semibold text-slate-900 text-right">DGX OS (Ubuntu-based)</dd>
+            </div>
+          </dl>
+
+          <div class="bg-white rounded-lg p-4 border border-blue-400/20">
+            <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">Choose DGX Spark when</p>
+            <ul class="text-sm text-slate-700 space-y-1.5">
+              <li>• You are developing, fine-tuning, or evaluating generative AI models locally</li>
+              <li>• You need a compact workstation for LLMs, agents, and AI experimentation</li>
+              <li>• Your workflow is desktop-based rather than embedded in a physical system</li>
+              <li>• You want to bring cloud-style AI development closer to your desk</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =========================================================
+       WHAT ABOUT NVIDIA IGX?
+       ========================================================= -->
+  <section id="igx" class="py-16 bg-slate-50 border-y border-slate-200 scroll-mt-32">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center">
+        <span class="text-sm font-semibold text-nvidia-green uppercase tracking-wider">Related Platform</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-4">What about NVIDIA IGX?</h2>
+        <p class="text-lg text-slate-600 max-w-3xl mx-auto leading-relaxed mb-6">
+          Jetson is the right place to start for compact robots, cameras, drones, and embedded AI products. NVIDIA IGX is for industrial-grade edge AI systems that need enterprise support, security, and functional safety.
+        </p>
+        <a href="https://www.nvidia.com/en-us/edge-computing/products/igx/" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-5 py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-all">
+          Learn more about NVIDIA IGX
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       FOOTER CTA
+       ========================================================= -->
+  <section id="next-steps" class="py-20 bg-slate-900 scroll-mt-32">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Where to next?</h2>
+      <p class="text-lg text-slate-400 mb-10 max-w-2xl mx-auto">
+        Explore the Jetson platform, choose the developer kit or module that fits your project, and start building physical AI at the edge.
+      </p>
+      <div class="flex flex-wrap gap-4 justify-center">
+        <a href="/tutorials/getting-started-with-jetson/" class="px-6 py-3 bg-nvidia-green text-nvidia-black font-bold rounded-lg hover:bg-nvidia-green/90 transition-all">
+          Getting Started with Jetson
+        </a>
+        <a href="/tutorials/" class="px-6 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/20 transition-all border border-white/10">
+          Browse Tutorials
+        </a>
+        <a href="/models/" class="px-6 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/20 transition-all border border-white/10">
+          Explore Models
+        </a>
+        <a href="https://developer.nvidia.com/embedded/buy-jetson" target="_blank" rel="noopener" class="px-6 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/20 transition-all border border-white/10">
+          Where to Buy
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  @keyframes pulse {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.3; }
+  }
+
+  .animate-pulse {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+</style>
