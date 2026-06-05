@@ -39,7 +39,8 @@
   ],
   "notes": [
     "Unless otherwise specified, all models utilize W4A16 quantization for Orin and NVFP4 for Thor.",
-    "NVFP4 and MXFP4 require Blackwell FP4 tensor cores and are not available on Orin (Ampere)."
+    "NVFP4 and MXFP4 require Blackwell FP4 tensor cores and are not available on Orin (Ampere).",
+    "Edge-LLM benchmark values are generation throughput from the official TensorRT Edge-LLM performance benchmarks on Jetson AGX Thor Developer Kit."
   ],
   "models": [
     {
@@ -161,6 +162,26 @@
       "isl": 2048,
       "osl": 128,
       "engines": {
+        "Edge-LLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 64.7,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 312.9,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        },
         "llama.cpp": {
           "Q4_K_M GGUF": {
             "concurrency1": {
@@ -234,6 +255,26 @@
               "orin_nx_16gb": null,
               "orin_nano_8gb": null,
               "dgx_spark": 191.2
+            }
+          }
+        },
+        "Edge-LLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 31.3,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
             }
           }
         },
@@ -439,6 +480,44 @@
               "dgx_spark": null
             }
           }
+        },
+        "Edge-LLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 90.2,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 507.4,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          },
+          "INT4 AWQ": {
+            "concurrency1": {
+              "t5000": 76.4,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 240.3,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
         }
       }
     },
@@ -540,6 +619,26 @@
               "t5000": null,
               "t4000": null,
               "agx_orin_64gb": 174,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        },
+        "Edge-LLM": {
+          "INT4 GPTQ": {
+            "concurrency1": {
+              "t5000": 72.6,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 215.9,
+              "t4000": null,
+              "agx_orin_64gb": null,
               "orin_nx_16gb": null,
               "orin_nano_8gb": null,
               "dgx_spark": null
