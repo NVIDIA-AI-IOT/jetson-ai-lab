@@ -89,8 +89,8 @@ flowchart LR
 </tr>
 </thead>
 <tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">JetPack</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">6.2.x</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">7.1</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">CUDA</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">12.6 (included)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">13.x (included)</td></tr>
+<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">JetPack</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">7.2 / Jetson Linux R39.2</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">7.1 / 7.2</td></tr>
+<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">CUDA</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">13.2 (included)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">13.x (included)</td></tr>
 <tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">TensorRT</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">10.x+ (included)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">10.x+ (included)</td></tr>
 <tr style="background: #ffffff;"><td style="padding: 12px 16px; font-weight: 600; color: #334155;">Storage</td><td style="padding: 12px 16px;">20–50 GB free (ONNX + engines)</td><td style="padding: 12px 16px;">20–50 GB free</td></tr>
 </tbody>
@@ -133,13 +133,13 @@ This step converts HuggingFace models to quantized ONNX files. It requires signi
 On Thor, use the [NVIDIA PyTorch container](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) which ships with **PyTorch, CUDA, TensorRT, and ModelOpt** pre-installed for Jetson's aarch64/SBSA architecture.
 
 ```bash
-docker pull nvcr.io/nvidia/pytorch:25.12-py3
+docker pull nvcr.io/nvidia/pytorch:26.05-py3
 
 docker run -it --runtime nvidia \
     --name edgellm-export \
     -v $(pwd):/workspace \
     -w /workspace \
-    nvcr.io/nvidia/pytorch:25.12-py3 \
+    nvcr.io/nvidia/pytorch:26.05-py3 \
     bash
 ```
 
@@ -178,13 +178,13 @@ export WORKSPACE_DIR=/workspace/tensorrt-edgellm-workspace
 Pull and launch the [NVIDIA PyTorch container](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch):
 
 ```bash
-docker pull nvcr.io/nvidia/pytorch:25.12-py3
+docker pull nvcr.io/nvidia/pytorch:26.05-py3
 
 docker run --gpus all -it \
     --name edgellm-export \
     -v $(pwd):/workspace \
     -w /workspace \
-    nvcr.io/nvidia/pytorch:25.12-py3 \
+    nvcr.io/nvidia/pytorch:26.05-py3 \
     bash
 ```
 
@@ -222,8 +222,8 @@ pip3 install .
 ### 1.2 Verify Installation
 
 ```bash
-tensorrt-edgellm-export-llm --help
-tensorrt-edgellm-quantize-llm --help
+tensorrt-edgellm-export --help
+tensorrt-edgellm-quantize llm --help
 ```
 
 Both commands should print their usage information without errors.
@@ -244,7 +244,7 @@ Paste your token when prompted. This persists across sessions inside the contain
 
 ### 1.4 Export Cosmos-Reason2-8B (VLM)
 
-Cosmos Reason2 is a vision-language model, so you need to export **two** components: the language model and the visual encoder.
+Cosmos Reason2 is a vision-language model. TensorRT Edge-LLM exports the language model and visual encoder components from the quantized checkpoint with one command.
 
 ```bash
 # Thor Docker users: WORKSPACE_DIR was already set to /workspace/tensorrt-edgellm-workspace in Step 1.1
@@ -262,7 +262,7 @@ mkdir -p $WORKSPACE_DIR && cd $WORKSPACE_DIR
 NVFP4 is the recommended precision for Thor (SM110+), offering 4x memory reduction with native hardware support.
 
 ```bash
-tensorrt-edgellm-quantize-llm \
+tensorrt-edgellm-quantize llm \
     --model_dir nvidia/Cosmos-Reason2-8B \
     --output_dir $MODEL_NAME/quantized \
     --quantization nvfp4
@@ -275,7 +275,7 @@ tensorrt-edgellm-quantize-llm \
 INT4 AWQ reduces the 8B language-model weights to roughly 4 GB. Use it when deploying on Orin devices (SM87) or Thor.
 
 ```bash
-tensorrt-edgellm-quantize-llm \
+tensorrt-edgellm-quantize llm \
     --model_dir nvidia/Cosmos-Reason2-8B \
     --output_dir $MODEL_NAME/quantized \
     --quantization int4_awq
@@ -288,7 +288,7 @@ tensorrt-edgellm-quantize-llm \
 FP8 requires SM89+ at build time. Use this if your target is Thor or an Ada Lovelace+ dev GPU.
 
 ```bash
-tensorrt-edgellm-quantize-llm \
+tensorrt-edgellm-quantize llm \
     --model_dir nvidia/Cosmos-Reason2-8B \
     --output_dir $MODEL_NAME/quantized \
     --quantization fp8
@@ -297,22 +297,12 @@ tensorrt-edgellm-quantize-llm \
 </div>
 </Tabs>
 
-#### Export Language Model to ONNX
+#### Export Checkpoint to ONNX
 
 ```bash
-tensorrt-edgellm-export-llm \
-    --model_dir $MODEL_NAME/quantized \
-    --output_dir $MODEL_NAME/onnx/llm
-```
-
-#### Export Visual Encoder to ONNX
-
-The visual encoder is exported from the original (unquantized) model directory:
-
-```bash
-tensorrt-edgellm-export-visual \
-    --model_dir nvidia/Cosmos-Reason2-8B \
-    --output_dir $MODEL_NAME/onnx/visual
+tensorrt-edgellm-export \
+    $MODEL_NAME/quantized \
+    $MODEL_NAME/onnx
 ```
 
 ### 1.5 Export Qwen3-4B-Instruct (LLM)
@@ -335,14 +325,14 @@ mkdir -p $WORKSPACE_DIR && cd $WORKSPACE_DIR
 INT4 AWQ reduces the 4B model to ~2 GB of weights, leaving plenty of headroom for KV cache on Orin Nano.
 
 ```bash
-tensorrt-edgellm-quantize-llm \
+tensorrt-edgellm-quantize llm \
     --model_dir Qwen/Qwen3-4B-Instruct-2507 \
     --output_dir $MODEL_NAME/quantized \
     --quantization int4_awq
 
-tensorrt-edgellm-export-llm \
-    --model_dir $MODEL_NAME/quantized \
-    --output_dir $MODEL_NAME/onnx
+tensorrt-edgellm-export \
+    $MODEL_NAME/quantized \
+    $MODEL_NAME/onnx
 ```
 
 </div>
@@ -350,14 +340,14 @@ tensorrt-edgellm-export-llm \
 <div class="nv-tab-panel">
 
 ```bash
-tensorrt-edgellm-quantize-llm \
+tensorrt-edgellm-quantize llm \
     --model_dir Qwen/Qwen3-4B-Instruct-2507 \
     --output_dir $MODEL_NAME/quantized \
     --quantization fp8
 
-tensorrt-edgellm-export-llm \
-    --model_dir $MODEL_NAME/quantized \
-    --output_dir $MODEL_NAME/onnx
+tensorrt-edgellm-export \
+    $MODEL_NAME/quantized \
+    $MODEL_NAME/onnx
 ```
 
 </div>
@@ -365,14 +355,14 @@ tensorrt-edgellm-export-llm \
 <div class="nv-tab-panel">
 
 ```bash
-tensorrt-edgellm-quantize-llm \
+tensorrt-edgellm-quantize llm \
     --model_dir Qwen/Qwen3-4B-Instruct-2507 \
     --output_dir $MODEL_NAME/quantized \
     --quantization nvfp4
 
-tensorrt-edgellm-export-llm \
-    --model_dir $MODEL_NAME/quantized \
-    --output_dir $MODEL_NAME/onnx
+tensorrt-edgellm-export \
+    $MODEL_NAME/quantized \
+    $MODEL_NAME/onnx
 ```
 
 </div>
@@ -430,13 +420,13 @@ sudo chown -R $(whoami):$(whoami) tensorrt-edgellm-workspace
 
 ### 2.1 Install Build Dependencies
 
-<Tabs labels={["Jetson Thor (JetPack 7.1)", "Jetson Orin Nano (JetPack 6.2)"]}>
+<Tabs labels={["Jetson Thor (JetPack 7.1 / 7.2)", "Jetson Orin (JetPack 7.2 / R39.2)"]}>
 <div class="nv-tab-panel active">
 
 ```bash
 sudo apt update
 sudo apt install -y cmake build-essential git \
-    cuda-toolkit-13-0 \
+    cuda-toolkit-13-2 \
     libnvinfer-headers-dev libnvinfer-dev libnvonnxparsers-dev
 export PATH=/usr/local/cuda/bin:$PATH
 ```
@@ -448,7 +438,7 @@ export PATH=/usr/local/cuda/bin:$PATH
 ```bash
 sudo apt update
 sudo apt install -y cmake build-essential git \
-    cuda-toolkit-12-6 \
+    cuda-toolkit-13-2 \
     libnvinfer-headers-dev libnvinfer-dev libnvonnxparsers-dev
 export PATH=/usr/local/cuda/bin:$PATH
 ```
@@ -461,6 +451,15 @@ Verify `nvcc` is available:
 ```bash
 nvcc --version
 ```
+
+For Jetson Orin, also confirm the device is running the JetPack 7.2 stack before building:
+
+```bash
+cat /etc/nv_tegra_release
+dpkg-query -W nvidia-l4t-core 'cuda-toolkit-13-2'
+```
+
+Expected versions are Jetson Linux `39.2.x` and `cuda-toolkit-13-2`.
 
 <details class="nv-details">
 <summary>Do not install Ubuntu <code>nvidia-cuda-toolkit</code></summary>
@@ -500,7 +499,9 @@ cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DTRT_PACKAGE_DIR=/usr \
     -DCMAKE_TOOLCHAIN_FILE=cmake/aarch64_linux_toolchain.cmake \
-    -DEMBEDDED_TARGET=jetson-thor
+    -DEMBEDDED_TARGET=jetson-thor \
+    -DCUDA_CTK_VERSION=13.0 \
+    -DENABLE_CUTE_DSL=ALL
 
 make -j$(nproc)
 ```
@@ -518,7 +519,9 @@ cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DTRT_PACKAGE_DIR=/usr \
     -DCMAKE_TOOLCHAIN_FILE=cmake/aarch64_linux_toolchain.cmake \
-    -DEMBEDDED_TARGET=jetson-orin
+    -DEMBEDDED_TARGET=jetson-orin \
+    -DCUDA_CTK_VERSION=13.2 \
+    -DENABLE_CUTE_DSL=ALL
 
 make -j$(nproc)
 ```
@@ -760,6 +763,52 @@ Example output from Qwen3-4B-Instruct INT4 on Orin Nano 8 GB:
 </div>
 </details>
 
+## Performance and Benchmarking
+
+TensorRT Edge-LLM publishes released performance results in its [Performance Benchmarks](https://nvidia.github.io/TensorRT-Edge-LLM/latest/user_guide/performance/performance-benchmarks.html) section. The benchmark page covers Jetson AGX Thor results across LLM and VLM workloads, including prefill latency, prefill throughput, generation throughput, GPU memory usage, visual encoder throughput, and speculative decoding speedups.
+
+For the engines built in this tutorial, use `llm_inference` when you want end-to-end application timing with real JSON requests, and use `llm_bench` when you want synthetic prefill or decode measurements without preparing request files.
+
+Benchmark a built LLM engine:
+
+```bash
+cd ~/TensorRT-Edge-LLM
+
+./build/examples/llm/llm_bench \
+    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
+    --mode prefill \
+    --inputLen 128 \
+    --batchSize 1
+```
+
+Collect a layer-level profile:
+
+```bash
+./build/examples/llm/llm_bench \
+    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
+    --mode generation \
+    --inputLen 128 \
+    --outputLen 128 \
+    --batchSize 1 \
+    --profile
+```
+
+For end-to-end application measurements, run `llm_inference` with `--dumpProfile` and, optionally, `--profileOutputFile`:
+
+```bash
+./build/examples/llm/llm_inference \
+    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
+    --inputFile $WORKSPACE_DIR/input_qwen.json \
+    --outputFile $WORKSPACE_DIR/output_qwen.json \
+    --dumpProfile \
+    --profileOutputFile $WORKSPACE_DIR/profile_qwen.json
+```
+
+<div class="admonition note">
+<p class="admonition-title">Benchmark context</p>
+<p>The released Edge-LLM benchmark tables use default TensorRT Edge-LLM inference settings on Jetson AGX Thor. Local results can vary with Jetson model, power mode, memory pressure, thermal state, CUDA/TensorRT version, batch size, prompt length, and generation length.</p>
+</div>
+
 ## Integrating Edge-LLM in Your C++ Application
 
 The `llm_inference` binary used above is a reference application. For production use (robotics, camera apps, industrial inspection, kiosks), you integrate Edge-LLM directly via the C++ API. The API surface is three calls: create a runtime, capture CUDA graphs, then call `handleRequest()` per query. See the [C++ runtime headers](https://github.com/NVIDIA/TensorRT-Edge-LLM/tree/main/cpp/runtime) and [example application](https://github.com/NVIDIA/TensorRT-Edge-LLM/tree/main/examples/llm) on GitHub.
@@ -770,7 +819,7 @@ The `llm_inference` binary used above is a reference application. For production
 <summary>Why not use plain <code>pip install</code> on Jetson (Thor container)?</summary>
 <div class="nv-details-content">
 
-The generic <code>torch-2.10.0</code> wheel from PyPI does not work on Jetson. It can raise <code>AttributeError: module 'torch._C' has no attribute '_dlpack_exchange_api'</code>. The NVIDIA PyTorch container includes a Jetson-built <code>torch</code> (for example <code>torch 2.10.0a0+...nv25.12</code>). The setup in this tutorial uses <code>--system-site-packages</code> on the venv so that build is visible, <code>pip3 install --no-deps .</code> so pip does not overwrite <code>torch</code>, and a filtered <code>requirements.txt</code> (with <code>torch</code> lines removed) to pull in the remaining packages (transformers, datasets, onnx, etc.) without replacing <code>torch</code> or <code>torchvision</code>.
+The generic PyPI torch wheel does not work on Jetson. It can raise <code>AttributeError: module 'torch._C' has no attribute '_dlpack_exchange_api'</code>. The NVIDIA PyTorch container includes a Jetson-built <code>torch</code>. The setup in this tutorial uses <code>--system-site-packages</code> on the venv so that build is visible, <code>pip3 install --no-deps .</code> so pip does not overwrite <code>torch</code>, and a filtered <code>requirements.txt</code> (with <code>torch</code> lines removed) to pull in the remaining packages (transformers, datasets, onnx, etc.) without replacing <code>torch</code> or <code>torchvision</code>.
 
 </div>
 </details>
@@ -795,7 +844,10 @@ Orin Nano has limited RAM. Reduce parallelism: `make -j4` instead of `make -j$(n
 
 ## References
 
-- [TensorRT Edge-LLM GitHub](https://github.com/NVIDIA/TensorRT-Edge-LLM)  
-- [Supported Models on TensorRT Edge-LLM ](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/main/docs/source/user_guide/getting_started/supported-models.md) 
-- [Official TensorRT Edge-LLM Documentation](https://nvidia.github.io/TensorRT-Edge-LLM/0.6.0/) 
+- [TensorRT Edge-LLM GitHub](https://github.com/NVIDIA/TensorRT-Edge-LLM)
+- [Supported Models on TensorRT Edge-LLM ](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/main/docs/source/user_guide/getting_started/supported-models.md)
+- [Official TensorRT Edge-LLM Documentation](https://nvidia.github.io/TensorRT-Edge-LLM/latest/)
+- [TensorRT Edge-LLM Performance Benchmarks](https://nvidia.github.io/TensorRT-Edge-LLM/latest/user_guide/performance/performance-benchmarks.html)
+- [Jetson Linux R39.2 Release Notes](https://docs.nvidia.com/jetson/archives/r39.2/ReleaseNotes/Jetson_Linux_Release_Notes_r39.2.pdf)
+- [CUDA for Tegra Application Note](https://docs.nvidia.com/cuda/pdf/CUDA-For-Tegra-AppNote.pdf)
 - [Hackster.io: Getting Started with TensorRT Edge-LLM on Jetson Thor](https://www.hackster.io/shahizat/getting-started-with-nvidia-tensorrt-edge-llm-on-jetson-thor-14735e)
