@@ -89,7 +89,7 @@ flowchart LR
 </tr>
 </thead>
 <tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">JetPack</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">7.2 / Jetson Linux R39.2</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">7.1</td></tr>
+<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">JetPack</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">7.2 / Jetson Linux R39.2</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">7.1 / 7.2</td></tr>
 <tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">CUDA</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">13.2 (included)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">13.x (included)</td></tr>
 <tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">TensorRT</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">10.x+ (included)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">10.x+ (included)</td></tr>
 <tr style="background: #ffffff;"><td style="padding: 12px 16px; font-weight: 600; color: #334155;">Storage</td><td style="padding: 12px 16px;">20–50 GB free (ONNX + engines)</td><td style="padding: 12px 16px;">20–50 GB free</td></tr>
@@ -420,13 +420,13 @@ sudo chown -R $(whoami):$(whoami) tensorrt-edgellm-workspace
 
 ### 2.1 Install Build Dependencies
 
-<Tabs labels={["Jetson Thor (JetPack 7.1)", "Jetson Orin (JetPack 7.2 / R39.2)"]}>
+<Tabs labels={["Jetson Thor (JetPack 7.1 / 7.2)", "Jetson Orin (JetPack 7.2 / R39.2)"]}>
 <div class="nv-tab-panel active">
 
 ```bash
 sudo apt update
 sudo apt install -y cmake build-essential git \
-    cuda-toolkit-13-0 \
+    cuda-toolkit-13-2 \
     libnvinfer-headers-dev libnvinfer-dev libnvonnxparsers-dev
 export PATH=/usr/local/cuda/bin:$PATH
 ```
