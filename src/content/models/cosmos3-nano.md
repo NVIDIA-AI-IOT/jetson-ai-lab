@@ -95,5 +95,5 @@ Send an OpenAI-style chat request with an `image_url` (data URI or http URL) plu
 
 ## Additional Resources
 
-- [NGC NVFP4 Checkpoint](https://catalog.ngc.nvidia.com/orgs/nim/teams/nvidia/models/cosmos3-nano-reasoner) - NVFP4 quantized model for vLLM on Thor
+- [NGC NVFP4 Checkpoint](https://catalog.ngc.nvidia.com/orgs/nim/nvidia/models/cosmos3-nano-reasoner/modelopt-nvfp4-full-quantize-final_format_fix) - NVFP4 quantized model for vLLM on Thor
 - [Live VLM WebUI](https://github.com/NVIDIA-AI-IOT/live-vlm-webui) - real-time webcam-to-VLM interface
