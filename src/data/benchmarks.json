@@ -1307,6 +1307,41 @@
           }
         }
       }
+    },
+    {
+      "family": "NVIDIA Cosmos",
+      "name": "Cosmos3 Nano",
+      "releaseDate": "2026-05-30",
+      "capabilities": {
+        "language": true,
+        "vision": true,
+        "audio": false,
+        "vla": false
+      },
+      "isl": 2048,
+      "osl": 128,
+      "engines": {
+        "vLLM": {
+          "NVFP4*": {
+            "concurrency1": {
+              "t5000": 43,
+              "t4000": 39,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 223,
+              "t4000": 164,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        }
+      }
     }
   ]
 }
