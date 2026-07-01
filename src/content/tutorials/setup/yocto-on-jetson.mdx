@@ -31,7 +31,7 @@ You don't have to build anything to try it. In this guide you'll **download a pr
 
 <div class="admonition note">
   <p class="admonition-title">📘 Where to get the images</p>
-  <p>Prebuilt Yocto images are published from the <a href="https://developer.nvidia.com/embedded/jetpack/downloads" target="_blank" rel="noopener">JetPack SDK downloads page</a> (see the <strong>Yocto Images</strong> section / the <a href="https://developer.nvidia.com/embedded/jetpack/downloads/archive-7.2" target="_blank" rel="noopener">JetPack 7.2 downloads archive</a>). If you'd rather build the image yourself, jump to <a href="#from-quick-start-to-production">From quick start to production</a>.</p>
+  <p>Prebuilt Yocto images are published on the <a href="https://developer.nvidia.com/embedded/jetpack/downloads" target="_blank" rel="noopener">JetPack SDK downloads page</a>. Under <strong>Yocto Images</strong>, use the button for your device: <strong>Yocto for Jetson AGX Thor</strong>, <strong>Yocto for Jetson AGX Orin</strong>, or <strong>Yocto for Jetson Orin Nano</strong>. If you'd rather build the image yourself, jump to <a href="#build-your-own-yocto-image">Build your own Yocto image</a>.</p>
 </div>
 
 ## Supported images
@@ -41,13 +41,12 @@ Download the `demo-image-full` tegraflash tarball for your target. Use the tarba
 | Hardware | OE4T `MACHINE` | Tarball name | Rootfs target |
 |----------|----------------|--------------|---------------|
 | Jetson AGX Thor devkit | `jetson-agx-thor-devkit` | `demo-image-full-jetson-agx-thor-devkit.rootfs.tegraflash-tar.zst` | NVMe (`nvme0n1p1`) |
-| Jetson AGX Thor T4000 | `jetson-agx-thor-t4000` | `demo-image-full-jetson-agx-thor-t4000.rootfs.tegraflash-tar.zst` | NVMe (`nvme0n1p1`) |
 | Jetson AGX Orin devkit (64 GB) | `p3737-0000-p3701-0005` | `demo-image-full-p3737-0000-p3701-0005.rootfs.tegraflash-tar.zst` | internal eMMC (`mmcblk0p1`) |
 | Jetson Orin Nano (NVMe) | `jetson-orin-nano-devkit-nvme` | `demo-image-full-jetson-orin-nano-devkit-nvme.rootfs.tegraflash-tar.zst` | NVMe (`nvme0n1p1`) |
 
 <div class="admonition warning">
   <p class="admonition-title">⚠️ Install the NVMe drive first (NVMe targets)</p>
-  <p>For the three NVMe targets, <strong>install the NVMe drive in the Jetson before</strong> putting the device into recovery mode. The flash script writes the root filesystem to the storage target described by the <code>MACHINE</code> configuration.</p>
+  <p>For the two NVMe targets (AGX Thor and Orin Nano), <strong>install the NVMe drive in the Jetson before</strong> putting the device into recovery mode. The flash script writes the root filesystem to the storage target described by the <code>MACHINE</code> configuration.</p>
 </div>
 
 ## Why Yocto?
@@ -142,18 +141,15 @@ gsettings get org.gnome.desktop.media-handling automount-open
 
 ## Step 1: Download the image for your device
 
-From the [JetPack downloads page](https://developer.nvidia.com/embedded/jetpack/downloads) (JetPack 7.2 / Jetson Linux R39.2), download the `.tegraflash-tar.zst` package whose `MACHINE` matches your hardware (see the [Supported images](#supported-images) table). Save it to `~/Downloads` and **leave the filename unchanged**.
+From the [JetPack downloads page](https://developer.nvidia.com/embedded/jetpack/downloads) (JetPack 7.2 / Jetson Linux R39.2), under **Yocto Images**, click the button for your device: **Yocto for Jetson AGX Thor**, **Yocto for Jetson AGX Orin**, or **Yocto for Jetson Orin Nano**. Download the `.tegraflash-tar.zst` package whose `MACHINE` matches your hardware (see the [Supported images](#supported-images) table). Save it to `~/Downloads` and **leave the filename unchanged**.
 
 ## Step 2: Unpack the flash tarball
 
 Set `MACHINE` to your target, then unpack the tarball into a fresh directory. Use the value from the table that matches your hardware:
 
-<Tabs labels={["Thor AGX devkit", "Thor AGX T4000", "Orin AGX 64 GB", "Orin Nano (NVMe)"]}>
+<Tabs labels={["Thor AGX devkit", "Orin AGX 64 GB", "Orin Nano (NVMe)"]}>
   <div class="nv-tab-panel active">
     <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"export MACHINE=\"jetson-agx-thor-devkit\""}</code></pre>
-  </div>
-  <div class="nv-tab-panel">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"export MACHINE=\"jetson-agx-thor-t4000\""}</code></pre>
   </div>
   <div class="nv-tab-panel">
     <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"export MACHINE=\"p3737-0000-p3701-0005\""}</code></pre>
@@ -182,7 +178,7 @@ Connect the host to the Jetson's **recovery USB port** before running the flash 
 
 | Developer kit | Recovery USB port | Diagram |
 |---------------|-------------------|---------|
-| Jetson AGX Thor devkit / T4000 | USB-C port with Force-Recovery functionality (**`5a`**, next to the HDMI connector); use the other USB-C port (`5b`) for power | [Hardware Layout](https://docs.nvidia.com/jetson/agx-thor-devkit/user-guide/latest/hardware_layout.html) |
+| Jetson AGX Thor devkit | USB-C port with Force-Recovery functionality (**`5a`**, next to the HDMI connector); use the other USB-C port (`5b`) for power | [Hardware Layout](https://docs.nvidia.com/jetson/agx-thor-devkit/user-guide/latest/hardware_layout.html) |
 | Jetson AGX Orin devkit (64 GB) | USB Type-C port **next to the 40-pin header** | [Hardware Layout](https://docs.nvidia.com/jetson/agx-orin-devkit/user-guide/latest/hardware_layout.html) |
 | Jetson Orin Nano devkit | USB-C port (**mark 4**) | [Hardware Layout](https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/hardware_layout.html) |
 
@@ -190,7 +186,7 @@ Enter Force Recovery Mode using the sequence for your developer kit:
 
 <Tabs labels={["Thor / Orin AGX (buttons)", "Orin Nano (header pins)"]}>
   <div class="nv-tab-panel active">
-    <p>For kits with <strong>RECOVERY</strong> and <strong>RESET</strong> buttons (Thor AGX devkit, Thor AGX T4000, Orin AGX devkit):</p>
+    <p>For kits with <strong>RECOVERY</strong> and <strong>RESET</strong> buttons (Thor AGX devkit, Orin AGX devkit):</p>
     <ol>
       <li>Power the Jetson carrier board.</li>
       <li><strong>Hold</strong> the <strong>RECOVERY</strong> (Force Recovery) button.</li>
@@ -249,7 +245,7 @@ When flashing completes, bring the device up:
 
 | Target | Next step |
 |--------|-----------|
-| Thor AGX devkit / Thor AGX T4000 | Power cycle or reset the Jetson. |
+| Thor AGX devkit | Power cycle or reset the Jetson. |
 | Orin AGX devkit (64 GB) | The script waits for final device status. Reboot or power cycle if it does not boot automatically. |
 | Orin Nano (NVMe) | The script waits for final device status. Reboot or power cycle if it does not boot automatically. |
 
@@ -423,7 +419,7 @@ Use `Ctrl-A` then `Ctrl-X` to exit `picocom`. Serial access differs per device:
 
 | Hardware | Serial access |
 |----------|---------------|
-| Thor AGX devkit / Thor AGX T4000 | USB CDC-ACM serial from the USB-C port hidden under the lid above the rear ports |
+| Thor AGX devkit | USB CDC-ACM serial from the USB-C port hidden under the lid above the rear ports |
 | Orin AGX devkit (64 GB) | USB CDC-ACM serial from the USB micro-B port |
 | Orin Nano (NVMe) | 3.3 V TTL UART on the button header; use a USB-to-TTL serial adapter |
 
@@ -440,7 +436,7 @@ The prebuilt `demo-image-full` is built from source on the OE4T `tegra-demo-dist
 
 ## References & Next Steps
 
-- [JetPack SDK downloads](https://developer.nvidia.com/embedded/jetpack/downloads): JetPack 7.2 / Jetson Linux R39.2, including the Yocto images ([7.2 archive](https://developer.nvidia.com/embedded/jetpack/downloads/archive-7.2))
+- [JetPack SDK downloads](https://developer.nvidia.com/embedded/jetpack/downloads): JetPack 7.2 / Jetson Linux R39.2, including the Yocto images
 - [OE4T Flashing Basics (`wrynose`)](https://oe4t.github.io/wrynose/Flashing.html): the upstream flashing reference
 - [OE4T `tegra-demo-distro` `wrynose` branch](https://github.com/OE4T/tegra-demo-distro/tree/wrynose) and [`meta-tegra` `wrynose` machine configs](https://github.com/OE4T/meta-tegra/tree/wrynose/conf/machine)
 - [NVIDIA Jetson Linux R39.2: Flashing Support](https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/SD/FlashingSupport.html) and [Quick Start](https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/IN/QuickStart.html)
