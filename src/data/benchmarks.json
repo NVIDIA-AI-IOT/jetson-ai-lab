@@ -151,6 +151,61 @@
     },
     {
       "family": "Nemotron",
+      "name": "Nemotron 3 Super 120B-A12B",
+      "releaseDate": "2025-12-15",
+      "capabilities": {
+        "language": true,
+        "vision": false,
+        "audio": false,
+        "vla": false
+      },
+      "isl": 2048,
+      "osl": 128,
+      "engines": {
+        "vLLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 15,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 40,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        },
+        "llama.cpp": {
+          "Q4_K_M GGUF": {
+            "concurrency1": {
+              "t5000": 10.2,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 10.0,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "family": "Nemotron",
       "name": "Nemotron3 Nano 4B",
       "releaseDate": "2026-03-16",
       "capabilities": {
