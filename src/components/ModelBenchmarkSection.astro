@@ -259,8 +259,8 @@ const ENGINE_COLORS_MAP: Record<string, string> = {
 				const firstQuantName = Object.keys(engineData)[0] ?? null;
 				const firstQuant = Object.values(engineData)[0] ?? { c1: {}, c8: {} };
 				const label = firstQuantName ? `${m.name} (${firstQuantName})` : m.name;
-				return { label, link: m.link ?? null, color: m.color, legendColor: m.color, isMain: false, seriesIndex: si, dnr: new Set(firstQuant.dnr ?? []), oom: new Set(firstQuant.oom ?? []), c1: firstQuant.c1, c8: firstQuant.c8 };
-			}),
+				return { label, link: m.link ?? null, color: m.color, legendColor: m.color, isMain: false, seriesIndex: si, hasData: !!firstQuantName, dnr: new Set(firstQuant.dnr ?? []), oom: new Set(firstQuant.oom ?? []), c1: firstQuant.c1, c8: firstQuant.c8 };
+			}).filter((b) => b.hasData),
 		];
 	}
 
