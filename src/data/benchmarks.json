@@ -1136,6 +1136,61 @@
     },
     {
       "family": "Gemma",
+      "name": "Gemma 4 12B",
+      "releaseDate": "2026-04-02",
+      "capabilities": {
+        "language": true,
+        "vision": true,
+        "audio": false,
+        "vla": false
+      },
+      "isl": 2048,
+      "osl": 128,
+      "engines": {
+        "vLLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 22,
+              "t4000": 22,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 94,
+              "t4000": 73,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        },
+        "llama.cpp": {
+          "Q4_0 QAT GGUF": {
+            "concurrency1": {
+              "t5000": 18,
+              "t4000": 13,
+              "agx_orin_64gb": 11,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 23,
+              "t4000": 11,
+              "agx_orin_64gb": 19,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "family": "Gemma",
       "name": "Gemma 4 26B-A4B",
       "releaseDate": "2026-04-02",
       "capabilities": {
