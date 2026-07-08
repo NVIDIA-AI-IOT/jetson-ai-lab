@@ -256,6 +256,44 @@
               "dgx_spark": null
             }
           }
+        },
+        "vLLM": {
+          "W4A16": {
+            "concurrency1": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 26,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 132,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          },
+          "BF16": {
+            "concurrency1": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 20,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 97,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
         }
       }
     },
@@ -771,7 +809,7 @@
         "vLLM": {
           "NVFP4": {
             "concurrency1": {
-              "t5000": 35,
+              "t5000": 49,
               "t4000": null,
               "agx_orin_64gb": null,
               "orin_nx_16gb": null,
@@ -779,7 +817,7 @@
               "dgx_spark": null
             },
             "concurrency8": {
-              "t5000": 125,
+              "t5000": 139,
               "t4000": null,
               "agx_orin_64gb": null,
               "orin_nx_16gb": null,
@@ -890,6 +928,46 @@
           "orin_nx_16gb": null,
           "orin_nano_8gb": null
         }
+      },
+      "engines": {
+        "vLLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 38,
+              "t4000": 36,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 128,
+              "t4000": 110,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          },
+          "W4A16": {
+            "concurrency1": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 29,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 83,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        }
       }
     },
     {
@@ -920,6 +998,28 @@
           "agx_orin_64gb": null,
           "orin_nx_16gb": null,
           "orin_nano_8gb": null
+        }
+      },
+      "engines": {
+        "vLLM": {
+          "W4A16": {
+            "concurrency1": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 7,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 21,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
         }
       }
     },
@@ -1126,6 +1226,44 @@
               "t5000": null,
               "t4000": null,
               "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        },
+        "vLLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 77,
+              "t4000": 66,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 523,
+              "t4000": 405,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          },
+          "BF16": {
+            "concurrency1": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 32,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 191,
               "orin_nx_16gb": null,
               "orin_nano_8gb": null,
               "dgx_spark": null
@@ -1344,6 +1482,24 @@
               "orin_nano_8gb": null,
               "dgx_spark": null
             }
+          },
+          "BF16": {
+            "concurrency1": {
+              "t5000": 47,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 123,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
           }
         }
       }
@@ -1445,6 +1601,165 @@
               "t5000": 223,
               "t4000": 164,
               "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "family": "Gemma",
+      "name": "Gemma 4 E4B",
+      "releaseDate": "2026-04-02",
+      "capabilities": {
+        "language": true,
+        "vision": true,
+        "audio": false,
+        "vla": false
+      },
+      "isl": 2048,
+      "osl": 128,
+      "engines": {
+        "vLLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 45,
+              "t4000": 39,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 275,
+              "t4000": 199,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          },
+          "W4A16": {
+            "concurrency1": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 32,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 147,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "family": "Qwen",
+      "name": "Qwen3.5-4B",
+      "releaseDate": "2026-02-27",
+      "capabilities": {
+        "language": true,
+        "vision": true,
+        "audio": false,
+        "vla": false
+      },
+      "isl": 2048,
+      "osl": 128,
+      "engines": {
+        "vLLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 60,
+              "t4000": 58,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 292,
+              "t4000": 258,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          },
+          "W4A16": {
+            "concurrency1": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 28,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 122,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "family": "Qwen",
+      "name": "Qwen3.5-9B",
+      "releaseDate": "2026-02-27",
+      "capabilities": {
+        "language": true,
+        "vision": true,
+        "audio": false,
+        "vla": false
+      },
+      "isl": 2048,
+      "osl": 128,
+      "engines": {
+        "vLLM": {
+          "NVFP4": {
+            "concurrency1": {
+              "t5000": 27,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": 154,
+              "t4000": null,
+              "agx_orin_64gb": null,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            }
+          },
+          "W4A16": {
+            "concurrency1": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 17,
+              "orin_nx_16gb": null,
+              "orin_nano_8gb": null,
+              "dgx_spark": null
+            },
+            "concurrency8": {
+              "t5000": null,
+              "t4000": null,
+              "agx_orin_64gb": 73,
               "orin_nx_16gb": null,
               "orin_nano_8gb": null,
               "dgx_spark": null

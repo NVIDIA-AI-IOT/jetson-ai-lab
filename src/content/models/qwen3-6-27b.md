@@ -35,6 +35,7 @@ benchmark:
     concurrency1: 13
     concurrency8: 55
     ttftMs: 0
+benchmark_key: "Qwen3.6-27B"
 ---
 
 Qwen3.6 27B is a dense language model from Alibaba Cloud's Qwen3.6 family. With 27 billion parameters, it delivers strong performance across complex reasoning, coding, and language understanding tasks.
