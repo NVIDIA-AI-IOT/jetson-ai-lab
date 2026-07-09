@@ -48,6 +48,7 @@ supported_inference_engines:
           --reasoning-parser qwen3 \
           --enable-auto-tool-choice \
           --tool-call-parser qwen3_coder
+benchmark_key: "Qwen3.5-4B"
 ---
 
 Qwen3.5 4B offers a balanced point in the Qwen3.5 family for local multimodal instruction following, visual understanding, and agent-style workloads on Jetson.
