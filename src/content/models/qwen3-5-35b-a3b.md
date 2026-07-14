@@ -40,7 +40,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-        vllm serve Kbenkhaled/Qwen3.5-35B-A3B-NVFP4 \
+        vllm serve AxionML/Qwen3.5-35B-A3B-NVFP4 \
           --gpu-memory-utilization 0.8 \
           --enable-prefix-caching \
           --reasoning-parser qwen3 \
@@ -100,7 +100,7 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host \
 ```bash
 sudo docker run -it --rm --pull always --runtime=nvidia --network host \
   ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-  vllm serve Kbenkhaled/Qwen3.5-35B-A3B-NVFP4 \
+  vllm serve AxionML/Qwen3.5-35B-A3B-NVFP4 \
     --gpu-memory-utilization 0.8 --enable-prefix-caching \
     --reasoning-parser qwen3 \
     --enable-auto-tool-choice --tool-call-parser qwen3_coder
@@ -127,6 +127,6 @@ This model supports **Multi-Token Prediction (MTP)** speculative decoding, which
 ## Additional Resources
 
 - [Hugging Face Model](https://huggingface.co/Qwen/Qwen3.5-35B-A3B) - Original model weights
-- [NVFP4 Checkpoint (Thor)](https://huggingface.co/Kbenkhaled/Qwen3.5-35B-A3B-NVFP4) - Quantized for Jetson Thor
+- [NVFP4 Checkpoint (Thor)](https://huggingface.co/AxionML/Qwen3.5-35B-A3B-NVFP4) - Quantized for Jetson Thor
 - [W4A16 Checkpoint (Orin)](https://huggingface.co/Kbenkhaled/Qwen3.5-35B-A3B-quantized.w4a16) - Quantized for Jetson Orin
 

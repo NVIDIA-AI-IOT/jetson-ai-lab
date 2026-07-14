@@ -31,7 +31,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
-        vllm serve Kbenkhaled/Qwen3.5-9B-quantized.w4a16 \
+        vllm serve RedHatAI/Qwen3.5-9B-quantized.w4a16 \
           --gpu-memory-utilization 0.8 \
           --enable-prefix-caching \
           --reasoning-parser qwen3 \
@@ -41,12 +41,13 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-        vllm serve Kbenkhaled/Qwen3.5-9B-NVFP4 \
+        vllm serve AxionML/Qwen3.5-9B-NVFP4 \
           --gpu-memory-utilization 0.8 \
           --enable-prefix-caching \
           --reasoning-parser qwen3 \
           --enable-auto-tool-choice \
           --tool-call-parser qwen3_coder
+benchmark_key: "Qwen3.5-9B"
 ---
 
 Qwen3.5 9B is a dense vision-language model in the Qwen3.5 family aimed at stronger reasoning, visual understanding, and agentic behavior on Jetson. This entry uses a W4A16 checkpoint on Jetson Orin and an NVFP4 checkpoint on Jetson Thor.
@@ -67,6 +68,6 @@ Qwen3.5 9B is a dense vision-language model in the Qwen3.5 family aimed at stron
 ## Additional Resources
 
 - [Original Model](https://huggingface.co/Qwen/Qwen3.5-9B) - Base Qwen3.5 9B checkpoint
-- [W4A16 Checkpoint](https://huggingface.co/Kbenkhaled/Qwen3.5-9B-quantized.w4a16) - Jetson Orin checkpoint
-- [NVFP4 Checkpoint](https://huggingface.co/Kbenkhaled/Qwen3.5-9B-NVFP4) - Jetson Thor checkpoint
+- [W4A16 Checkpoint](https://huggingface.co/RedHatAI/Qwen3.5-9B-quantized.w4a16) - Jetson Orin checkpoint
+- [NVFP4 Checkpoint](https://huggingface.co/AxionML/Qwen3.5-9B-NVFP4) - Jetson Thor checkpoint
 

@@ -66,6 +66,7 @@ serving:
           -v $HOME/.cache/huggingface:/root/.cache/huggingface \
           ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
           llama-server -hf unsloth/gemma-4-E4B:Q4_K_M
+benchmark_key: "Gemma 4 E4B"
 ---
 
 Gemma 4 E4B is a lightweight Gemma 4 model that can be served locally on Jetson with `llama.cpp`. In Google's launch material, E4B is framed as the stronger edge-focused sibling to E2B, combining on-device efficiency with materially better coding, reasoning, and multimodal performance.
