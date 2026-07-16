@@ -1,10 +1,10 @@
 ---
 title: "TensorRT Edge-LLM on Jetson"
-description: "Use NVIDIA TensorRT Edge-LLM with two example models: Cosmos Reason2 8B (VLM) on Jetson Thor and Qwen3-4B-Instruct (LLM) on Jetson Orin Nano. Covers quantization, ONNX export, TensorRT engine builds, and pure C++ on-device inference."
+description: "Use NVIDIA TensorRT Edge-LLM with two example models: Cosmos Reason2 8B (VLM) on Jetson Thor and Qwen3-4B-Instruct (LLM) on Jetson Orin Nano. Covers quantization, ONNX export, TensorRT engine builds, and pure C++ on-device inference. The SDK supports Llama, Qwen3/3.5/3.6, InternVL3/3.5, Phi-4-Multimodal, Nemotron-Nano, Alpamayo R1, and more."
 category: "Model Optimization"
 section: "Edge LLM"
 order: 1
-tags: ["edge-llm", "tensorrt", "cosmos-reason2", "qwen3", "int4", "nvfp4", "quantization", "jetson-thor", "jetson-orin-nano", "vlm", "llm", "memory-optimization", "onnx", "c++"]
+tags: ["edge-llm", "tensorrt", "cosmos-reason2", "qwen3", "qwen3.5", "internvl3", "phi-4-multimodal", "nemotron-nano", "int4", "nvfp4", "quantization", "jetson-thor", "jetson-orin-nano", "vlm", "llm", "memory-optimization", "onnx", "c++"]
 featured: false
 isNew: true
 authors:
@@ -26,6 +26,31 @@ Edge-LLM supports a wide range of LLMs and VLMs across the entire Jetson family,
 |-------|------|------------|-------------|---------------|
 | [Cosmos-Reason2-8B](https://huggingface.co/nvidia/Cosmos-Reason2-8B) | VLM | 8B | NVFP4 | Jetson Thor |
 | [Qwen3-4B-Instruct](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) | LLM | 4B | INT4 AWQ | Jetson Orin Nano 8 GB |
+
+Beyond these two examples, the same export → build → inference workflow applies to the full range of supported model families:
+
+<div style="overflow-x: auto; margin: 1rem 0 2rem;">
+<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden;">
+<thead>
+<tr style="background: #e2e8f0; color: #1e293b;">
+<th style="padding: 10px 14px; text-align: left; font-weight: 600;">Model Family</th>
+<th style="padding: 10px 14px; text-align: left; font-weight: 600;">Type</th>
+<th style="padding: 10px 14px; text-align: left; font-weight: 600;">Jetson Orin</th>
+<th style="padding: 10px 14px; text-align: left; font-weight: 600;">Jetson Thor</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background: #f8fafc;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Llama 3.x Instruct</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">LLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
+<tr style="background: #ffffff;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Qwen3 dense (0.6B–14B)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">LLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
+<tr style="background: #f8fafc;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Qwen3.5 / Qwen3.6 text (0.8B–27B)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">LLM / VLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
+<tr style="background: #ffffff;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Qwen3-VL (2B–8B)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">VLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
+<tr style="background: #f8fafc;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">InternVL3 / InternVL3.5 (1B–14B)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">VLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 AWQ</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
+<tr style="background: #ffffff;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Phi-4-Multimodal</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">VLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
+<tr style="background: #f8fafc;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Nemotron-Nano 4B / 9B</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">LLM (Mamba2+Attention)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">BF16</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">BF16 · FP8 · NVFP4</td></tr>
+<tr style="background: #ffffff;"><td style="padding: 10px 14px; font-weight: 600;">Alpamayo R1</td><td style="padding: 10px 14px;">VLA (robotics)</td><td style="padding: 10px 14px;">FP16</td><td style="padding: 10px 14px;">FP16</td></tr>
+</tbody>
+</table>
+</div>
 
 The workflow:
 
@@ -762,6 +787,73 @@ Example output from Qwen3-4B-Instruct INT4 on Orin Nano 8 GB:
 
 </div>
 </details>
+
+## Trying Other Models
+
+The workflow in Steps 1–4 generalises to any model in the [Supported Models](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/main/docs/source/user_guide/getting_started/supported-models.md) list. Swap the `--model_dir` argument in the quantize and export commands, then rebuild the TensorRT engine on your Jetson. A few worked examples:
+
+### InternVL3 / InternVL3.5
+
+InternVL3 is an open-source VLM family ranging from 1B to 14B. The 1B and 2B models fit Orin Nano with INT4 AWQ; larger variants target AGX Orin or Thor.
+
+```bash
+# Option A: quantize from the original checkpoint
+tensorrt-edgellm-quantize llm \
+    --model_dir OpenGVLab/InternVL3-2B-hf \
+    --output_dir InternVL3-2B/quantized \
+    --quantization int4_awq
+
+tensorrt-edgellm-export \
+    InternVL3-2B/quantized \
+    InternVL3-2B/onnx \
+    --externalize-weights int4_ffn
+
+# Option B: use a pre-quantized AWQ checkpoint (skip the quantize step)
+tensorrt-edgellm-export \
+    OpenGVLab/InternVL3-2B-AWQ \
+    InternVL3-2B/onnx \
+    --externalize-weights int4_ffn
+```
+
+Build and run on your Jetson exactly as in Steps 3–4 (use `llm_build` for the LLM engine and `visual_build` for the vision encoder, then `llm_inference` with `--multimodalEngineDir`).
+
+### Qwen3.5 / Qwen3.6 Text
+
+Qwen3.5 and Qwen3.6 dense text models follow the same workflow as Qwen3. Available sizes are 0.8B, 2B, 4B, 9B, and 27B — there are no separate Instruct checkpoints; the base checkpoints support instruction following directly.
+
+```bash
+# Qwen3.5-4B with INT4 AWQ — fits Orin Nano 8 GB
+tensorrt-edgellm-quantize llm \
+    --model_dir Qwen/Qwen3.5-4B \
+    --output_dir Qwen3.5-4B/quantized \
+    --quantization int4_awq
+
+tensorrt-edgellm-export \
+    Qwen3.5-4B/quantized \
+    Qwen3.5-4B/onnx \
+    --externalize-weights int4_ffn
+```
+
+### Nemotron-Nano 4B
+
+NVIDIA Nemotron-Nano uses a hybrid Mamba2+Attention architecture. Pre-quantized checkpoints export directly — no separate quantize step needed.
+
+```bash
+# NVFP4 pre-quantized — Thor only (SM110+)
+tensorrt-edgellm-export \
+    nvidia/NVIDIA-Nemotron-3-Nano-4B-NVFP4 \
+    Nemotron-Nano-4B/onnx
+
+# BF16 original — Orin (export directly, runs as FP16 on device)
+tensorrt-edgellm-export \
+    nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 \
+    Nemotron-Nano-4B/onnx
+```
+
+<div class="admonition tip">
+<p class="admonition-title">Memory guidance for Orin Nano INT4 builds</p>
+<p>Pass <code>--externalize-weights int4_ffn</code> to <code>tensorrt-edgellm-export</code> for dense INT4 checkpoints to reduce peak engine-build memory. For MoE checkpoints add <code>int4_moe</code> to that flag.</p>
+</div>
 
 ## Performance and Benchmarking
 
