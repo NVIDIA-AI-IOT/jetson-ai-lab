@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:25.09-py3
+ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:26.05-py3
 FROM ${BASE_IMAGE}
 
 RUN apt-get update && \
@@ -38,21 +38,12 @@ RUN apt-get update && \
 
 WORKDIR /workspace
 
-COPY openpi_on_thor/pyproject.toml .
+COPY deployment_scripts/pyproject.toml .
 
 # Set to get precompiled jetson wheels
 RUN export PIP_INDEX_URL=https://pypi.jetson-ai-lab.io/sbsa/cu130 && \
     export PIP_TRUSTED_HOST=pypi.jetson-ai-lab.io && \
-    pip install -e .[thor]
-
-# chex (+ toolz) is needed for JAX→PyTorch conversion (transitive dep of flax/jax).
-# Install with --no-deps to avoid upgrading jax/numpy from the Jetson builds.
-RUN pip install chex --no-deps
-RUN pip install toolz --no-deps
-
-# onnxslim: needed for NVFP4 2DQ format conversion during ONNX export.
-RUN pip install onnxslim
-
-# lerobot: OpenPi expects a specific commit with the lerobot.common module structure.
-RUN pip install "lerobot @ git+https://github.com/huggingface/lerobot@0cf864870cf29f4738d3ade893e6fd13fbd7cdb5" --no-deps
+    python3 -m pip install --ignore-installed --no-deps PyYAML==6.0.2 && \
+    python3 -m pip install -e '.[thor]'  && \
+    pip install onnxslim lief
 

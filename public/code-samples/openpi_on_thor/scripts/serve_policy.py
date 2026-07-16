@@ -2,37 +2,30 @@ import dataclasses
 import enum
 import logging
 import socket
+import sys
 from pathlib import Path
 
 import tyro
-
-# Patch load_pytorch to handle dtype mismatches and tied weights across
-# different safetensors / transformers versions (e.g. 25.09 vs 26.01 containers).
-import safetensors.torch as _st
-from openpi.models_pytorch import pi0_pytorch as _pi0pt
-
-def _load_pytorch_patched(self, train_config, weight_path: str):
-    model = _pi0pt.PI0Pytorch(config=train_config.model)
-    state_dict = _st.load_file(weight_path)
-    model.load_state_dict(state_dict, strict=False)
-    return model
-
-import openpi.models.model as _model_mod
-for _cls in vars(_model_mod).values():
-    if isinstance(_cls, type) and hasattr(_cls, "load_pytorch"):
-        _cls.load_pytorch = _load_pytorch_patched
 
 from openpi.policies import policy as _policy
 from openpi.policies import policy_config as _policy_config
 from openpi.serving import websocket_policy_server
 from openpi.training import config as _config
 
+# Add deployment_scripts to path for TensorRT support
+_script_dir = Path(__file__).parent
+_parent_dir = _script_dir.parent
+_deployment_scripts_dir = _parent_dir / "deployment_scripts"
+if str(_deployment_scripts_dir) not in sys.path:
+    sys.path.insert(0, str(_deployment_scripts_dir))
+
 try:
-    from openpi_on_thor.trt_model_forward import setup_pi0_tensorrt_engine
+    from deployment_scripts.trt_model_forward import setup_pi0_tensorrt_engine
 
     TENSORRT_AVAILABLE = True
 except ImportError:
     TENSORRT_AVAILABLE = False
+    logging.warning("TensorRT support not available. Install TensorRT to enable acceleration.")
 
 
 class EnvMode(enum.Enum):
@@ -118,9 +111,8 @@ def create_policy(args: Args) -> _policy.Policy:
     """Create a policy from the given arguments."""
     match args.policy:
         case Checkpoint():
-            checkpoint_dir = str(Path(args.policy.dir).expanduser())
             return _policy_config.create_trained_policy(
-                _config.get_config(args.policy.config), checkpoint_dir, default_prompt=args.default_prompt
+                _config.get_config(args.policy.config), args.policy.dir, default_prompt=args.default_prompt
             )
         case Default():
             return create_default_policy(args.env, default_prompt=args.default_prompt)
@@ -138,8 +130,9 @@ def main(args: Args) -> None:
                 "  pip install tensorrt cuda-python"
             )
 
+        # Determine engine path
         if args.tensorrt_engine:
-            engine_path = Path(args.tensorrt_engine).expanduser()
+            engine_path = Path(args.tensorrt_engine)
         else:
             # Try to find engine in checkpoint directory
             if isinstance(args.policy, Checkpoint):
@@ -153,9 +146,10 @@ def main(args: Args) -> None:
         if not engine_path.exists():
             raise FileNotFoundError(
                 f"TensorRT engine not found at {engine_path}\n"
-                f"Please run ONNX export and TensorRT engine build first:\n"
-                f"  python openpi_on_thor/pytorch_to_onnx.py ...\n"
-                f"  bash openpi_on_thor/build_engine.sh ..."
+                f"Please run ONNX export and TensorRT conversion first:\n"
+                f"  python deployment_scripts/convert_jax_model_to_onnx.py\n"
+                f"  python deployment_scripts/pytorch_to_onnx.py\n"
+                f"  bash deployment_scripts/build_engine.sh"
             )
 
         logging.info("Setting up TensorRT acceleration from %s", engine_path)

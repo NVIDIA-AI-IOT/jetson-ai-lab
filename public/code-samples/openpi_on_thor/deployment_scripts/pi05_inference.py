@@ -7,7 +7,7 @@ import time
 import numpy as np
 import nvtx
 import torch
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from openpi.policies import policy_config
 from openpi.policies.aloha_policy import make_aloha_example
 from openpi.policies.droid_policy import make_droid_example
@@ -16,25 +16,6 @@ from openpi.training import config as _config
 
 # Configure logging to show INFO messages
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-# ---------------------------------------------------------------------------
-# Patch load_pytorch to handle dtype mismatches and tied weights across
-# different safetensors / transformers versions (e.g. 25.09 vs 26.01 containers).
-# ---------------------------------------------------------------------------
-import safetensors.torch as _st
-from openpi.models_pytorch import pi0_pytorch as _pi0pt
-
-def _load_pytorch_patched(self, train_config, weight_path: str):
-    model = _pi0pt.PI0Pytorch(config=train_config.model)
-    state_dict = _st.load_file(weight_path)
-    model.load_state_dict(state_dict, strict=False)
-    return model
-
-import openpi.models.model as _model_mod
-for _cls in vars(_model_mod).values():
-    if isinstance(_cls, type) and hasattr(_cls, "load_pytorch"):
-        _cls.load_pytorch = _load_pytorch_patched
-# ---------------------------------------------------------------------------
 
 
 def create_synthetic_example(config_name):
@@ -112,6 +93,14 @@ def run_pytorch_inference(config, checkpoint_dir, example, noise=None, num_warmu
     policy = policy_config.create_trained_policy(config, checkpoint_dir)
     print("Policy loaded successfully")
 
+    # Deployment-side hook: align the additive attention mask dtype with the
+    # attention compute dtype before torch.compile traces sample_actions,
+    # otherwise the memory-efficient SDPA kernel raises
+    # "invalid dtype for bias - should match query's dtype".
+    from deployment_scripts.trt_model_forward import install_attention_mask_dtype_fix
+
+    install_attention_mask_dtype_fix(policy._model if hasattr(policy, "_model") else policy.model)
+
     # Warmup runs
     print(f"\nWarming up ({num_warmup} runs)...")
     for i in range(num_warmup):
@@ -174,7 +163,7 @@ def run_tensorrt_inference(
         raise FileNotFoundError(
             f"TensorRT engine not found at {engine_path}\n"
             "Please run ONNX to TensorRT conversion first:\n"
-            "  bash openpi_on_thor/build_engine.sh"
+            "  bash deployment_scripts/build_engine.sh"
         )
 
     print("Loading policy...")
@@ -182,7 +171,7 @@ def run_tensorrt_inference(
     print("Policy loaded successfully")
 
     print("Setting up TensorRT engine...")
-    from openpi_on_thor.trt_model_forward import setup_pi0_tensorrt_engine
+    from deployment_scripts.trt_model_forward import setup_pi0_tensorrt_engine
 
     policy = setup_pi0_tensorrt_engine(
         policy,
@@ -333,7 +322,7 @@ def main():
         "--engine-path",
         type=str,
         default=None,
-        help="Path to TensorRT engine file (default: {checkpoint_dir}/model_fp32.engine)",
+        help="Path to TensorRT engine file (default: {checkpoint_dir}/model_fp16.engine)",
     )
     parser.add_argument(
         "--sample-idx",

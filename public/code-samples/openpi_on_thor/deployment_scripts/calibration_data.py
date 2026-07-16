@@ -6,7 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from openpi.training import config as _config
 from openpi.policies import policy_config
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
 
 class CalibrationDataset(Dataset):

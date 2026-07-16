@@ -1,35 +1,56 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+#
+# Fetch the Jetson Thor deployment overlay for OpenPi pi0.5.
+#
+# Run this from the ROOT of your cloned OpenPi repository, after checking out
+# the pinned commit (15a9616). It adds the deployment_scripts/ folder and
+# applies the TensorRT export patches to examples/, scripts/, and src/.
+#
+# Usage:
+#   git clone --recurse-submodules https://github.com/Physical-Intelligence/openpi.git
+#   cd openpi
+#   git checkout 15a9616a00943ada6c20a0f158e3adb39df2ccac
+#   wget -qO- https://www.jetson-ai-lab.com/code-samples/openpi_on_thor/download.sh | bash
+#
+set -euo pipefail
 
-BASE_URL="https://www.jetson-ai-lab.com/code-samples/openpi_on_thor"
-TARGET_DIR="openpi_on_thor"
+BASE_URL="${OPENPI_THOR_OVERLAY_URL:-https://www.jetson-ai-lab.com/code-samples/openpi_on_thor}"
 
-echo "Downloading OpenPi Jetson Thor deployment scripts..."
-
-mkdir -p "${TARGET_DIR}/patches"
-
+# Files that make up the overlay (paths are relative to the repo root).
 FILES=(
-    thor.Dockerfile
-    pyproject.toml
-    pi05_inference.py
-    pytorch_to_onnx.py
-    build_engine.sh
-    trt_model_forward.py
-    trt_torch.py
-    calibration_data.py
+  deployment_scripts/build_engine.sh
+  deployment_scripts/calibration_data.py
+  deployment_scripts/pi05_inference.py
+  deployment_scripts/pyproject.toml
+  deployment_scripts/pytorch_to_onnx.py
+  deployment_scripts/thor.Dockerfile
+  deployment_scripts/trt_model_forward.py
+  deployment_scripts/trt_torch.py
+  examples/convert_jax_model_to_pytorch.py
+  scripts/serve_policy.py
+  src/openpi/models/model.py
+  src/openpi/models_pytorch/transformers_replace/models/gemma/modeling_gemma.py
 )
 
+# Sanity check: make sure we are at the root of an OpenPi checkout, because the
+# overlay overwrites existing upstream files under examples/, scripts/, and src/.
+if [ ! -d "src/openpi" ]; then
+  echo "ERROR: 'src/openpi' not found in the current directory." >&2
+  echo "Run this script from the root of your cloned OpenPi repository." >&2
+  exit 1
+fi
+
+echo "Fetching Jetson Thor deployment overlay from:"
+echo "  $BASE_URL"
+echo
+
 for f in "${FILES[@]}"; do
-    echo "  Downloading ${f}..."
-    wget -q "${BASE_URL}/${f}" -O "${TARGET_DIR}/${f}"
+  mkdir -p "$(dirname "$f")"
+  echo "  -> $f"
+  wget -q "$BASE_URL/$f" -O "$f"
 done
 
-echo "  Downloading patches/apply_gemma_fixes.py..."
-wget -q "${BASE_URL}/patches/apply_gemma_fixes.py" -O "${TARGET_DIR}/patches/apply_gemma_fixes.py"
-
-chmod +x "${TARGET_DIR}/build_engine.sh"
-
-echo ""
-echo "Done! Scripts downloaded to ${TARGET_DIR}/"
-echo ""
-ls "${TARGET_DIR}/"
+echo
+echo "Overlay applied successfully."
+echo "  - deployment_scripts/ added"
+echo "  - examples/, scripts/, and src/ patches applied"
