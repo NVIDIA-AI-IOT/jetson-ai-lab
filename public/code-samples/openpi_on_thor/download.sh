@@ -50,7 +50,17 @@ for f in "${FILES[@]}"; do
   wget -q "$BASE_URL/$f" -O "$f"
 done
 
+# lerobot 0.3.2 renamed lerobot.common.datasets -> lerobot.datasets. Upstream
+# data_loader.py (pulled in transitively by every inference step via
+# checkpoints.py -> policy_config.py) still uses the old path, so patch it in
+# place to match the lerobot version installed in the Thor image. 
+if [ -f src/openpi/training/data_loader.py ]; then
+  echo "  -> patching src/openpi/training/data_loader.py for lerobot 0.3.2"
+  sed -i 's/lerobot\.common\.datasets/lerobot.datasets/g' src/openpi/training/data_loader.py
+fi
+
 echo
 echo "Overlay applied successfully."
 echo "  - deployment_scripts/ added"
 echo "  - examples/, scripts/, and src/ patches applied"
+echo "  - data_loader.py patched for lerobot 0.3.2"
