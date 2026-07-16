@@ -8,6 +8,8 @@ tags: ["vla", "openpi", "pi0.5", "robotics", "jetson-thor", "tensorrt", "nvfp4",
 authors:
   - name: "Aditya Sahu"
     github: "adsahu-nv"
+  - name: "Anqi Liu"
+    github: "liuanqi-libra7"
 ---
 
 Deploy [Physical Intelligence's](https://www.physicalintelligence.company/) OpenPi **π₀.₅ Vision-Language-Action (VLA)** model on **NVIDIA Jetson AGX Thor** with TensorRT NVFP4 quantization for low-latency end-to-end inference.
@@ -41,13 +43,15 @@ JAX Checkpoint ──► PyTorch ──► ONNX (FP8 + NVFP4) ──► TensorRT
 
 ## Performance
 
-Benchmarked on Jetson AGX Thor Developer Kit (JetPack 7.x, MAXN power mode):
+Benchmarked on Jetson AGX Thor Developer Kit (JetPack 7.2, MAXN power mode), `pi05_libero`, action horizon 10:
 
 | Inference Backend | Total Latency (ms) | Model Latency (ms) | Speedup |
 |---|---|---|---|
-| PyTorch BF16 | ~163 | ~158 | 1.0x |
-| TensorRT FP8 | ~95 | ~91 | 1.71x |
-| **TensorRT FP8 + NVFP4** | **~94** | **~90** | **1.73x** |
+| PyTorch BF16 | ~132 | ~128 | 1.0x |
+| TensorRT FP8 | ~54 | ~53 | 2.4x |
+| **TensorRT FP8 + NVFP4** | **~49** | **~48** | **~2.7x** |
+
+![π₀.₅ end-to-end inference latency on Jetson AGX Thor: PyTorch BF16 vs TensorRT FP8 vs TensorRT FP8+NVFP4](/images/tutorials/pi05-thor-latency.png)
 
 ## Prerequisites
 
@@ -60,16 +64,16 @@ Benchmarked on Jetson AGX Thor Developer Kit (JetPack 7.x, MAXN power mode):
 
 | Component | Required Version |
 |---|---|
-| JetPack | 7.x (L4T R38.x) — tested with JP 7.0 and 7.1 |
-| CUDA | 13.0 |
+| JetPack | 7.2 (L4T R39.x) |
+| CUDA | 13.0+ |
 | Docker | 28.x+ |
 | NVIDIA Container Toolkit | 1.18+ |
 
 > **Check your setup:**
 > ```bash
-> cat /etc/nv_tegra_release   # Should show R38
-> nvidia-smi                   # Should show CUDA 13.0, Thor GPU
-> docker --version             # Docker 28.x
+> cat /etc/nv_tegra_release   # Should show R39
+> nvidia-smi                   # Should show CUDA 13.0 or above, Thor GPU
+> docker --version             # Docker 28.x or newer
 > dpkg-query -W nvidia-container-toolkit
 > ```
 
@@ -84,9 +88,6 @@ sudo nvpmodel -m 0
 
 # Lock all clocks to maximum frequency
 sudo jetson_clocks
-
-# Disable GPU railgate
-sudo sh -c 'echo on > /sys/bus/pci/devices/0000:01:00.0/power/control'
 ```
 
 Verify with:
@@ -95,46 +96,49 @@ Verify with:
 sudo jetson_clocks --show
 ```
 
+> **JetPack 7.0 GA only:** if you see the GPU railgating (clocks dropping when
+> idle), disable it explicitly. This is not needed on JP 7.1 / 7.2:
+> ```bash
+> sudo sh -c 'echo on > /sys/bus/pci/devices/0000:01:00.0/power/control'
+> ```
 
-## Step 2: Clone the OpenPi Repository
 
-The deployment scripts in this tutorial were tested against a specific commit of the OpenPi repo. Pin to that commit for reproducibility:
+## Step 2: Clone the Repository and Add the Deployment Scripts
+
+### 2.1 Clone OpenPi (pinned to a validated commit)
+
+Clone the upstream [OpenPi](https://github.com/Physical-Intelligence/openpi) repository (with submodules) and check out the exact commit this tutorial was validated against. Pinning to a fixed commit means future upstream changes cannot silently break the steps below.
 
 ```bash
 git clone --recurse-submodules https://github.com/Physical-Intelligence/openpi.git
 cd openpi
-git checkout 175f89c3
+git checkout 15a9616a00943ada6c20a0f158e3adb39df2ccac
 ```
 
-> **Tip:** You can try the latest `main` branch (`git checkout main`) if you want the newest features, but if something breaks during conversion or export, fall back to the pinned commit above.
+> **Note:** Pinned to commit `15a9616` (`update output objects to support batching`, 2026-06-16). The full FP8 + NVFP4 pipeline in this tutorial has been validated end-to-end on this commit.
 
+### 2.2 Add the Jetson Thor Deployment Scripts
 
-## Step 3: Download Jetson Thor Deployment Scripts
-
-The OpenPi repo does not include the Jetson Thor deployment scripts by default. Download them into the cloned repo:
+Upstream OpenPi does not include the Jetson Thor deployment scripts or the TensorRT export patches. From the **root of the checkout** (`openpi/`), run the helper script to add them:
 
 ```bash
 wget -qO- https://www.jetson-ai-lab.com/code-samples/openpi_on_thor/download.sh | bash
 ```
 
-This downloads the Dockerfile, inference scripts, ONNX export tools, and TensorRT engine builder into the `openpi_on_thor/` folder.
+This fetches the `deployment_scripts/` folder (`thor.Dockerfile`, `pyproject.toml`, `pi05_inference.py`, `pytorch_to_onnx.py`, `build_engine.sh`, `trt_model_forward.py`, `trt_torch.py`, `calibration_data.py`) and applies four small patches on top of the pinned upstream commit:
 
-Verify:
-
-```bash
-ls openpi_on_thor/
-# thor.Dockerfile  pyproject.toml  pi05_inference.py  pytorch_to_onnx.py
-# build_engine.sh  trt_model_forward.py  trt_torch.py  calibration_data.py
-# patches/apply_gemma_fixes.py
-```
+- `examples/convert_jax_model_to_pytorch.py`
+- `scripts/serve_policy.py`
+- `src/openpi/models/model.py`
+- `src/openpi/models_pytorch/transformers_replace/models/gemma/modeling_gemma.py`
 
 
-## Step 4: Build the Docker Image for Jetson Thor
+## Step 3: Build the Docker Image for Jetson Thor
 
-The Dockerfile at `openpi_on_thor/thor.Dockerfile` uses the [NVIDIA PyTorch container](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) as the base and installs all dependencies from the [Jetson AI Lab pip index](https://pypi.jetson-ai-lab.io).
+The Dockerfile at `deployment_scripts/thor.Dockerfile` uses the [NVIDIA PyTorch container](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) as the base and installs all dependencies from the [Jetson AI Lab pip index](https://pypi.jetson-ai-lab.io).
 
 ```bash
-sudo docker build -t openpi-pi0.5:latest -f openpi_on_thor/thor.Dockerfile .
+sudo docker build -t openpi-pi0.5:l4t-jp7.2 -f deployment_scripts/thor.Dockerfile .
 ```
 
 > **Note:** The first build takes 15–20 minutes. Subsequent builds use Docker cache and are much faster.
@@ -142,40 +146,43 @@ sudo docker build -t openpi-pi0.5:latest -f openpi_on_thor/thor.Dockerfile .
 <details>
 <summary><strong>What the Dockerfile does (click to expand)</strong></summary>
 
-- **Base image:** `nvcr.io/nvidia/pytorch:25.09-py3` (PyTorch + CUDA + TensorRT + ModelOpt pre-installed)
+- **Base image:** `nvcr.io/nvidia/pytorch:26.05-py3` (PyTorch + CUDA + TensorRT + ModelOpt pre-installed)
 - **Pip index:** `https://pypi.jetson-ai-lab.io/sbsa/cu130` (precompiled aarch64 wheels)
-- **Installs:** OpenPi with `[thor]` extras — includes `onnx`, `onnxruntime`, `onnx_graphsurgeon`, `nvtx`, `torchcodec`, `diffusers`, and more
-- **Extra deps:** `chex`, `toolz` (installed with `--no-deps` to avoid JAX/NumPy conflicts), `onnxslim` (for ONNX optimization), `lerobot` (pinned to a specific commit for API compatibility)
+- **Installs (in order):**
+  1. `PyYAML==6.0.2` with `--no-deps` — pinned up front so dependency resolution can't pull a conflicting version
+  2. OpenPi in editable mode with the `[thor]` extras — Thor-specific wheels including `torchcodec`, `onnxruntime`, `onnx_graphsurgeon`, `onnxscript`, `onnx-ir`, `ml-dtypes`, `diffusers`, `decord2`, `nvtx` (on top of core deps such as `onnx`, `transformers`, `jax`, `lerobot`, `chex`)
+  3. `onnxslim` and `lief`
 - **System packages:** ffmpeg, OpenCV dependencies, build tools
 
 </details>
 
 
-## Step 5: Launch the Docker Container
+## Step 4: Launch the Docker Container
 
 ```bash
 sudo docker run --rm -it --runtime nvidia \
   -v "$PWD":/workspace \
   -v "$HOME/.cache/openpi":/root/.cache/openpi \
+  -v "$HOME/.cache/huggingface":/root/.cache/huggingface \
   -w /workspace \
   -p 8000:8000 \
-  openpi-pi0.5:latest
+  openpi-pi0.5:l4t-jp7.2
 ```
 
-> **Tip:** The `-v "$HOME/.cache/openpi":/root/.cache/openpi` mount persists downloaded checkpoints, converted models, and TensorRT engines across container restarts. Without it, you'd need to re-download and re-convert everything each time.
+> **Tip:** The `-v "$HOME/.cache/openpi":/root/.cache/openpi` mount persists downloaded checkpoints, converted models, and TensorRT engines across container restarts. Without it, you'd need to re-download and re-convert everything each time. The `~/.cache/huggingface` mount reuses your `hf auth login` token so the FP8 calibration dataset (Step 9) can download without re-authenticating.
 
 **You are now inside the container.** All remaining steps run inside this shell.
 
 
-## Step 6: Configure the Environment (Inside Container)
+## Step 5: Configure the Environment (Inside Container)
 
-### 6.1 Set PYTHONPATH
+### 5.1 Set PYTHONPATH
 
 ```bash
 export PYTHONPATH=packages/openpi-client/src:src:.:$PYTHONPATH
 ```
 
-### 6.2 Choose a Model Config
+### 5.2 Choose a Model Config
 
 Pick the config name for your target robot/task. We'll use `pi05_libero` as the running example.
 
@@ -191,7 +198,7 @@ Available configs:
 | `pi05_droid` | DROID (Franka) | Fine-tuned on DROID dataset, good generalization |
 | `pi05_aloha` | ALOHA | For bimanual ALOHA platforms |
 
-### 6.3 Apply Transformers Library Patches
+### 5.3 Apply Transformers Library Patches
 
 OpenPi requires patched versions of several HuggingFace Transformers files (for AdaRMS normalization, precision control, and KV cache behavior).
 
@@ -200,28 +207,9 @@ cp -r ./src/openpi/models_pytorch/transformers_replace/* \
   /usr/local/lib/python3.12/dist-packages/transformers/
 ```
 
-### 6.4 Apply ONNX/TRT Compatibility Fixes
+These files already include the ONNX/TensorRT compatibility fixes needed for NVFP4 export (the `GemmaRMSNorm.extra_repr()` guard and the explicit attention reshape dimension), so no additional patching step is required.
 
-The upstream transformers patches need two small fixes for TensorRT NVFP4 export:
-
-1. **`GemmaRMSNorm.extra_repr()`** — add a guard so ONNX tracing doesn't crash when the `weight` attribute is absent (adaptive-norm layers use `.dense` instead).
-2. **`GemmaAttention.forward()`** — replace `reshape(*input_shape, -1)` with an explicit dimension (`num_attention_heads * head_dim`). Without this, all dimensions appear dynamic in the ONNX graph and TensorRT's FP4 block quantization fails.
-
-```bash
-python openpi_on_thor/patches/apply_gemma_fixes.py
-```
-
-Expected output:
-
-```
-Applying ONNX/TRT compatibility fixes to modeling_gemma.py...
-  [1/2] Applied hasattr guard in GemmaRMSNorm.extra_repr()
-  [2/2] Applied explicit reshape dimension in GemmaAttention.forward()
-  Patched: /usr/local/lib/python3.12/dist-packages/transformers/models/gemma/modeling_gemma.py
-Done.
-```
-
-## Step 7: Download the JAX Checkpoint
+## Step 6: Download the JAX Checkpoint
 
 The model checkpoints are stored on Google Cloud Storage and are downloaded automatically. The download includes both the model parameters and normalization assets.
 
@@ -238,7 +226,7 @@ print(f'Checkpoint downloaded to: {checkpoint_dir}')
 The checkpoint will be cached at `~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}/`.
 
 
-## Step 8: Convert JAX Checkpoint to PyTorch
+## Step 7: Convert JAX Checkpoint to PyTorch
 
 Convert the original JAX/Flax checkpoint to PyTorch SafeTensors format:
 
@@ -258,25 +246,18 @@ Model conversion completed successfully!
 Model saved to /root/.cache/openpi/openpi-assets/checkpoints/pi05_libero_pytorch
 ```
 
-**Copy the normalization assets** into the PyTorch checkpoint directory (the conversion script does not copy them automatically):
-
-```bash
-cp -r ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}/assets \
-  ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch/
-```
-
-The output directory now contains:
+The conversion script also copies the normalization `assets/` into the output directory automatically, so no manual copy is needed. The output directory contains:
 - `model.safetensors` — PyTorch weights
 - `config.json` — model architecture metadata
 - `assets/` — normalization stats (needed for inference)
 
 
-## Step 9: (Optional) Verify PyTorch Inference
+## Step 8: (Optional) Verify PyTorch Inference
 
 Before quantizing, confirm the PyTorch model works correctly:
 
 ```bash
-python openpi_on_thor/pi05_inference.py \
+python deployment_scripts/pi05_inference.py \
   --config-name ${CONFIG_NAME} \
   --checkpoint-dir ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch \
   --inference-mode pytorch \
@@ -284,27 +265,27 @@ python openpi_on_thor/pi05_inference.py \
   --num-test-runs 5
 ```
 
-Expected output (~163 ms per inference on Thor, MAXN mode):
+Expected output (~132 ms per inference on Thor, MAXN mode, `torch.compile` BF16):
 
 ```
 ============================================================
 Results:
 ============================================================
 Actions shape: (10, 7)
-Actions range: [-0.4826, 0.9994]
-Total inference time: 162.64 ± 0.37 ms
-    (min: 162.34, max: 163.32)
-Model inference time: 157.94 ± 0.35 ms
-    (min: 157.63, max: 158.60)
+Actions range: [-0.4481, 1.0103]
+Total inference time: 132.00 ± 0.89 ms
+    (min: 131.46, max: 133.77)
+Model inference time: 128.34 ± 0.60 ms
+    (min: 127.95, max: 129.53)
 ```
 
 
-## Step 10: Export to ONNX with NVFP4 Quantization
+## Step 9: Export to ONNX with NVFP4 Quantization
 
 This step converts the PyTorch model to ONNX format with **FP8 + NVFP4** quantization using [NVIDIA ModelOpt](https://github.com/NVIDIA/TensorRT-Model-Optimizer):
 
 ```bash
-python openpi_on_thor/pytorch_to_onnx.py \
+python deployment_scripts/pytorch_to_onnx.py \
   --checkpoint_dir ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch \
   --output_path ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch \
   --config_name ${CONFIG_NAME} \
@@ -328,29 +309,35 @@ The ONNX model is saved to:
 <details>
 <summary><strong>Other precision options (click to expand)</strong></summary>
 
-| Flag | Precision | Latency | Notes |
+| Flag | Precision | Model Latency | Notes |
 |---|---|---|---|
-| `--precision fp8 --quantize_attention_matmul` | FP8 | ~95 ms | Good accuracy/speed tradeoff |
-| **`--precision fp8 --enable_llm_nvfp4 --quantize_attention_matmul`** | **FP8 + NVFP4** | **~94 ms** | **Recommended — best latency** |
+| `--precision fp8 --quantize_attention_matmul` | FP8 | ~53 ms | Most stable accuracy (cosine ≈ 0.9995) |
+| **`--precision fp8 --enable_llm_nvfp4 --quantize_attention_matmul`** | **FP8 + NVFP4** | **~48 ms** | Fastest; accuracy typically ≈ 0.99, see Step 12 |
 
 > **Note:** Pure FP16 (`--precision fp16`) is not supported. The Pi0.5 model uses BF16 natively (8-bit exponent). FP16 has a much smaller dynamic range (5-bit exponent), causing overflow in the Gemma attention layers that compounds over the denoising loop.
 
 </details>
 
 
-## Step 11: Build TensorRT Engine
+## Step 10: Build TensorRT Engine
 
 Compile the ONNX model into a TensorRT engine using `trtexec`:
 
 ```bash
-ACTION_HORIZON=10 bash openpi_on_thor/build_engine.sh \
+ACTION_HORIZON=10 bash deployment_scripts/build_engine.sh \
   ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch/onnx/model_fp8_nvfp4.onnx \
   ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch/engine/model_fp8_nvfp4.engine
 ```
 
 > **Note:** `ACTION_HORIZON=10` matches the default for `pi05_libero`. Adjust if using a different config (check `config.model.action_horizon`).
 
-This step takes **10–30 minutes** on Thor as `trtexec` optimizes the graph, selects kernels, and compiles CUDA code. The build log is saved alongside the engine file.
+> **Language length:** the engine is built with a fixed language sequence length
+> of **208** tokens (a multiple of 16 for better TensorRT performance). At runtime
+> the inference script automatically pads shorter prompts and truncates longer
+> ones to this length, so no action is needed unless your prompts routinely exceed
+> ~208 tokens.
+
+This step takes **10–30 minutes** on Thor as `trtexec` optimizes the graph, selects kernels, and compiles CUDA code (it also captures a CUDA graph via `--useCudaGraph`). The build log is saved alongside the engine file.
 
 When complete:
 
@@ -360,12 +347,12 @@ TensorRT engine built successfully!
 ```
 
 
-## Step 12: Run TensorRT NVFP4 Inference
+## Step 11: Run TensorRT NVFP4 Inference
 
 Run the optimized TensorRT engine:
 
 ```bash
-python openpi_on_thor/pi05_inference.py \
+python deployment_scripts/pi05_inference.py \
   --config-name ${CONFIG_NAME} \
   --checkpoint-dir ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch \
   --engine-path ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch/engine/model_fp8_nvfp4.engine \
@@ -374,62 +361,81 @@ python openpi_on_thor/pi05_inference.py \
   --num-test-runs 10
 ```
 
-**Expected output (~96 ms on Thor, MAXN mode):**
+On startup you should see the runtime hooks activate:
+
+```
+  [trt hooks] tokenize cache installed (OPENPI_TOKENIZE_CACHE=0 to disable)
+  [trt hooks] fast infer installed: Observation validation bypassed (OPENPI_FAST_INFER=0 to disable)
+[trt_torch] CUDA graph captured (1 shape signature(s))
+```
+
+**Expected output (~49 ms on Thor, MAXN mode, FP8 + NVFP4):**
 
 ```
 ============================================================
 Results:
 ============================================================
 Actions shape: (10, 7)
-Actions range: [-0.3147, 0.8649]
-Total inference time: 96.42 ± 0.33 ms
-    (min: 95.98, max: 96.91)
-Model inference time: 91.99 ± 0.26 ms
-    (min: 91.70, max: 92.54)
+Actions range: [-1.0322, 0.9781]
+Total inference time: 48.84 ± 0.16 ms
+    (min: 48.70, max: 49.48)
+Model inference time: 48.08 ± 0.11 ms
+    (min: 47.99, max: 48.53)
 ```
+
+> **Runtime knobs (all enabled by default, set to `0` to disable):**
+> `OPENPI_FAST_INFER` (skip observation validation), `OPENPI_TOKENIZE_CACHE`
+> (cache tokenizer results), `OPENPI_MASK_DTYPE_FIX` (attention-mask dtype fix for
+> the PyTorch `torch.compile` path), and `TRT_TORCH_CUDA_GRAPH` (CUDA-graph replay
+> of the engine enqueue).
 
 ---
 
-## Step 13: (Optional) Compare PyTorch vs TensorRT
+## Step 12: (Optional) Compare PyTorch vs TensorRT
+
+<details>
+<summary><strong>Compare accuracy and speedup against PyTorch (click to expand)</strong></summary>
 
 The inference script has a built-in comparison mode that runs **both backends** with identical inputs and reports accuracy differences:
 
 ```bash
-python openpi_on_thor/pi05_inference.py \
+python deployment_scripts/pi05_inference.py \
   --config-name ${CONFIG_NAME} \
   --checkpoint-dir ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch \
   --engine-path ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch/engine/model_fp8_nvfp4.engine \
-  --inference-mode compare \
-  --num-warmup 3 \
-  --num-test-runs 10
+  --inference-mode compare
 ```
 
-**Expected comparison output:**
+**Expected comparison output (FP8 + NVFP4):**
 
 ```
 Cosine Similarity:
-  - Overall: 0.99557564
-  - Per-timestep Mean: 0.99580561
-  - Per-timestep Min:  0.99352367
-  - Per-timestep Max:  0.99797150
+  - Overall: 0.99456406
+  - Per-timestep Mean: 0.99467865
+  - Per-timestep Min:  0.98825477
+  - Per-timestep Max:  0.99778910
 
 Speedup:
-  - Total: 1.71x
-  - Model: 1.75x
+  - Total: 2.69x
+  - Model: 2.66x
 ```
 
 Key metrics:
-- **Cosine similarity** > 0.99 across all timesteps confirms the TRT engine faithfully reproduces PyTorch behavior
-- **1.7× speedup** over PyTorch BF16 inference
+- **Cosine similarity** ≈ 0.99 confirms the TRT engine faithfully reproduces PyTorch behavior
+- **~2.7× speedup** over PyTorch BF16 inference
+
+> **Note:** `compare` mode draws a fresh random noise each run (fed identically to both backends), so the cosine value varies slightly from run to run. For a reproducible number, pin the noise with `--golden-noise-path=golden_noise.npy`.
+
+</details>
 
 ---
 
-## Step 14: (Optional) Launch Inference Server
+## Step 13: (Optional) Launch Inference Server
 
 For production robotics deployment, launch a WebSocket policy server that robots can query over the network:
 
 ```bash
-python openpi_on_thor/serve_policy.py \
+python scripts/serve_policy.py \
   --use-tensorrt \
   --tensorrt-engine ~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch/engine/model_fp8_nvfp4.engine \
   --port 8000 \
@@ -438,7 +444,7 @@ python openpi_on_thor/serve_policy.py \
   --policy.dir=~/.cache/openpi/openpi-assets/checkpoints/${CONFIG_NAME}_pytorch
 ```
 
-> **Note:** This uses `openpi_on_thor/serve_policy.py` which extends OpenPi's `serve_policy.py` with TensorRT support. To serve without TensorRT (PyTorch only), omit `--use-tensorrt` and `--tensorrt-engine`.
+> **Note:** This uses OpenPi's `scripts/serve_policy.py`, extended in this fork with TensorRT support (`--use-tensorrt` / `--tensorrt-engine`, backed by `deployment_scripts/trt_model_forward.py`). To serve without TensorRT (PyTorch only), omit `--use-tensorrt` and `--tensorrt-engine`.
 
 The server listens on `0.0.0.0:8000` and accepts observations via WebSocket. A robot client can then query it:
 
@@ -469,21 +475,19 @@ actions = action_chunk["actions"]  # (10, 7) action trajectory
 | Issue | Solution |
 |---|---|
 | `docker build` fails pulling base image | Ensure network access to `nvcr.io`. Try `docker login nvcr.io` |
-| `trtexec` not found | It should be at `/usr/src/tensorrt/bin/trtexec` inside the container |
 | TensorRT engine build OOM | Reduce `MAX_BATCH` to 1 in `build_engine.sh` |
-| `fp16 precision has been set...but fp16 is not configured` | The `build_engine.sh` script needs `--fp16 --fp8` flags for `trtexec`. Ensure you're using the latest version. |
-| ONNX export `GemmaRMSNorm` `AttributeError` | The `pytorch_to_onnx.py` script uses `dynamo=False` to avoid this. Ensure you're using the latest `openpi_on_thor/` scripts. |
-| ONNX export fails | Ensure transformers patches were applied (Step 6.3) and `PYTHONPATH` is set (Step 6.1) |
-| `ModuleNotFoundError: No module named 'openpi'` | `PYTHONPATH` is not set. Run Step 6.1: `export PYTHONPATH=packages/openpi-client/src:src:.:$PYTHONPATH` |
-| `ModuleNotFoundError: No module named 'chex'` | Run `pip install chex --no-deps && pip install toolz --no-deps`. **Do NOT** omit `--no-deps` — it will upgrade jax/numpy and break the environment. The Dockerfile already includes this fix. |
-| `No module named 'onnxslim'` | Run `pip install onnxslim` inside the container. The Dockerfile already includes this. |
-| NVFP4 `TRT_FP4DynamicQuantize` blocked axis error | The Gemma attention reshape uses `-1` which makes dims appear dynamic. Run Step 6.4 (`apply_gemma_fixes.py`) to replace with explicit dims. |
-| NVFP4 `TRT_FP4QDQ` / `fp4qdq_to_2dq` not found | ModelOpt in `26.01-py3` may lack `fp4qdq_to_2dq`. Use `25.09-py3` base image (default) which includes full NVFP4 support. |
+| `ModuleNotFoundError: No module named 'openpi'` | `PYTHONPATH` is not set. Run Step 5.1: `export PYTHONPATH=packages/openpi-client/src:src:.:$PYTHONPATH` |
+| ONNX export fails | Ensure transformers patches were applied (Step 5.3) and `PYTHONPATH` is set (Step 5.1) |
+| NVFP4 `TRT_FP4DynamicQuantize` blocked axis error | The Gemma attention reshape must use an explicit dimension (not `-1`). The shipped `transformers_replace` already includes this fix — make sure you completed the copy in Step 5.3. |
 | Checkpoint download fails | Check internet connectivity; GCS URLs require no auth for public checkpoints |
-| GPU railgate re-enables after reboot | Re-run the `echo on > .../power/control` command after each boot |
-| `ImportError: modelopt` | Ensure you're using the `[thor]` Docker image; `nvidia-modelopt` is pre-installed |
-| Low cosine similarity (< 0.99) in compare mode | Ensure you built the engine with `--stronglyTyped` (the default `build_engine.sh` includes this) and are using the latest `pytorch_to_onnx.py` which performs denoising-loop accumulation in FP32. Re-export ONNX and rebuild the engine. |
+| Low cosine similarity (< 0.99) in compare mode | First re-run a few times — `compare` uses random noise per run and a single unlucky draw can dip low (average several runs or pin `--golden-noise-path`). If it is *consistently* low, try FP8-only (drop `--enable_llm_nvfp4`) to isolate NVFP4, then re-export and rebuild. |
 | HuggingFace dataset download needs token | Set `export HF_TOKEN=<your_token>` if using `--use-dataset` flag |
+
+---
+
+## Acknowledgments
+
+These TensorRT optimizations were inspired in part by the [FlashRT](https://github.com/flashrt-project/FlashRT) community project, whose published Jetson Thor inference results helped motivate this work.
 
 ---
 
@@ -494,4 +498,5 @@ actions = action_chunk["actions"]  # (10, 7) action trajectory
 - [Physical Intelligence — FAST Tokenizer](https://www.physicalintelligence.company/research/fast)
 - [NVIDIA TensorRT Documentation](https://docs.nvidia.com/deeplearning/tensorrt/)
 - [NVIDIA ModelOpt (Quantization)](https://github.com/NVIDIA/TensorRT-Model-Optimizer)
+- [FlashRT GitHub](https://github.com/flashrt-project/FlashRT)
 

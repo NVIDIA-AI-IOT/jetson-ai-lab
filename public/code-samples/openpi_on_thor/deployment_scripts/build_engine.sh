@@ -8,7 +8,7 @@
 #
 # Run without arguments to auto-detect ONNX file and see full configuration.
 
-set -eo pipefail
+set -e
 
 if [ ! -e /usr/src/tensorrt/bin/trtexec ]; then
     echo "Error: trtexec not found. Please install TensorRT"
@@ -21,7 +21,7 @@ ENGINE_PATH="${ENGINE_PATH:-${2}}"
 MAX_BATCH="${MAX_BATCH:-${3:-4}}"
 OPT_BATCH="${OPT_BATCH:-${4:-1}}"
 MIN_BATCH="${MIN_BATCH:-${5:-1}}"
-ACTION_HORIZON="${ACTION_HORIZON:-${6:-15}}"
+ACTION_HORIZON="${ACTION_HORIZON:-${6:-10}}"
 
 if [ -z "$ONNX_PATH" ]; then
     ONNX_DIR="${ONNX_DIR:-$DEFAULT_ONNX_DIR}"
@@ -44,53 +44,38 @@ NUM_IMAGES=3
 IMAGE_CHANNELS=$((NUM_IMAGES * 3))
 IMAGE_SIZE=224
 
-MIN_SEQ_LEN="${MIN_SEQ_LEN:-64}"
-OPT_SEQ_LEN="${OPT_SEQ_LEN:-128}"
-MAX_SEQ_LEN="${MAX_SEQ_LEN:-256}"
+MAX_SEQ_LEN=208 # Use a multiple of 16 for better TensorRT performance.
 
 STATE_DIM=32
 ACTION_DIM=32
 
 mkdir -p "$(dirname "$ENGINE_PATH")"
 
-# Auto-detect precision flags from ONNX filename.
-# --stronglyTyped preserves FP32 precision for numerically sensitive operations
-# (softmax, RMSNorm) and FP32 denoising loop accumulation.
-ONNX_BASENAME=$(basename "$ONNX_PATH" .onnx)
-if [[ "$ONNX_BASENAME" == *"fp8"* ]] || [[ "$ONNX_BASENAME" == *"nvfp4"* ]]; then
-    PRECISION_FLAGS="--fp16 --fp8 --stronglyTyped"
-else
-    PRECISION_FLAGS="--fp16 --stronglyTyped"
-    echo "WARNING: No FP8/NVFP4 quantization detected in ONNX filename."
-    echo "  For best accuracy and performance, use FP8+NVFP4 quantization (see Step 10)."
-    echo ""
-fi
-
 echo "Converting ONNX model to TensorRT engine..."
 echo "Configuration:"
 echo "  ONNX Path: $ONNX_PATH"
 echo "  Engine Path: $ENGINE_PATH"
-echo "  Precision Flags: $PRECISION_FLAGS"
 echo "  Batch Sizes: min=$MIN_BATCH, opt=$OPT_BATCH, max=$MAX_BATCH"
-echo "  Sequence Lengths: min=$MIN_SEQ_LEN, opt=$OPT_SEQ_LEN, max=$MAX_SEQ_LEN"
 echo "  Action Horizon: $ACTION_HORIZON"
 echo ""
 
 /usr/src/tensorrt/bin/trtexec \
     --onnx="$ONNX_PATH" \
     --saveEngine="$ENGINE_PATH" \
-    $PRECISION_FLAGS \
     --useCudaGraph \
     --verbose \
+    --stronglyTyped \
     --separateProfileRun \
     --profilingVerbosity=detailed \
     --dumpProfile \
     --dumpLayerInfo \
     --noDataTransfers \
-    --minShapes=images:${MIN_BATCH}x${IMAGE_CHANNELS}x${IMAGE_SIZE}x${IMAGE_SIZE},img_masks:${MIN_BATCH}x${NUM_IMAGES},lang_tokens:${MIN_BATCH}x${MIN_SEQ_LEN},lang_masks:${MIN_BATCH}x${MIN_SEQ_LEN},state:${MIN_BATCH}x${STATE_DIM},noise:${MIN_BATCH}x${ACTION_HORIZON}x${ACTION_DIM} \
-    --optShapes=images:${OPT_BATCH}x${IMAGE_CHANNELS}x${IMAGE_SIZE}x${IMAGE_SIZE},img_masks:${OPT_BATCH}x${NUM_IMAGES},lang_tokens:${OPT_BATCH}x${OPT_SEQ_LEN},lang_masks:${OPT_BATCH}x${OPT_SEQ_LEN},state:${OPT_BATCH}x${STATE_DIM},noise:${OPT_BATCH}x${ACTION_HORIZON}x${ACTION_DIM} \
+    --exportProfile=${ENGINE_PATH}_profile.json \
+    --exportLayerInfo=${ENGINE_PATH}_layers.json \
+    --minShapes=images:${MIN_BATCH}x${IMAGE_CHANNELS}x${IMAGE_SIZE}x${IMAGE_SIZE},img_masks:${MIN_BATCH}x${NUM_IMAGES},lang_tokens:${MIN_BATCH}x${MAX_SEQ_LEN},lang_masks:${MIN_BATCH}x${MAX_SEQ_LEN},state:${MIN_BATCH}x${STATE_DIM},noise:${MIN_BATCH}x${ACTION_HORIZON}x${ACTION_DIM} \
+    --optShapes=images:${OPT_BATCH}x${IMAGE_CHANNELS}x${IMAGE_SIZE}x${IMAGE_SIZE},img_masks:${OPT_BATCH}x${NUM_IMAGES},lang_tokens:${OPT_BATCH}x${MAX_SEQ_LEN},lang_masks:${OPT_BATCH}x${MAX_SEQ_LEN},state:${OPT_BATCH}x${STATE_DIM},noise:${OPT_BATCH}x${ACTION_HORIZON}x${ACTION_DIM} \
     --maxShapes=images:${MAX_BATCH}x${IMAGE_CHANNELS}x${IMAGE_SIZE}x${IMAGE_SIZE},img_masks:${MAX_BATCH}x${NUM_IMAGES},lang_tokens:${MAX_BATCH}x${MAX_SEQ_LEN},lang_masks:${MAX_BATCH}x${MAX_SEQ_LEN},state:${MAX_BATCH}x${STATE_DIM},noise:${MAX_BATCH}x${ACTION_HORIZON}x${ACTION_DIM} \
-    2>&1 | tee "${ENGINE_PATH}.log"
+    > "${ENGINE_PATH}.log" 2>&1
 
 echo ""
 echo "TensorRT engine built successfully!"
@@ -101,8 +86,8 @@ echo ""
 echo "Engine shape ranges:"
 echo "  images: [${MIN_BATCH}x${IMAGE_CHANNELS}x${IMAGE_SIZE}x${IMAGE_SIZE}] to [${MAX_BATCH}x${IMAGE_CHANNELS}x${IMAGE_SIZE}x${IMAGE_SIZE}]"
 echo "  img_masks: [${MIN_BATCH}x${NUM_IMAGES}] to [${MAX_BATCH}x${NUM_IMAGES}]"
-echo "  lang_tokens: [${MIN_BATCH}x${MIN_SEQ_LEN}] to [${MAX_BATCH}x${MAX_SEQ_LEN}]"
-echo "  lang_masks: [${MIN_BATCH}x${MIN_SEQ_LEN}] to [${MAX_BATCH}x${MAX_SEQ_LEN}]"
+echo "  lang_tokens: [${MIN_BATCH}x${MAX_SEQ_LEN}] to [${MAX_BATCH}x${MAX_SEQ_LEN}]"
+echo "  lang_masks: [${MIN_BATCH}x${MAX_SEQ_LEN}] to [${MAX_BATCH}x${MAX_SEQ_LEN}]"
 echo "  state: [${MIN_BATCH}x${STATE_DIM}] to [${MAX_BATCH}x${STATE_DIM}]"
 echo "  noise: [${MIN_BATCH}x${ACTION_HORIZON}x${ACTION_DIM}] to [${MAX_BATCH}x${ACTION_HORIZON}x${ACTION_DIM}]"
 
