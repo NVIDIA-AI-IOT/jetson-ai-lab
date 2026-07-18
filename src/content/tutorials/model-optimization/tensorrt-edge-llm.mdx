@@ -857,32 +857,28 @@ tensorrt-edgellm-export \
 
 ## Performance and Benchmarking
 
-TensorRT Edge-LLM publishes released performance results in its [Performance Benchmarks](https://nvidia.github.io/TensorRT-Edge-LLM/latest/user_guide/performance/performance-benchmarks.html) section. The benchmark page covers Jetson AGX Thor results across LLM and VLM workloads, including prefill latency, prefill throughput, generation throughput, GPU memory usage, visual encoder throughput, and speculative decoding speedups.
+TensorRT Edge-LLM publishes released performance results in its [Performance Benchmarks](https://nvidia.github.io/TensorRT-Edge-LLM/latest/user_guide/performance/performance-benchmarks.html) section. The benchmark page covers Jetson AGX Thor and Orin results across LLM and VLM workloads, including prefill latency, prefill throughput, generation throughput, GPU memory usage, visual encoder throughput, and speculative decoding speedups.
 
-For the engines built in this tutorial, use `llm_inference` when you want end-to-end application timing with real JSON requests, and use `llm_bench` when you want synthetic prefill or decode measurements without preparing request files.
+### Profiling Your Own Build
 
-Benchmark a built LLM engine:
+Use `llm_bench` for synthetic prefill or decode measurements without preparing request files:
 
 ```bash
 cd ~/TensorRT-Edge-LLM
 
+# Prefill throughput at batch size 1
 ./build/examples/llm/llm_bench \
     --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
     --mode prefill \
-    --inputLen 128 \
+    --inputLen 2048 \
     --batchSize 1
-```
 
-Collect a layer-level profile:
-
-```bash
+# Decode throughput at batch size 8
 ./build/examples/llm/llm_bench \
     --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
-    --mode generation \
-    --inputLen 128 \
-    --outputLen 128 \
-    --batchSize 1 \
-    --profile
+    --mode decode \
+    --pastKVLen 128 \
+    --batchSize 8
 ```
 
 For end-to-end application measurements, run `llm_inference` with `--dumpProfile` and, optionally, `--profileOutputFile`:
@@ -895,11 +891,6 @@ For end-to-end application measurements, run `llm_inference` with `--dumpProfile
     --dumpProfile \
     --profileOutputFile $WORKSPACE_DIR/profile_qwen.json
 ```
-
-<div class="admonition note">
-<p class="admonition-title">Benchmark context</p>
-<p>The released Edge-LLM benchmark tables use default TensorRT Edge-LLM inference settings on Jetson AGX Thor. Local results can vary with Jetson model, power mode, memory pressure, thermal state, CUDA/TensorRT version, batch size, prompt length, and generation length.</p>
-</div>
 
 ## Integrating Edge-LLM in Your C++ Application
 
