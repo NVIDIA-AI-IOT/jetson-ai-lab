@@ -19,7 +19,7 @@ huggingface_url: "https://huggingface.co/nvidia/Cosmos3-Edge"
 minimum_jetson: "AGX Orin"
 supported_inference_engines:
   - engine: "vLLM"
-    type: "Container · Reasoner (Text/Image/Video → Text)"
+    type: "Reasoner (Text/Image/Video → Text)"
     modules_supported:
       - thor_t5000
       - thor_t4000
@@ -47,7 +47,7 @@ supported_inference_engines:
           --max-model-len 16384 \
           --gpu-memory-utilization 0.3
   - engine: "vLLM-Omni"
-    type: "Container · Generator / Action"
+    type: "Generator / Action"
     modules_supported:
       - thor_t5000
       - thor_t4000
