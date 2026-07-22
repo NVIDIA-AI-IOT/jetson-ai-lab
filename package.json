@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Official NVIDIA experience for running Jetson-optimized generative AI models locally",
   "author": "NVIDIA Corporation",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
@@ -38,7 +38,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/nvidia/jetson-ai-lab.git"
+    "url": "https://github.com/NVIDIA-AI-IOT/jetson-ai-lab.git"
   },
   "homepage": "https://www.jetson-ai-lab.com"
 }

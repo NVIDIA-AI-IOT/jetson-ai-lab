@@ -8,7 +8,7 @@ The NVIDIA Jetson AI Lab is your guide to running generative AI models entirely 
 
 ## About
 
-Jetson AI Lab pairs a modern Astro frontend with a content-driven workflow, enabling new tutorials, models, and posts to be published without touching layout code.
+Jetson AI Lab pairs a modern Astro frontend with a content-driven workflow, enabling new tutorials, models, and community projects to be published without touching layout code.
 
 ### Key Features
 
@@ -35,12 +35,15 @@ Jetson AI Lab pairs a modern Astro frontend with a content-driven workflow, enab
 │   ├── content/              Markdown and JSON content repositories
 │   │   ├── home.json         Homepage metrics and featured models
 │   │   ├── models/           Model deep dives authored in Markdown
-│   │   ├── posts/            Blog articles
-│   │   └── tutorials/        Long-form tutorials with frontmatter
+│   │   ├── tutorials/        Long-form tutorials with frontmatter
+│   │   ├── projects/         Community project entries
+│   │   └── gtc26/            GTC workshop lab content
+│   ├── data/                 Benchmark and category data (JSON)
 │   ├── layouts/              Base layouts for pages and tutorials
 │   └── pages/                Astro routes for the site
 ├── public/
 │   ├── archive/              Legacy MkDocs documentation (static)
+│   ├── code-samples/         Downloadable tutorial scripts
 │   └── images/               Static assets
 ├── astro.config.mjs          Astro configuration with redirects
 ├── tailwind.config.mjs       Tailwind theme definitions
@@ -51,7 +54,7 @@ Jetson AI Lab pairs a modern Astro frontend with a content-driven workflow, enab
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 20 and npm (matches CI)
 - Git
 
 ### Local Development
@@ -95,6 +98,8 @@ npm run preview
 
 ## Content Authoring
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for collection schemas, validation requirements, and contribution workflow.
+
 ### Adding Tutorials
 
 1. Create a Markdown file in `src/content/tutorials/` with appropriate frontmatter
@@ -112,7 +117,7 @@ Edit `src/content/home.json` to update hero metrics, featured models, and stats.
 ### Content Tips
 
 - Use Markdown headings and tables for consistent styling
-- Set `difficulty` in tutorial frontmatter: `Beginner`, `Intermediate`, or `Advanced`
+- Match tutorial frontmatter to `src/content/config.ts` (`title`, `description`, `category`, `tags`, and optional `authors`)
 - Store media assets under `public/` and reference with absolute paths
 
 ## URL Redirects
@@ -149,15 +154,13 @@ Legacy MkDocs documentation is preserved at `/archive/` with a deprecation banne
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/new-tutorial`)
-3. Commit your changes (`git commit -m 'Add new tutorial'`)
-4. Push to the branch (`git push origin feature/new-tutorial`)
-5. Open a Pull Request
+Developers inside and outside NVIDIA are invited to contribute tutorials, Jetson projects, model updates, code samples, benchmarks, and site improvements. Open your pull request against `main`, and one of our core contributors will review it.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, publishing guidelines, validation requirements, and the pull request process.
 
 ## License
 
-See [LICENSE](LICENSE) for details.
+Licensed under the [MIT License](LICENSE).
 
 ## Contact
 
