@@ -7,7 +7,6 @@ You can contribute:
 - Jetson tutorials, applications, and downloadable code samples
 - Community projects built with Jetson
 - New or updated model pages and verified inference instructions
-- Reproducible benchmarks with hardware and software details
 - Bug fixes, accessibility improvements, and website features
 - Documentation corrections and troubleshooting guidance
 
@@ -89,6 +88,22 @@ NVIDIA-AI-IOT/jetson-ai-lab → main
 Describe the change, link any related issue, and list how you tested it. By submitting a pull request, you confirm that you have the right to contribute the work under the repository's MIT License.
 
 One of our core contributors will review the pull request and may request changes. After approval and successful checks, a core contributor will merge it. You do not need direct write access.
+
+### Signing your commits (recommended)
+
+We recommend signing off your commits with a [Developer Certificate of Origin (DCO)](https://developercertificate.org/). The sign-off certifies that you have the right to submit the contribution under the project's license and provides a clear record of authorship. It is encouraged but not required.
+
+Add a sign-off with the `-s` flag:
+
+```bash
+git commit -s -m "Add a Jetson setup troubleshooting section"
+```
+
+This appends a trailer matching your commit author identity:
+
+```text
+Signed-off-by: Your Name <your.email@example.com>
+```
 
 ## Reporting Issues
 

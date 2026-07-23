@@ -54,7 +54,7 @@ Jetson AI Lab pairs a modern Astro frontend with a content-driven workflow, enab
 
 ### Prerequisites
 
-- Node.js 20 and npm (matches CI)
+- Node.js 20 and npm 
 - Git
 
 ### Local Development
