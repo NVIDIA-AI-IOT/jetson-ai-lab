@@ -38,7 +38,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         -e HF_TOKEN=$HF_TOKEN -v $HOME/.cache/huggingface:/root/.cache/huggingface vllm/vllm-openai:latest \
-        vllm serve nvidia/Cosmos-Reason1-7B --max-model-len 8192 --gpu-memory-utilization 0.6 --reasoning-parser qwen3
+        nvidia/Cosmos-Reason1-7B --max-model-len 8192 --gpu-memory-utilization 0.6 --reasoning-parser qwen3
 ---
 
 [NVIDIA Cosmos Reason 1 7B](https://huggingface.co/nvidia/Cosmos-Reason1-7B) is a reasoning vision-language model designed for physical AI and robotics applications. With 7 billion parameters, it provides strong reasoning capabilities for understanding physical world interactions, spatial relationships, and complex scene analysis.

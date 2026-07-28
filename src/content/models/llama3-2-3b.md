@@ -58,7 +58,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
-        vllm serve espressor/meta-llama.Llama-3.2-3B-Instruct_W4A16
+        espressor/meta-llama.Llama-3.2-3B-Instruct_W4A16
 one_shot_inference:
   modules_supported:
     - thor_t5000

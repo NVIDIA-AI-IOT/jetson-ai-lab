@@ -37,7 +37,7 @@ supported_inference_engines:
         -v $HOME/.cache/tiktoken:/etc/encodings \
         -e TIKTOKEN_ENCODINGS_BASE=/etc/encodings \
         vllm/vllm-openai:latest \
-        vllm serve openai/gpt-oss-120b --gpu-memory-utilization 0.8
+        openai/gpt-oss-120b --gpu-memory-utilization 0.8
 ---
 
 [OpenAI GPT OSS 120B](https://huggingface.co/openai/gpt-oss-120b) is OpenAI's open-source 120 billion parameter language model. Due to its size, this model is exclusively supported on Jetson AGX Thor. It requires tiktoken encodings to be downloaded before serving.
@@ -62,7 +62,7 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host \
   -v $HOME/.cache/tiktoken:/etc/encodings \
   -e TIKTOKEN_ENCODINGS_BASE=/etc/encodings \
   vllm/vllm-openai:latest \
-  vllm serve openai/gpt-oss-120b --gpu-memory-utilization 0.8
+  openai/gpt-oss-120b --gpu-memory-utilization 0.8
 ```
 
 ## GPT OSS Family

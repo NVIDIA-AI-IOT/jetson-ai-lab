@@ -40,7 +40,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
-        vllm serve Kbenkhaled/Qwen3.5-27B-NVFP4 \
+        Kbenkhaled/Qwen3.5-27B-NVFP4 \
           --gpu-memory-utilization 0.8 \
           --enable-prefix-caching \
           --reasoning-parser qwen3 \
@@ -100,7 +100,7 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host \
 ```bash
 sudo docker run -it --rm --pull always --runtime=nvidia --network host \
   vllm/vllm-openai:latest \
-  vllm serve Kbenkhaled/Qwen3.5-27B-NVFP4 \
+  Kbenkhaled/Qwen3.5-27B-NVFP4 \
     --gpu-memory-utilization 0.8 --enable-prefix-caching \
     --reasoning-parser qwen3 \
     --enable-auto-tool-choice --tool-call-parser qwen3_coder

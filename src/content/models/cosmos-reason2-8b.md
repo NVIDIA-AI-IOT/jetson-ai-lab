@@ -46,7 +46,7 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         -v $MODEL_PATH:/models/cosmos-reason2-8b:ro \
         vllm/vllm-openai:latest \
-        vllm serve /models/cosmos-reason2-8b \
+        /models/cosmos-reason2-8b \
           --max-model-len 8192 \
           --gpu-memory-utilization 0.8 \
           --reasoning-parser qwen3 \
@@ -129,7 +129,7 @@ sudo docker run -it --rm --runtime=nvidia --network host \
   -v $MODEL_PATH:/models/cosmos-reason2-8b:ro \
   -v ${HOME}/.cache/vllm:/root/.cache/vllm \
   vllm/vllm-openai:latest \
-  vllm serve /models/cosmos-reason2-8b \
+  /models/cosmos-reason2-8b \
     --served-model-name nvidia/cosmos-reason2-8b-fp8 \
     --max-model-len 8192 \
     --gpu-memory-utilization 0.7 \

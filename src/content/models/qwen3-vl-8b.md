@@ -35,7 +35,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
-        vllm serve cpatonn/Qwen3-VL-8B-Instruct-AWQ-4bit
+        cpatonn/Qwen3-VL-8B-Instruct-AWQ-4bit
 benchmark_key: "Qwen3-VL-8B"
 benchmark_series:
   - "Qwen3-VL-4B"

@@ -41,7 +41,7 @@ serving:
           --runtime=nvidia --network host \
           -v $HOME/.cache/huggingface:/root/.cache/huggingface \
           vllm/vllm-openai:latest \
-          vllm serve bg-digitalservices/Gemma-4-26B-A4B-it-NVFP4 \
+          bg-digitalservices/Gemma-4-26B-A4B-it-NVFP4 \
             --gpu-memory-utilization 0.75 \
             --enable-auto-tool-choice \
             --reasoning-parser gemma4 \

@@ -37,7 +37,7 @@ serving:
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
           vllm/vllm-openai:latest \
-          vllm serve mistralai/Ministral-3-3B-Reasoning-2512
+          mistralai/Ministral-3-3B-Reasoning-2512
 ---
 
 Mistral AI's Ministral 3 3B Reasoning is specifically optimized for logical reasoning, problem-solving, and analytical tasks.

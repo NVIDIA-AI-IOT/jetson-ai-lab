@@ -53,7 +53,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
-        vllm serve RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16
+        RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16
 one_shot_inference:
   modules_supported:
     - thor_t5000

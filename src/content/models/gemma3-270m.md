@@ -48,7 +48,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
-        vllm serve google/gemma-3-270m-it
+        google/gemma-3-270m-it
 one_shot_inference:
   modules_supported:
     - thor_t5000

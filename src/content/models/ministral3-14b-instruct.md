@@ -35,7 +35,7 @@ serving:
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
           vllm/vllm-openai:latest \
-          vllm serve mistralai/Ministral-3-14B-Instruct-2512
+          mistralai/Ministral-3-14B-Instruct-2512
     - engine: "Ollama"
       type: "CLI"
       modules_supported:

@@ -44,7 +44,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
-        vllm serve RedHatAI/Qwen3-30B-A3B-quantized.w4a16
+        RedHatAI/Qwen3-30B-A3B-quantized.w4a16
 benchmark_key: "Qwen3-30B-A3B"
 benchmark_series:
   - "Qwen3-32B"

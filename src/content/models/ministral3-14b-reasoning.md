@@ -35,7 +35,7 @@ serving:
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
           vllm/vllm-openai:latest \
-          vllm serve mistralai/Ministral-3-14B-Reasoning-2512
+          mistralai/Ministral-3-14B-Reasoning-2512
 ---
 
 Mistral AI's Ministral 3 14B Reasoning is the most powerful reasoning variant, excelling at complex logical analysis and problem-solving.

@@ -35,6 +35,7 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
+        --entrypoint "" \
         vllm/vllm-openai:latest \
         bash -c "pip install -q 'vllm[audio]' && vllm serve RedHatAI/Qwen3.6-35B-A3B-NVFP4 \
           --gpu-memory-utilization 0.8 \
@@ -94,6 +95,7 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host \
 
 ```bash
 sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+  --entrypoint "" \
   vllm/vllm-openai:latest \
   bash -c "pip install -q 'vllm[audio]' && vllm serve RedHatAI/Qwen3.6-35B-A3B-NVFP4 \
     --gpu-memory-utilization 0.8 --enable-prefix-caching \

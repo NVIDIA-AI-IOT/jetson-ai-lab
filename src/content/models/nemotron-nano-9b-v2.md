@@ -29,7 +29,7 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
-        vllm serve nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4
+        nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4
 benchmark_key: "Nemotron Nano 9B V2"
 benchmark_series:
   - "Nemotron 3 30B-A3B"

@@ -36,7 +36,7 @@ serving:
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
           vllm/vllm-openai:latest \
-          vllm serve mistralai/Ministral-3-8B-Reasoning-2512
+          mistralai/Ministral-3-8B-Reasoning-2512
 ---
 
 Mistral AI's Ministral 3 8B Reasoning is the default reasoning variant, balancing reasoning capability with efficiency.
