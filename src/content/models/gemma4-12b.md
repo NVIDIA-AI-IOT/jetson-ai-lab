@@ -29,7 +29,7 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         -v $HOME/.cache/huggingface:/root/.cache/huggingface \
         --entrypoint "" \
-        vllm/vllm-openai:v0.24.0-aarch64-ubuntu2404 \
+        vllm/vllm-openai:latest \
         vllm serve RedHatAI/gemma-4-12B-it-NVFP4 \
           --gpu-memory-utilization 0.7 \
           --max-model-len 8192 \

@@ -23,7 +23,7 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
-        vllm/vllm-openai:nightly-aarch64 \
+        vllm/vllm-openai:latest \
         bash -c "pip install -q 'vllm[audio]' && vllm serve sakamakismile/Qwen3.6-27B-NVFP4 \
           --gpu-memory-utilization 0.8 \
           --enable-prefix-caching \
@@ -58,7 +58,7 @@ Qwen3.6 27B is a dense language model from Alibaba Cloud's Qwen3.6 family. With 
 
 ```bash
 sudo docker run -it --rm --pull always --runtime=nvidia --network host \
-  vllm/vllm-openai:nightly-aarch64 \
+  vllm/vllm-openai:latest \
   bash -c "pip install -q 'vllm[audio]' && vllm serve sakamakismile/Qwen3.6-27B-NVFP4 \
     --gpu-memory-utilization 0.8 --enable-prefix-caching \
     --reasoning-parser qwen3 \

@@ -30,7 +30,7 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         -v $HOME/.cache/huggingface:/root/.cache/huggingface \
         --entrypoint bash \
-        vllm/vllm-openai:v0.20.0-ubuntu2404 \
+        vllm/vllm-openai:latest \
         -c "pip install -q 'vllm[audio]' && vllm serve nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-NVFP4 \
           --trust-remote-code --gpu-memory-utilization 0.8 --max-model-len 32768 \
           --reasoning-parser nemotron_v3 --enable-auto-tool-choice --tool-call-parser qwen3_coder"
@@ -102,7 +102,7 @@ sudo docker run -it --rm --pull always \
   --runtime=nvidia --network host \
   -v $HOME/.cache/huggingface:/root/.cache/huggingface \
   --entrypoint bash \
-  vllm/vllm-openai:v0.20.0-ubuntu2404 \
+  vllm/vllm-openai:latest \
   -c "pip install -q 'vllm[audio]' && vllm serve nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-NVFP4 \
     --trust-remote-code --gpu-memory-utilization 0.8 --max-model-len 32768 \
     --reasoning-parser nemotron_v3 --enable-auto-tool-choice --tool-call-parser qwen3_coder"

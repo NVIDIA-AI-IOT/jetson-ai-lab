@@ -32,7 +32,7 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         -v $MODEL_PATH:/model:ro \
         --entrypoint "" \
-        vllm/vllm-openai:v0.23.0-aarch64-ubuntu2404 \
+        vllm/vllm-openai:latest \
         vllm serve /model \
           --max-model-len 8192 \
           --gpu-memory-utilization 0.8 \
@@ -83,7 +83,7 @@ export MODEL_PATH=$(find ~/cosmos3-ngc -maxdepth 2 -name config.json -exec dirna
 sudo docker run -it --rm --runtime=nvidia --network host \
   -v $MODEL_PATH:/model:ro \
   --entrypoint "" \
-  vllm/vllm-openai:v0.23.0-aarch64-ubuntu2404 \
+  vllm/vllm-openai:latest \
   vllm serve /model \
     --max-model-len 8192 \
     --gpu-memory-utilization 0.8 \

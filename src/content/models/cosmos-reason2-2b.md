@@ -45,7 +45,7 @@ supported_inference_engines:
       sudo docker run -it --rm \
         --runtime=nvidia --network host \
         -v $MODEL_PATH:/models/cosmos-reason2-2b:ro \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
+        vllm/vllm-openai:latest \
         vllm serve /models/cosmos-reason2-2b \
           --max-model-len 8192 \
           --gpu-memory-utilization 0.8 \
@@ -137,7 +137,7 @@ sudo sysctl -w vm.drop_caches=3
 sudo docker run -it --rm --runtime=nvidia --network host \
   -v $MODEL_PATH:/models/cosmos-reason2-2b:ro \
   -v ${HOME}/.cache/vllm:/root/.cache/vllm \
-  ghcr.io/nvidia-ai-iot/vllm:0.14.0-r38.3-arm64-sbsa-cu130-24.04 \
+  vllm/vllm-openai:latest \
   vllm serve /models/cosmos-reason2-2b \
     --served-model-name nvidia/cosmos-reason2-2b-fp8 \
     --max-model-len 8192 \

@@ -35,7 +35,7 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
+        vllm/vllm-openai:latest \
         vllm serve cpatonn/Qwen3-VL-4B-Instruct-AWQ-4bit
 benchmark_key: "Qwen3-VL-4B"
 benchmark_series:

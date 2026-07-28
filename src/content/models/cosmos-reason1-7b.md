@@ -37,7 +37,7 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
-        -e HF_TOKEN=$HF_TOKEN -v $HOME/.cache/huggingface:/root/.cache/huggingface ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
+        -e HF_TOKEN=$HF_TOKEN -v $HOME/.cache/huggingface:/root/.cache/huggingface vllm/vllm-openai:latest \
         vllm serve nvidia/Cosmos-Reason1-7B --max-model-len 8192 --gpu-memory-utilization 0.6 --reasoning-parser qwen3
 ---
 
@@ -57,7 +57,7 @@ This model can be pulled directly from HuggingFace and served with vLLM — no m
 
 | | Jetson AGX Thor | Jetson AGX Orin (64GB) |
 |---|---|---|
-| **vLLM Container** | `ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor` | `ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin` |
+| **vLLM Container** | `vllm/vllm-openai:latest` | `ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin` |
 | **Max Model Length** | 8192 tokens | 8192 tokens |
 | **GPU Memory Util** | 0.6 | 0.8 |
 

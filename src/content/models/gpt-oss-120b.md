@@ -36,7 +36,7 @@ supported_inference_engines:
         -v $HOME/.cache/huggingface:/root/.cache/huggingface \
         -v $HOME/.cache/tiktoken:/etc/encodings \
         -e TIKTOKEN_ENCODINGS_BASE=/etc/encodings \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
+        vllm/vllm-openai:latest \
         vllm serve openai/gpt-oss-120b --gpu-memory-utilization 0.8
 ---
 
@@ -61,7 +61,7 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host \
   -v $HOME/.cache/huggingface:/root/.cache/huggingface \
   -v $HOME/.cache/tiktoken:/etc/encodings \
   -e TIKTOKEN_ENCODINGS_BASE=/etc/encodings \
-  ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
+  vllm/vllm-openai:latest \
   vllm serve openai/gpt-oss-120b --gpu-memory-utilization 0.8
 ```
 

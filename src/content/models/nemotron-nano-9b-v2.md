@@ -28,7 +28,7 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
+        vllm/vllm-openai:latest \
         vllm serve nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4
 benchmark_key: "Nemotron Nano 9B V2"
 benchmark_series:

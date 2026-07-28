@@ -28,7 +28,7 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         -v $HOME/.cache/huggingface:/root/.cache/huggingface \
         --entrypoint "" \
-        vllm/vllm-openai:v0.23.0-aarch64-ubuntu2404 \
+        vllm/vllm-openai:latest \
         vllm serve nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4 \
           --trust-remote-code \
           --kv-cache-dtype fp8 \

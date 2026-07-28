@@ -35,7 +35,7 @@ serving:
       serve_command_thor: |-
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
-          ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
+          vllm/vllm-openai:latest \
           vllm serve mistralai/Ministral-3-8B-Reasoning-2512
 ---
 
