@@ -39,8 +39,8 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-        vllm serve Kbenkhaled/Qwen3.5-27B-NVFP4 \
+        vllm/vllm-openai:latest \
+        Kbenkhaled/Qwen3.5-27B-NVFP4 \
           --gpu-memory-utilization 0.8 \
           --enable-prefix-caching \
           --reasoning-parser qwen3 \
@@ -99,8 +99,8 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host \
 
 ```bash
 sudo docker run -it --rm --pull always --runtime=nvidia --network host \
-  ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-  vllm serve Kbenkhaled/Qwen3.5-27B-NVFP4 \
+  vllm/vllm-openai:latest \
+  Kbenkhaled/Qwen3.5-27B-NVFP4 \
     --gpu-memory-utilization 0.8 --enable-prefix-caching \
     --reasoning-parser qwen3 \
     --enable-auto-tool-choice --tool-call-parser qwen3_coder

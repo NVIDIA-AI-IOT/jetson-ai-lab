@@ -34,8 +34,8 @@ serving:
       serve_command_thor: |-
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
-          ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-          vllm serve mistralai/Ministral-3-14B-Reasoning-2512
+          vllm/vllm-openai:latest \
+          mistralai/Ministral-3-14B-Reasoning-2512
 ---
 
 Mistral AI's Ministral 3 14B Reasoning is the most powerful reasoning variant, excelling at complex logical analysis and problem-solving.

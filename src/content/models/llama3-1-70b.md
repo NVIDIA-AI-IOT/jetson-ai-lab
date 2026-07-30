@@ -52,8 +52,8 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-        vllm serve RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16
+        vllm/vllm-openai:latest \
+        RedHatAI/Meta-Llama-3.1-70B-Instruct-quantized.w4a16
 one_shot_inference:
   modules_supported:
     - thor_t5000

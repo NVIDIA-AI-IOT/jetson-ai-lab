@@ -40,8 +40,8 @@ serving:
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
           -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          ghcr.io/nvidia-ai-iot/vllm:gemma4-jetson-thor \
-          vllm serve bg-digitalservices/Gemma-4-26B-A4B-it-NVFP4 \
+          vllm/vllm-openai:latest \
+          bg-digitalservices/Gemma-4-26B-A4B-it-NVFP4 \
             --gpu-memory-utilization 0.75 \
             --enable-auto-tool-choice \
             --reasoning-parser gemma4 \

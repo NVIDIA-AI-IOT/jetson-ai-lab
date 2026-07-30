@@ -47,8 +47,8 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-        vllm serve google/gemma-3-1b-it
+        vllm/vllm-openai:latest \
+        google/gemma-3-1b-it
 one_shot_inference:
   modules_supported:
     - thor_t5000

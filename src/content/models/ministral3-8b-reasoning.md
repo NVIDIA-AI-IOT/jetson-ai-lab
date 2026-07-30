@@ -35,8 +35,8 @@ serving:
       serve_command_thor: |-
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
-          ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-          vllm serve mistralai/Ministral-3-8B-Reasoning-2512
+          vllm/vllm-openai:latest \
+          mistralai/Ministral-3-8B-Reasoning-2512
 ---
 
 Mistral AI's Ministral 3 8B Reasoning is the default reasoning variant, balancing reasoning capability with efficiency.

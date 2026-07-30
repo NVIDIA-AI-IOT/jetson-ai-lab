@@ -44,8 +44,8 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-        vllm serve RedHatAI/Qwen3-8B-quantized.w4a16
+        vllm/vllm-openai:latest \
+        RedHatAI/Qwen3-8B-quantized.w4a16
 benchmark_key: "Qwen 3 8B"
 benchmark_series:
   - "Qwen 3 4B"

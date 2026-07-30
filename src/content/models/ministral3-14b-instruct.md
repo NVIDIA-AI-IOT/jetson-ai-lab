@@ -34,8 +34,8 @@ serving:
       serve_command_thor: |-
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
-          ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor \
-          vllm serve mistralai/Ministral-3-14B-Instruct-2512
+          vllm/vllm-openai:latest \
+          mistralai/Ministral-3-14B-Instruct-2512
     - engine: "Ollama"
       type: "CLI"
       modules_supported:
