@@ -1,0 +1,3705 @@
+diff --git a/scripts/deployment/README.md b/scripts/deployment/README.md
+index 75ef713..02bd3c0 100644
+--- a/scripts/deployment/README.md
++++ b/scripts/deployment/README.md
+@@ -142,6 +142,62 @@ The pipeline runs 4 steps in sequence:
+ Each step can be run individually via `--steps <step>`. Verbose logs are written to `<output-dir>/pipeline.log`.
+ </details>
+ 
++### Performance Optimization
++
++`build_trt_pipeline.py` supports quantization plus additional execution optimizations
++via `--execution-profile optimized --quantization <policy>`. Two quantization policies
++are available: `mixed_nvfp4` (fastest — used in the steps below) and `fp8`; see
++[Optimized TensorRT Result](#optimized-tensorrt-result) for measured numbers. These
++optimizations were developed and validated on Jetson AGX Thor.
++
++The steps below use the Jetson AGX Thor Docker container as the example. Set up the
++environment following [Jetson Thor Setup](#jetson-thor-setup) first, then run the
++following inside the container:
++
++1. Install ModelOpt (required for mixed-precision quantization). `uv` is
++   preinstalled in the container and targets `/opt/gr00t-venv`; bare `pip` would
++   install into the system Python instead:
++
++   ```bash
++   uv pip install "nvidia-modelopt[onnx]==0.39.0"
++   ```
++
++2. Download and prepare the calibration dataset used by the quantized builds. The GR00T-specific `modality.json` must be copied into
++   the dataset's `meta/` directory, and normalization statistics generated once(`stats.py` writes `meta/stats.json` / `meta/relative_stats.json`, which the calibration data pipeline needs):
++
++   ```bash
++   hf download --repo-type dataset IPEC-COMMUNITY/libero_10_no_noops_1.0.0_lerobot \
++     --local-dir examples/LIBERO/libero_10_no_noops_1.0.0_lerobot/
++   cp examples/LIBERO/modality.json examples/LIBERO/libero_10_no_noops_1.0.0_lerobot/meta/
++
++   export PYTHONPATH=/workspace/repo
++   python gr00t/data/stats.py \
++     --dataset-path examples/LIBERO/libero_10_no_noops_1.0.0_lerobot \
++     --embodiment-tag LIBERO_PANDA
++   ```
++
++3. Build with the optimized profile (`PYTHONPATH` makes the mounted repo importable):
++
++   ```bash
++   python scripts/deployment/build_trt_pipeline.py \
++     --model-path checkpoints/GR00T-N1.7-LIBERO/libero_10 \
++     --dataset-path demo_data/libero_demo \
++     --embodiment-tag LIBERO_PANDA \
++     --output-dir ./gr00t_trt_optimized_mixed_nvfp4 \
++     --execution-profile optimized \
++     --quantization mixed_nvfp4 \
++     --calib-dataset-path examples/LIBERO/libero_10_no_noops_1.0.0_lerobot \
++     --calib-size 10
++   ```
++
++   Expected: the verify step reports cosine similarity in the 0.998–0.999+ range,
++   and the full pipeline takes ~6 minutes on Thor. For measured latency and accuracy,
++   see [Optimized TensorRT Result](#optimized-tensorrt-result).
++
++4. Run inference with the optimized engines by pointing the
++   [Standalone Inference with TRT](#standalone-inference-with-trt) command at the
++   new output directory: `--trt-engine-path ./gr00t_trt_optimized_mixed_nvfp4/engines`.
++
+ ---
+ 
+ ## Performance
+@@ -206,6 +262,26 @@ TensorRT (Full Pipeline):
+ ```
+ </details>
+ 
++### Optimized TensorRT Result
++
++GR00T N1.7 Inference Timing, measured under the following setup:
++
++-  **AGX Thor**:  MAXN power mode, **JetPack 7.2**
++- **Engine build:** `--execution-profile optimized` with `--quantization fp8` or
++  `mixed_nvfp4` (see [Performance Optimization](#performance-optimization))
++
++| Device | Dataset | Configuration | Data Processing | Backbone | Action Head | E2E | Frequency | E2E Speedup |
++|---|---|---|---:|---:|---:|---:|---:|---:|
++|  AGX Thor | LIBERO | PyTorch Eager | 8.21 ms | 55.26 ms | 81.65 ms | 144.9 ms | 6.9 Hz | 1.00x |
++|  AGX Thor | LIBERO | TensorRT Full Pipeline | 8.21 ms | 28.89 ms | 56.64 ms | 93.8 ms | 10.7 Hz | 1.54x |
++|  AGX Thor | LIBERO | **TensorRT Full Pipeline Optimized + FP8** | 8.21 ms | 14.04 ms | 20.69 ms | **42.9 ms** | **23.3 Hz** | **3.37x** |
++|  AGX Thor | LIBERO | **TensorRT Full Pipeline Optimized + mixed NVFP4** | 8.21 ms | 13.53 ms | 17.22 ms | **38.9 ms** | **25.7 Hz** | **3.73x** |
++
++Optimized mixed NVFP4 is 2.41x faster than the standard TensorRT full pipeline
++(93.8 ms → 38.9 ms E2E) with no measurable accuracy loss: averaged over 3 rounds of
++the 200-episode LIBERO Spatial closed-loop benchmark on Thor, it reaches 97.3%
++success vs. 97.5% for the PyTorch bf16 baselines.
++
+ ### Standalone Inference with TRT
+ 
+ The standalone inference script serves as both an accuracy validation and a reference for deploying TRT inference in your own code. It runs per-step inference on real trajectories and compares action predictions:
+@@ -323,6 +399,8 @@ python scripts/deployment/build_trt_pipeline.py \
+   --dataset-path demo_data/libero_demo \
+   --embodiment-tag LIBERO_PANDA
+ ```
++
++For the best performance on Thor, see [Performance Optimization](#performance-optimization).
+ </details>
+ 
+ <details>
+@@ -340,6 +418,7 @@ source scripts/activate_thor.sh
+ ```
+ 
+ Then run the TRT pipeline or PyTorch inference as shown in the [TensorRT Acceleration](#tensorrt-acceleration) and [Quick Start](#quick-start-pytorch-inference) sections above.
++For the best performance on Thor, see [Performance Optimization](#performance-optimization).
+ The activation script exports the PyTorch and CUDA library/include paths that `torchcodec`
+ and `torch.compile` need on Thor.
+ </details>
+@@ -471,6 +550,10 @@ and `torch.compile` need on Orin.
+ | `--embodiment-tag` | Auto-detected | Embodiment tag (auto-detected from processor_config.json if single embodiment) |
+ | `--output-dir` | `./gr00t_trt_deployment` | Root output directory. ONNX → `<output-dir>/onnx/`, engines → `<output-dir>/engines/` |
+ | `--precision` | `bf16` | Precision for ONNX export and TRT engine build (`bf16` only) |
++| `--execution-profile` | `baseline` | `baseline` or `optimized`. `optimized` enables additional execution optimizations that speed up the LLM and action head; requires `--export-mode action_head` or `full_pipeline` |
++| `--quantization` | `none` | Quantization policy: `none` (BF16 baseline), `fp8`, or `mixed_nvfp4` (requires ModelOpt — see [Performance Optimization](#performance-optimization)) |
++| `--calib-dataset-path` | `--dataset-path` | LeRobot dataset used for quantization calibration |
++| `--calib-size` | `10` | Number of calibration samples |
+ | `--batch-size` | `1` | Batch size baked into exported ONNX/TRT models (static — see note below) |
+ | `--export-mode` | `full_pipeline` | Export mode: `dit_only`, `action_head`, or `full_pipeline` |
+ | `--workspace` | `8192` | TRT builder workspace size in MB |
+@@ -506,6 +589,10 @@ and `torch.compile` need on Orin.
+ | `standalone_inference_script.py` | Main inference script (PyTorch + DiT-only TensorRT) |
+ | `trt_torch.py` | TRT Engine wrapper class (load, bind, execute) |
+ | `trt_model_forward.py` | TRT forward functions and setup (backbone + action head) |
++| `n1d7_optimization_config.py` | Shared precision-policy table and optimized-artifact schema for `--quantization` / `--execution-profile` |
++| `calibration.py` | FP8/NVFP4 post-training-quantization calibration (batch capture + per-component recipes) |
++| `n1d7_optimized_export.py` | Export-only graph transforms: LLM Gate/Up fusion, DiT cross-KV split, precomputed timestep constants |
++| `n1d7_optimized_runtime.py` | CUDA-graph runtime for the optimized TensorRT action head |
+ 
+ ---
+ 
+diff --git a/scripts/deployment/benchmark_inference.py b/scripts/deployment/benchmark_inference.py
+index fd7d9df..c9ab57f 100644
+--- a/scripts/deployment/benchmark_inference.py
++++ b/scripts/deployment/benchmark_inference.py
+@@ -378,6 +378,7 @@ def main(args: BenchmarkConfig | None = None):
+     if args is None:
+         args = tyro.cli(BenchmarkConfig)
+ 
++    policy_trt = None
+     set_seed(args.seed)
+     device = "cuda" if torch.cuda.is_available() else "cpu"
+     if device == "cpu":
+@@ -608,10 +609,13 @@ def main(args: BenchmarkConfig | None = None):
+         else:
+             from standalone_inference_script import replace_dit_with_tensorrt
+ 
+-            # dit_only mode: trt_engine_path may be a directory; resolve the engine file
++            # dit_only mode: trt_engine_path may be a directory; resolve the
++            # engine file from export metadata (falls back to dit_bf16.engine).
+             dit_engine_path = args.trt_engine_path
+             if os.path.isdir(dit_engine_path):
+-                dit_engine_path = os.path.join(dit_engine_path, "dit_bf16.engine")
++                from trt_model_forward import _engine_path
++
++                dit_engine_path = _engine_path(dit_engine_path, "dit")
+             replace_dit_with_tensorrt(policy_trt, dit_engine_path)
+ 
+         # TensorRT needs extra warmup for engine initialization and CUDA context setup
+@@ -671,6 +675,10 @@ def main(args: BenchmarkConfig | None = None):
+         print(f"  Action Head:     {np.median(data['action_head']):.2f} ms (median)")
+ 
+     print("\n" + "=" * 100)
++    if policy_trt is not None:
++        from trt_model_forward import close_tensorrt_engines
++
++        close_tensorrt_engines(policy_trt)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/scripts/deployment/build_tensorrt_engine.py b/scripts/deployment/build_tensorrt_engine.py
+index 473b762..40fa965 100644
+--- a/scripts/deployment/build_tensorrt_engine.py
++++ b/scripts/deployment/build_tensorrt_engine.py
+@@ -37,6 +37,7 @@ Usage:
+ from dataclasses import dataclass
+ import logging
+ import os
++import shutil
+ import time
+ from typing import Literal
+ 
+@@ -45,6 +46,7 @@ from gr00t.deployment.modes import FULL_PIPELINE_COMPONENTS, BuildEngineMode
+ import onnx
+ import tensorrt as trt
+ import tyro
++from n1d7_optimization_config import OptimizationArtifacts, trt_boundary_precision
+ 
+ 
+ # Set up logging
+@@ -435,7 +437,7 @@ def build_full_pipeline(
+     if metadata is not None:
+         # The engine must be built at the precision it was exported for; a drift here
+         # produces a valid-but-wrong engine. Per-component precision is still taken from
+-        # each ONNX filename below — this guards the pipeline-wide default.
++        # the metadata/ONNX filenames below — this guards the pipeline-wide default.
+         if metadata["precision"] != precision:
+             raise ValueError(
+                 f"build_full_pipeline: --precision={precision} but export_metadata.json in "
+@@ -462,10 +464,11 @@ def build_full_pipeline(
+ 
+     # Build order, ONNX candidates, and engine filenames come from the shared
+     # component table (single source of truth). ``only`` restricts to the subset
+-    # a partial export produced. FP32 ViT is preferred for accuracy and falls
+-    # back to BF16; the engine filename stays precision-neutral (vit.engine)
+-    # because the input ONNX may be either FP32 or BF16 — the real precision is
+-    # recorded in export_metadata.json and inspectable via TRT tooling.
++    # a partial export produced. Quantized/mixed exports record per-component
++    # precision in export_metadata.json; the artifact name derived from it is
++    # tried first (e.g. vit_fp8.onnx -> vit_fp8.engine), then the static table
++    # candidates. FP32 ViT is preferred for accuracy and falls back to BF16;
++    # its table engine filename stays precision-neutral (vit.engine).
+     if only is not None:
+         valid_names = {c.name for c in FULL_PIPELINE_COMPONENTS}
+         unknown = set(only) - valid_names
+@@ -474,20 +477,72 @@ def build_full_pipeline(
+                 f"Unknown pipeline component(s) {sorted(unknown)}; "
+                 f"valid components: {sorted(valid_names)}"
+             )
+-    components: list[tuple[str, str, str]] = []
++
++    metadata_precision_keys = {"ViT": "vit", "LLM": "llm", "DiT": "dit"}
++    component_precision: dict[str, str] = {}
++    if metadata is not None and all(
++        f"{key}_precision" in metadata for key in ("vit", "llm", "dit")
++    ):
++        aux_precision = metadata.get("aux_precision", precision)
++        for component in FULL_PIPELINE_COMPONENTS:
++            key = metadata_precision_keys.get(component.name)
++            component_precision[component.name] = (
++                metadata[f"{key}_precision"] if key else aux_precision
++            )
++        logger.info(f"Loaded component precisions from metadata: {component_precision}")
++
++    components: list[tuple[str, str, str, str]] = []
+     for component in FULL_PIPELINE_COMPONENTS:
+         if only is not None and component.name not in only:
+             continue
++        candidates = list(component.onnx_candidates)
++        key = metadata_precision_keys.get(component.name)
++        if key and component.name in component_precision:
++            expected = f"{key}_{component_precision[component.name]}.onnx"
++            if expected not in candidates:
++                candidates.insert(0, expected)
+         onnx_file = next(
+-            (c for c in component.onnx_candidates if os.path.exists(os.path.join(onnx_dir, c))),
+-            component.onnx_candidates[0],
++            (c for c in candidates if os.path.exists(os.path.join(onnx_dir, c))),
++            candidates[0],
++        )
++        # Table candidates keep their table engine filename; metadata-derived
++        # (quantized) artifacts mirror their ONNX name.
++        if onnx_file in component.onnx_candidates:
++            engine_file = component.engine
++        else:
++            engine_file = onnx_file[: -len(".onnx")] + ".engine"
++        artifact_precision = component_precision.get(
++            component.name, _precision_from_onnx_path(onnx_file, default=precision)
++        )
++        components.append((component.name, onnx_file, engine_file, artifact_precision))
++
++    # Optimized action head: build the extra Cross-KV engine and ship the
++    # precomputed timestep/AdaLN constants next to the engines.
++    optimized_onnx = OptimizationArtifacts.from_metadata(onnx_dir, metadata, artifact_kind="onnx")
++    if optimized_onnx is not None:
++        optimized_engine = OptimizationArtifacts.from_metadata(
++            engine_dir, metadata, artifact_kind="engine"
++        )
++        for artifact_path in (optimized_onnx.cross_kv, optimized_onnx.constants):
++            if not os.path.exists(artifact_path):
++                raise FileNotFoundError(f"Missing optimized artifact: {artifact_path}")
++        shutil.copy2(optimized_onnx.constants, optimized_engine.constants)
++        components.append(
++            (
++                "DiT Cross-KV",
++                os.path.basename(optimized_onnx.cross_kv),
++                os.path.basename(optimized_engine.cross_kv),
++                metadata.get("dit_precision", precision),
++            )
++        )
++        logger.info(
++            f"Registered optimized action-head artifacts and copied constants to {engine_dir}"
+         )
+-        components.append((component.name, onnx_file, component.engine))
+ 
+     results: list[tuple[str, str, str]] = []
+     skipped: list[tuple[str, str]] = []  # (name, onnx_path) for components with no ONNX input
+ 
+-    for name, onnx_file, engine_file in components:
++    for name, onnx_file, engine_file, artifact_precision in components:
+         onnx_path = os.path.join(onnx_dir, onnx_file)
+ 
+         if not os.path.exists(onnx_path):
+@@ -501,13 +556,17 @@ def build_full_pipeline(
+ 
+         engine_path = os.path.join(engine_dir, engine_file)
+         # Pick the precision that actually matches this ONNX's tensor types.
+-        # The full_pipeline export is mixed-precision (ViT FP32, rest BF16),
+-        # so the pipeline-wide ``precision`` argument is the default but each
+-        # component uses what it was actually exported with.
+-        component_precision = _precision_from_onnx_path(onnx_path, default=precision)
+-        if component_precision != precision:
++        # FP8/NVFP4 artifacts carry their quantization in internal Q/DQ nodes,
++        # so their STRONGLY_TYPED network boundary is FP16.
++        build_precision = trt_boundary_precision(artifact_precision)
++        if build_precision != artifact_precision:
++            logger.info(
++                f"  Artifact compute precision={artifact_precision}; "
++                f"STRONGLY_TYPED network boundary={build_precision}"
++            )
++        elif build_precision != precision:
+             logger.info(
+-                f"  Using precision={component_precision} for {name} (from ONNX filename); "
++                f"  Using precision={build_precision} for {name}; "
+                 f"pipeline default is {precision}"
+             )
+ 
+@@ -527,7 +586,7 @@ def build_full_pipeline(
+             build_engine(
+                 onnx_path=onnx_path,
+                 engine_path=engine_path,
+-                precision=component_precision,
++                precision=build_precision,
+                 workspace_mb=workspace_mb,
+                 min_shapes=min_shapes,
+                 opt_shapes=opt_shapes,
+diff --git a/scripts/deployment/build_trt_pipeline.py b/scripts/deployment/build_trt_pipeline.py
+index b037bad..0992e09 100644
+--- a/scripts/deployment/build_trt_pipeline.py
++++ b/scripts/deployment/build_trt_pipeline.py
+@@ -65,6 +65,13 @@ _DEPLOY_DIR = os.path.dirname(os.path.abspath(__file__))
+ if _DEPLOY_DIR not in sys.path:
+     sys.path.insert(0, _DEPLOY_DIR)
+ 
++from n1d7_optimization_config import (  # noqa: E402
++    ExecutionProfile,
++    QuantizationPolicy,
++    component_precisions,
++    trt_boundary_precision,
++)
++
+ 
+ # ---------------------------------------------------------------------------
+ # Helpers
+@@ -217,14 +224,26 @@ class PipelineConfig:
+     """Root output directory. ONNX files go to <output_dir>/onnx/, engines to <output_dir>/engines/."""
+ 
+     precision: Literal["bf16"] = "bf16"
+-    """Precision baked into the exported ONNX and the built TRT engine.
++    """Precision of the default (non-quantized) export and engine build.
++
++    Fixed to 'bf16' (with the ViT promoted to FP32 for TRT accuracy).
++    Quantized deployments are selected via --quantization, which maps to a
++    fixed per-component precision recipe in
++    n1d7_optimization_config.COMPONENT_PRECISIONS."""
++
++    execution_profile: ExecutionProfile = "baseline"
++    """'optimized' adds the cross-KV-cache action head (CUDA-graph runtime) and
++    fuses the LLM Gate/Up projections. Requires action_head or full_pipeline
++    export mode."""
++
++    quantization: QuantizationPolicy = "none"
++    """Quantization policy: none (BF16 baseline), fp8, or mixed_nvfp4."""
++
++    calib_dataset_path: Optional[str] = None
++    """LeRobot dataset for calibration. Defaults to --dataset-path."""
+ 
+-    Only 'bf16' is honored end-to-end: the ONNX export hardcodes a
+-    mixed-dtype graph (ViT FP32, every other component BF16) and the
+-    builder treats this as the single supported configuration. Adding
+-    'fp16'/'fp32'/'fp8' here without first wiring them through
+-    export_onnx_n1d7.py would silently produce a bf16 artifact under a
+-    different name."""
++    calib_size: int = 10
++    """Number of calibration samples (default: 10)."""
+ 
+     batch_size: int = 1
+     """Batch size baked into the exported ONNX/TRT models (default: 1).
+@@ -280,6 +299,10 @@ def _run_export(cfg: PipelineConfig, onnx_dir: str, embodiment_tag, log_fp) -> N
+         output_dir=onnx_dir,
+         export_mode=cfg.export_mode,
+         precision=cfg.precision,
++        execution_profile=cfg.execution_profile,
++        quantization=cfg.quantization,
++        calib_dataset_path=cfg.calib_dataset_path,
++        calib_size=cfg.calib_size,
+         batch_size=cfg.batch_size,
+     )
+     with _redirect_to_log(log_fp):
+@@ -295,12 +318,15 @@ def _run_build(
+     build_mode, _, _ = _MODE_MAP[cfg.export_mode]
+ 
+     if build_mode == "single":
+-        # dit_only: single ONNX -> single engine
++        # dit_only: single ONNX -> single engine. The DiT artifact name comes
++        # from the shared quantization policy table so it always matches what
++        # the export step produced.
++        dit_precision = component_precisions(cfg.quantization)["dit"]
+         build_cfg = BuildConfig(
+             mode="single",
+-            onnx=os.path.join(onnx_dir, "dit_bf16.onnx"),
+-            engine=os.path.join(engine_dir, "dit_bf16.engine"),
+-            precision=cfg.precision,
++            onnx=os.path.join(onnx_dir, f"dit_{dit_precision}.onnx"),
++            engine=os.path.join(engine_dir, f"dit_{dit_precision}.engine"),
++            precision=trt_boundary_precision(dit_precision),
+             workspace=cfg.workspace,
+         )
+         with _redirect_to_log(log_fp):
+@@ -360,8 +386,9 @@ def _run_benchmark(cfg: PipelineConfig, engine_dir: str, embodiment_tag, log_fp)
+     _, _, trt_mode = _MODE_MAP[cfg.export_mode]
+ 
+     # For dit_only, engine path is the single .engine file
+-    if cfg.export_mode == "dit_only":
+-        trt_engine_path = os.path.join(engine_dir, "dit_bf16.engine")
++    if cfg.export_mode == ExportMode.dit_only:
++        dit_precision = component_precisions(cfg.quantization)["dit"]
++        trt_engine_path = os.path.join(engine_dir, f"dit_{dit_precision}.engine")
+     else:
+         trt_engine_path = engine_dir
+ 
+@@ -392,6 +419,13 @@ def main(cfg: PipelineConfig | None = None) -> None:
+     if not cfg.model_path:
+         raise ValueError("Please provide --model-path")
+ 
++    # Fail fast on invalid mode combinations, before any model loading.
++    if cfg.execution_profile == "optimized" and cfg.export_mode == ExportMode.dit_only:
++        raise ValueError(
++            "--execution-profile optimized requires --export-mode action_head "
++            "or full_pipeline"
++        )
++
+     # Parse steps
+     valid_names = {s.value for s in Step}
+     if cfg.steps == "all":
+diff --git a/scripts/deployment/calibration.py b/scripts/deployment/calibration.py
+new file mode 100644
+index 0000000..1caad4f
+--- /dev/null
++++ b/scripts/deployment/calibration.py
+@@ -0,0 +1,556 @@
++#!/usr/bin/env python3
++
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: Apache-2.0
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""FP8 / NVFP4 post-training-quantization calibration for GR00T N1.7 export.
++
++Two-phase design, consumed by ``export_onnx_n1d7.py``:
++
++1. :func:`capture_calibration_batches` walks the calibration dataset ONCE
++   through the still-unquantized policy and caches every component's inputs
++   on CPU. It must run before any component is exported: modelopt fake-quant
++   mutates the policy's modules in place, so later captures would observe
++   quantized upstream activations.
++2. :func:`calibrate_component` replays the cached batches through a
++   component's export wrapper under the modelopt recipe selected by
++   ``(component, precision_tag)``. The per-layer breakdown of the mixed
++   recipes lives in :func:`_quant_config`:
++
++   - llm/nvfp4: NVFP4 AWQ, with o_proj and down_proj kept in FP8.
++   - dit/nvfp4: FP8 everywhere, with the FFN linears in NVFP4.
++   - vl_sa/fp8: only the FFN linears in FP8, attention stays high precision.
++"""
++
++import copy
++import logging
++import os
++import sys
++import time
++from typing import Any, Optional
++
++import numpy as np
++import torch
++import torch.nn as nn
++
++from gr00t.data.dataset.lerobot_episode_loader import LeRobotEpisodeLoader
++from gr00t.data.dataset.sharded_single_step_dataset import extract_step_data
++from gr00t.data.types import MessageType
++from gr00t.policy.gr00t_policy import Gr00tPolicy, _rec_to_dtype
++
++# ---------------------------------------------------------------------------
++# Compat shim: modelopt (<=0.39) + torch>=2.10
++# ---------------------------------------------------------------------------
++
++
++def _patch_modelopt_jitscalartype_import() -> None:
++    """Inject ``JitScalarType`` into the torchscript exporter namespace so that
++    older modelopt versions don't crash on newer PyTorch."""
++    try:
++        import torch.onnx._internal.torchscript_exporter as _tse
++    except Exception:
++        return
++    if hasattr(_tse, "JitScalarType"):
++        return
++    try:
++        from torch.onnx._internal.torchscript_exporter._type_utils import (
++            JitScalarType as _JitScalarType,
++        )
++    except Exception:
++        return
++    _tse.JitScalarType = _JitScalarType
++
++
++_patch_modelopt_jitscalartype_import()
++
++# Make sibling modules importable when run directly from any directory.
++sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
++
++logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
++logger = logging.getLogger(__name__)
++
++
++# ============================================================
++# Phase 1: capture calibration inputs from the clean policy
++# ============================================================
++
++
++def _prepare_step_observation(
++    loader: LeRobotEpisodeLoader, ep_idx: int, step_idx: int, policy: Gr00tPolicy
++) -> dict:
++    """Prepare a single trajectory step as a batched observation dict."""
++    traj = loader[ep_idx]
++    modality_configs = policy.modality_configs
++
++    data_point = extract_step_data(
++        traj,
++        step_idx,
++        modality_configs={k: v for k, v in modality_configs.items() if k != "action"},
++        embodiment_tag=policy.embodiment_tag,
++    )
++
++    observation: dict[str, Any] = {}
++    for key, value in data_point.states.items():
++        observation[f"state.{key}"] = value
++    for key, value in data_point.images.items():
++        observation[f"video.{key}"] = np.array(value)
++    for key in modality_configs["language"].modality_keys:
++        observation[key] = data_point.text
++
++    new_obs: dict[str, Any] = {}
++    for modality in ["video", "state", "language"]:
++        new_obs[modality] = {}
++        for key in modality_configs[modality].modality_keys:
++            parsed_key = key if modality == "language" else f"{modality}.{key}"
++            arr = observation[parsed_key]
++            new_obs[modality][key] = [[arr]] if isinstance(arr, str) else arr[None, :]
++    return new_obs
++
++
++def _collate_inputs(policy: Gr00tPolicy, data: dict) -> dict:
++    """Process one observation through the VLA processor and collate."""
++    unbatched_observations = policy._unbatch_observation(data)
++    processed_inputs = []
++    for obs in unbatched_observations:
++        vla_step_data = policy._to_vla_step_data(obs)
++        messages = [{"type": MessageType.EPISODE_STEP.value, "content": vla_step_data}]
++        processed_inputs.append(policy.processor(messages))
++
++    collated = policy.collate_fn(processed_inputs)
++    collated = _rec_to_dtype(collated, dtype=torch.bfloat16)
++    return collated.get("inputs", collated)
++
++
++def _to_cpu(batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
++    return {name: tensor.detach().cpu() for name, tensor in batch.items()}
++
++
++def _capture_llm_batch(policy: Gr00tPolicy, inputs: dict) -> dict[str, torch.Tensor]:
++    """Mirror the runtime LLM path: embed tokens, run the ViT, scatter image
++    embeds, compute 3D position_ids — everything the LLM export wrapper takes."""
++    input_ids = inputs.get("input_ids")
++    attention_mask = inputs.get("attention_mask")
++    pixel_values = inputs.get("pixel_values")
++    image_grid_thw = inputs.get("image_grid_thw")
++    if input_ids is None or attention_mask is None or pixel_values is None:
++        raise RuntimeError(
++            f"LLM calibration: required inputs missing. Keys found: {list(inputs.keys())}"
++        )
++
++    device = next(policy.model.parameters()).device
++    qwen = policy.model.backbone.model
++    qwen_inner = qwen.model
++    vision = qwen_inner.visual
++    text_model = qwen_inner.language_model
++
++    input_ids = input_ids.to(device)
++    attention_mask = attention_mask.to(device)
++    pixel_values = pixel_values.to(device=device)
++    image_grid_thw = image_grid_thw.to(device=device)
++
++    inputs_embeds = text_model.get_input_embeddings()(input_ids)
++
++    vision_dtype = next(vision.parameters()).dtype
++    vision_out = vision(pixel_values.to(vision_dtype), grid_thw=image_grid_thw)
++    if isinstance(vision_out, tuple):
++        image_embeds, deepstack_features = vision_out
++    else:
++        image_embeds = vision_out
++        deepstack_features = None
++
++    image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
++
++    image_token_id = qwen.config.image_token_id
++    image_mask = (input_ids == image_token_id).unsqueeze(-1).expand_as(inputs_embeds)
++    inputs_embeds = inputs_embeds.masked_scatter(image_mask, image_embeds)
++
++    position_ids, _ = qwen_inner.get_rope_index(
++        input_ids=input_ids,
++        image_grid_thw=image_grid_thw,
++        video_grid_thw=None,
++        attention_mask=attention_mask,
++    )
++
++    batch: dict[str, torch.Tensor] = {
++        "inputs_embeds": inputs_embeds,
++        "attention_mask": attention_mask.to(torch.int64),
++        "position_ids": position_ids.to(torch.int64),
++        "visual_pos_masks": input_ids == image_token_id,
++    }
++    if deepstack_features is not None:
++        for i, feature in enumerate(deepstack_features):
++            batch[f"deepstack_{i}"] = feature.to(inputs_embeds.device, inputs_embeds.dtype)
++    return batch
++
++
++def capture_calibration_batches(
++    policy: Gr00tPolicy,
++    dataset_path: str,
++    calib_size: int,
++    components: set[str],
++) -> dict[str, list[dict[str, torch.Tensor]]]:
++    """Capture calibration inputs for the requested components in one pass.
++
++    Runs ``calib_size`` dataset steps through the (still unquantized) policy
++    and returns, per component, a list of CPU input dicts matching the export
++    wrapper's keyword arguments. Call this before exporting/quantizing any
++    component.
++    """
++    from transformers import BatchFeature
++
++    model = policy.model
++    action_head = model.action_head
++    device = next(model.parameters()).device
++    dtype = next(model.parameters()).dtype
++
++    loader = LeRobotEpisodeLoader(
++        dataset_path=dataset_path,
++        modality_configs=policy.modality_configs,
++    )
++    step_indices: list[tuple[int, int]] = []
++    for ep_idx in range(len(loader)):
++        for step_idx in range(len(loader[ep_idx])):
++            step_indices.append((ep_idx, step_idx))
++            if len(step_indices) >= calib_size:
++                break
++        if len(step_indices) >= calib_size:
++            break
++    if not step_indices:
++        raise RuntimeError(f"Calibration dataset {dataset_path} yielded no steps")
++
++    def _move(x):
++        if isinstance(x, torch.Tensor):
++            if x.dtype.is_floating_point:
++                return x.to(device=device, dtype=dtype)
++            return x.to(device=device)
++        return x
++
++    logger.info(
++        "Capturing %d calibration batches for %s from %s ...",
++        len(step_indices),
++        sorted(components),
++        dataset_path,
++    )
++    batches: dict[str, list[dict[str, torch.Tensor]]] = {name: [] for name in components}
++    for count, (ep_idx, step_idx) in enumerate(step_indices):
++        if count % 10 == 0:
++            logger.info("  capturing calibration batch %d/%d ...", count, len(step_indices))
++        observation = _prepare_step_observation(loader, ep_idx, step_idx, policy)
++        inputs = _collate_inputs(policy, observation)
++
++        pixel_values = inputs.get("pixel_values")
++        if isinstance(pixel_values, list):
++            pixel_values = torch.cat(pixel_values, dim=0)
++
++        with torch.no_grad():
++            if "vit" in components:
++                if pixel_values is None:
++                    raise RuntimeError(
++                        "ViT calibration: 'pixel_values' missing from collated inputs. "
++                        f"Keys found: {list(inputs.keys())}"
++                    )
++                batches["vit"].append(_to_cpu({"pixel_values": pixel_values}))
++
++            if "llm" in components:
++                llm_inputs = dict(inputs)
++                llm_inputs["pixel_values"] = pixel_values
++                batches["llm"].append(_to_cpu(_capture_llm_batch(policy, llm_inputs)))
++
++            if "vl_sa" in components or "dit" in components:
++                backbone_inputs = {
++                    k: _move(inputs[k])
++                    for k in ("input_ids", "attention_mask", "pixel_values", "image_grid_thw")
++                    if k in inputs
++                }
++                backbone_output = model.backbone(BatchFeature(data=backbone_inputs))
++
++                if "vl_sa" in components:
++                    hidden_states = action_head.vlln(backbone_output["backbone_features"])
++                    batches["vl_sa"].append(_to_cpu({"hidden_states": hidden_states}))
++
++                if "dit" in components:
++                    processed = action_head.process_backbone_output(backbone_output)
++                    vl_embs = processed["backbone_features"]
++
++                    state = _move(inputs["state"])
++                    embodiment_id = _move(inputs["embodiment_id"])
++                    state_flat = state.view(state.shape[0], 1, -1)
++                    state_features = action_head.state_encoder(state_flat, embodiment_id)
++
++                    B = state_features.shape[0]
++                    config = action_head.config
++                    actions = torch.randn(
++                        B,
++                        config.action_horizon,
++                        action_head.action_dim,
++                        device=device,
++                        dtype=state_features.dtype,
++                    )
++                    timestep = torch.randint(
++                        0,
++                        int(action_head.num_timestep_buckets),
++                        (B,),
++                        device=device,
++                        dtype=torch.int64,
++                    )
++                    action_features = action_head.action_encoder(
++                        actions, timestep, embodiment_id
++                    )
++                    if getattr(config, "add_pos_embed", False):
++                        pos_ids = torch.arange(
++                            action_features.shape[1], dtype=torch.long, device=device
++                        )
++                        pos_embs = action_head.position_embedding(pos_ids).unsqueeze(0)
++                        action_features = action_features + pos_embs
++
++                    batch = {
++                        "sa_embs": torch.cat((state_features, action_features), dim=1),
++                        "vl_embs": vl_embs,
++                        "timestep": timestep,
++                    }
++                    if processed["image_mask"] is not None:
++                        batch["image_mask"] = processed["image_mask"]
++                    if processed["backbone_attention_mask"] is not None:
++                        batch["backbone_attention_mask"] = processed["backbone_attention_mask"]
++                    batches["dit"].append(_to_cpu(batch))
++
++    logger.info("Captured %d calibration batches per component.", len(step_indices))
++    return batches
++
++
++# ============================================================
++# Phase 2: modelopt PTQ over the captured batches
++# ============================================================
++
++# FFN projection layer names shared by the DiT and VL self-attention
++# transformer blocks (diffusers BasicTransformerBlock).
++_FFN_LAYERS = ("ff.net.0.proj", "ff.net.2")
++
++# LLM layers kept in FP8 under the NVFP4 recipe to preserve accuracy.
++_LLM_NVFP4_FP8_FALLBACK_LAYERS = ("mlp.down_proj", "self_attn.o_proj")
++
++# Batch key and dimension whose export-time shape every calibration batch must
++# match (the exported graphs are static except for vl_seq_len).
++_SHAPE_KEYS = {
++    "vit": ("pixel_values", 0),
++    "llm": ("inputs_embeds", 1),
++    "vl_sa": ("hidden_states", 1),
++    "dit": ("vl_embs", 1),
++}
++
++
++def _quant_config(component: str, tag: str):
++    """modelopt quantization config for one (component, precision-tag) recipe."""
++    import modelopt.torch.quantization as mtq
++
++    if component == "vit" and tag == "fp8":
++        cfg = copy.deepcopy(mtq.FP8_DEFAULT_CFG)
++        cfg["quant_cfg"]["nn.Conv3d"] = {"*": {"enable": False}}
++        cfg["quant_cfg"]["nn.Conv2d"] = {"*": {"enable": False}}
++        return cfg
++
++    if component == "llm" and tag == "fp8":
++        return copy.deepcopy(mtq.FP8_DEFAULT_CFG)
++
++    if component == "llm" and tag == "nvfp4":
++        cfg = copy.deepcopy(mtq.NVFP4_AWQ_FULL_CFG)
++        for layer in _LLM_NVFP4_FP8_FALLBACK_LAYERS:
++            cfg["quant_cfg"][f"*layers.*.{layer}.input_quantizer"] = {
++                "num_bits": (4, 3),
++                "axis": None,
++            }
++            cfg["quant_cfg"][f"*layers.*.{layer}.weight_quantizer"] = {
++                "num_bits": (4, 3),
++                "axis": None,
++            }
++        return cfg
++
++    if component == "vl_sa" and tag == "fp8":
++        # Standard FP8 tensor format, but only the FFN projections of each
++        # block are enabled; attention stays high precision.
++        cfg = copy.deepcopy(mtq.FP8_DEFAULT_CFG)
++        cfg["quant_cfg"]["*weight_quantizer"] = {"enable": False}
++        cfg["quant_cfg"]["*input_quantizer"] = {"enable": False}
++        for layer in _FFN_LAYERS:
++            for quantizer in ("input_quantizer", "weight_quantizer"):
++                cfg["quant_cfg"][f"*transformer_blocks.*.{layer}.{quantizer}"] = copy.deepcopy(
++                    mtq.FP8_DEFAULT_CFG["quant_cfg"][f"*{quantizer}"]
++                )
++        return cfg
++
++    if component == "dit" and tag == "fp8":
++        return copy.deepcopy(mtq.FP8_DEFAULT_CFG)
++
++    if component == "dit" and tag == "nvfp4":
++        # Attention in FP8, FFN linears in NVFP4.
++        cfg = copy.deepcopy(mtq.FP8_DEFAULT_CFG)
++        for layer in _FFN_LAYERS:
++            for quantizer in ("input_quantizer", "weight_quantizer"):
++                cfg["quant_cfg"][f"*transformer_blocks.*.{layer}.{quantizer}"] = copy.deepcopy(
++                    mtq.NVFP4_DEFAULT_CFG["quant_cfg"][f"*{quantizer}"]
++                )
++        return cfg
++
++    raise ValueError(f"No calibration recipe for component={component!r}, tag={tag!r}")
++
++
++def _count_ffn_linears(wrapper: nn.Module) -> int:
++    return sum(
++        1
++        for name, module in wrapper.named_modules()
++        if isinstance(module, nn.Linear) and any(f".{layer}" in name for layer in _FFN_LAYERS)
++    )
++
++
++def _patch_nvfp4_trt_attributes(
++    wrapper: nn.Module, target_dtype: torch.dtype, *, only_block_quantized: bool
++) -> list[str]:
++    """Set the TRT export attributes modelopt's NVFP4 ONNX path expects.
++
++    ``only_block_quantized`` restricts patching to linears whose weight
++    quantizer carries NVFP4 block sizes (used for the mixed DiT, where the
++    FP8 attention linears must stay untouched).
++    """
++    from modelopt.torch.quantization.utils import is_quantized_linear
++
++    high_prec = "BFloat16" if target_dtype == torch.bfloat16 else "Half"
++    patched = []
++    for name, module in wrapper.named_modules():
++        if not isinstance(module, nn.Linear) or not is_quantized_linear(module):
++            continue
++        if only_block_quantized and getattr(module.weight_quantizer, "block_sizes", None) is None:
++            continue
++        module.input_quantizer._trt_high_precision_dtype = high_prec
++        module.input_quantizer._onnx_quantizer_type = "dynamic"
++        module.weight_quantizer._onnx_quantizer_type = "static"
++        patched.append(name)
++    return patched
++
++
++def _check_effective_samples(used: int, skipped: int, total: int, tag: str) -> None:
++    """Log used/skipped counts; raise if effective samples are too few."""
++    logger.info(
++        f"  {tag} calibration used {used}/{total} samples (skipped {skipped} shape-mismatched)"
++    )
++    min_required = max(2, total // 2)
++    if used < min_required:
++        raise RuntimeError(
++            f"{tag} calibration only used {used} samples (min {min_required}); "
++            f"shape variance in dataset too high — increase --calib-size or filter the dataset."
++        )
++
++
++def _post_calibration_checks(
++    wrapper: nn.Module, component: str, tag: str, target_dtype: torch.dtype
++) -> None:
++    """Recipe-specific TRT attribute patching and selective-quantization audits."""
++    import modelopt.torch.quantization as mtq
++    from modelopt.torch.quantization.utils import is_quantized_linear
++
++    if component == "llm" and tag == "nvfp4":
++        patched = _patch_nvfp4_trt_attributes(wrapper, target_dtype, only_block_quantized=False)
++        logger.info(f"  Patched {len(patched)} quantized LLM linears with TRT NVFP4 attributes")
++
++    if component == "dit" and tag == "nvfp4":
++        patched = _patch_nvfp4_trt_attributes(wrapper, target_dtype, only_block_quantized=True)
++        expected = _count_ffn_linears(wrapper)
++        if len(patched) != expected or any(".ff." not in name for name in patched):
++            raise RuntimeError(
++                f"DiT mixed quantization expected exactly {expected} NVFP4 FFN Linear "
++                f"modules, got {len(patched)}: {patched}"
++            )
++        logger.info(f"  Patched {len(patched)} DiT NVFP4 FFN linears for TRT export")
++
++    if component == "vl_sa":
++        quantized = [
++            name
++            for name, module in wrapper.named_modules()
++            if isinstance(module, nn.Linear)
++            and is_quantized_linear(module)
++            and module.input_quantizer.is_enabled
++            and module.weight_quantizer.is_enabled
++        ]
++        expected = _count_ffn_linears(wrapper)
++        if len(quantized) != expected or any(".ff." not in name for name in quantized):
++            raise RuntimeError(
++                f"VL-SA selective FP8 expected exactly {expected} FFN Linear modules, "
++                f"got {len(quantized)}: {quantized}"
++            )
++        logger.info(f"  Selectively quantized {len(quantized)} VL-SA FFN Linear modules")
++
++    mtq.print_quant_summary(wrapper)
++
++
++def calibrate_component(
++    wrapper: nn.Module,
++    component: str,
++    tag: str,
++    batches: list[dict[str, torch.Tensor]],
++    input_names: Optional[list[str]] = None,
++) -> None:
++    """Quantize an export wrapper in place with modelopt PTQ.
++
++    ``batches`` come from :func:`capture_calibration_batches`. Batches whose
++    shape (see ``_SHAPE_KEYS``) differs from the first batch are skipped: the
++    exported graphs are static in those dimensions.
++    """
++    import modelopt.torch.quantization as mtq
++
++    if not batches:
++        raise RuntimeError(f"No calibration batches captured for component {component!r}")
++
++    target_dtype = next(wrapper.parameters()).dtype
++    target_device = next(wrapper.parameters()).device
++    shape_key, shape_dim = _SHAPE_KEYS[component]
++    expected_shape = None
++    used = skipped = 0
++
++    def calibrate_loop(model: nn.Module) -> None:
++        nonlocal expected_shape, used, skipped
++        for idx, batch in enumerate(batches):
++            if idx % 10 == 0:
++                logger.info(f"    {component} {tag} calibrating batch {idx}...")
++            kwargs: dict[str, torch.Tensor] = {}
++            for name, tensor in batch.items():
++                if input_names is not None and name not in input_names:
++                    continue
++                if tensor.dtype.is_floating_point:
++                    tensor = tensor.to(device=target_device, dtype=target_dtype)
++                else:
++                    tensor = tensor.to(device=target_device)
++                kwargs[name] = tensor
++
++            size = kwargs[shape_key].shape[shape_dim]
++            if expected_shape is None:
++                expected_shape = size
++            elif size != expected_shape:
++                logger.warning(
++                    f"    skip batch {idx}: {shape_key}.shape[{shape_dim}]={size} "
++                    f"!= expected {expected_shape}"
++                )
++                skipped += 1
++                continue
++
++            with torch.inference_mode():
++                model(**kwargs)
++            used += 1
++
++    logger.info(f"  Running {component} {tag} calibration on {len(batches)} cached batches...")
++    start = time.time()
++    mtq.quantize(wrapper, _quant_config(component, tag), forward_loop=calibrate_loop)
++    logger.info(f"  {component} {tag} calibration finished in {time.time() - start:.1f}s")
++    _check_effective_samples(used, skipped, len(batches), f"{component} {tag}")
++    _post_calibration_checks(wrapper, component, tag, target_dtype)
++    torch.cuda.empty_cache()
+diff --git a/scripts/deployment/export_onnx_n1d7.py b/scripts/deployment/export_onnx_n1d7.py
+index bb8086a..aa7bc94 100755
+--- a/scripts/deployment/export_onnx_n1d7.py
++++ b/scripts/deployment/export_onnx_n1d7.py
+@@ -64,6 +64,19 @@ from gr00t.data.utils import parse_observation_gr00t
+ from gr00t.deployment.modes import ExportMode
+ from gr00t.model.modules.qwen3_backbone import _assign_inv_freq, recompute_vision_rotary_inv_freq
+ from gr00t.policy.gr00t_policy import Gr00tPolicy
++from n1d7_optimization_config import (
++    ACTION_HEAD_FORMAT_VERSION,
++    ExecutionProfile,
++    QuantizationPolicy,
++    component_precisions,
++    format_quantization_summary,
++    resolve_dtype,
++)
++from n1d7_optimized_export import (
++    export_optimized_action_encoder,
++    export_optimized_dit,
++    fuse_llm_gateup,
++)
+ import numpy as np
+ import torch
+ import torch.nn as nn
+@@ -77,8 +90,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
+ logger = logging.getLogger(__name__)
+ 
+ 
+-def _consolidate_external_data(onnx_path: str) -> None:
+-    """Merge scattered external-data files into a single .data file next to the ONNX model."""
++def _consolidate_external_data(onnx_path: str, enable_nvfp4: bool = False) -> None:
++    """Merge scattered external-data files into a single .data file next to the ONNX model.
++
++    When ``enable_nvfp4`` is True, also converts FP4 QDQ ops to 2DQ format
++    for TensorRT compatibility.
++    """
+     import onnx
+     from onnx.external_data_helper import convert_model_to_external_data
+ 
+@@ -91,14 +108,22 @@ def _consolidate_external_data(onnx_path: str) -> None:
+         f
+         for f in os.listdir(onnx_dir)
+         if os.path.isfile(os.path.join(onnx_dir, f))
+-        and not f.endswith((".onnx", ".json", ".data"))
++        and not f.endswith((".onnx", ".json", ".data", ".pt"))
+         and f != data_file
+     ]
+-    if not scattered:
++    if not scattered and not enable_nvfp4:
+         return
+ 
+-    logger.info(f"  Consolidating {len(scattered)} external data files into {data_file}...")
++    if scattered:
++        logger.info(f"  Consolidating {len(scattered)} external data files into {data_file}...")
+     model = onnx.load(onnx_path, load_external_data=True)
++
++    if enable_nvfp4:
++        logger.info("  Converting NVFP4 QDQ ops to 2DQ format for TensorRT...")
++        from modelopt.onnx.quantization.qdq_utils import fp4qdq_to_2dq
++
++        model = fp4qdq_to_2dq(model, verbose=True)
++
+     convert_model_to_external_data(
+         model, all_tensors_to_one_file=True, location=data_file, size_threshold=0
+     )
+@@ -107,14 +132,26 @@ def _consolidate_external_data(onnx_path: str) -> None:
+     # Clean up scattered files
+     for f in scattered:
+         os.remove(os.path.join(onnx_dir, f))
+-    logger.info(f"  Consolidated and cleaned up {len(scattered)} files.")
++    if scattered:
++        logger.info(f"  Consolidated and cleaned up {len(scattered)} files.")
+ 
+ 
+-def verify_onnx_export(onnx_path: str) -> None:
+-    """Load and check the exported ONNX model for validity."""
++def verify_onnx_export(onnx_path: str, skip_check: bool = False) -> None:
++    """Load and check the exported ONNX model for validity.
++
++    ``skip_check=True`` skips ``onnx.checker.check_model`` (used for NVFP4 LLM
++    whose 2DQ-converted graph trips the stock checker but is valid for TRT).
++    """
+     import onnx
+ 
+     logger.info(f"  Verifying {onnx_path} ...")
++    if skip_check:
++        model = onnx.load(onnx_path, load_external_data=False)
++        logger.info(
++            f"  ONNX model loaded (skip_check=True): {len(model.graph.node)} nodes, "
++            f"{len(model.graph.initializer)} initializers."
++        )
++        return
+     onnx.checker.check_model(onnx_path)
+     logger.info("  ONNX model verified successfully.")
+ 
+@@ -529,7 +566,10 @@ def _assert_vision_rotary_matches_analytic(vision, vision_config, *, atol=1e-5,
+         )
+ 
+ 
+-def export_vit_to_onnx(policy, output_dir, captured_vit, use_bf16=True, batch_size=1):
++def export_vit_to_onnx(
++    policy, output_dir, captured_vit, use_bf16=True, batch_size=1,
++    *, precision_tag=None, pre_export_fn=None,
++):
+     """Export Qwen3-VL Vision Model to ONNX.
+ 
+     Pre-computes position/rotary embeddings for the captured grid_thw to avoid
+@@ -539,6 +579,13 @@ def export_vit_to_onnx(policy, output_dir, captured_vit, use_bf16=True, batch_si
+     Input: pixel_values [num_patches * batch_size, C*T*pH*pW]
+     Output: image_embeds [num_merged_patches * batch_size, hidden_dim],
+             deepstack_features [num_layers, num_merged_patches * batch_size, hidden_dim]
++
++    Quantization hooks (optional, used by the FP8/NVFP4 policies in main()):
++        precision_tag:  Precision tag driving the export dtype and the output
++                        filename (e.g. "fp8" -> vit_fp8.onnx).
++        pre_export_fn:  Called as ``pre_export_fn(wrapper)`` after the wrapper is
++                        built but before ``torch.onnx.export``. Use for modelopt
++                        calibration / quantization.
+     """
+     logger.info("\n" + "=" * 80)
+     logger.info("Exporting ViT (Qwen3-VL Vision) to ONNX")
+@@ -549,13 +596,17 @@ def export_vit_to_onnx(policy, output_dir, captured_vit, use_bf16=True, batch_si
+     vision = qwen_model.model.visual
+ 
+     # Gr00tPolicy loads the model in bf16, which rounds the non-persistent RoPE
+-    # inv_freq. The ViT is exported in fp32 for TRT accuracy, so re-derive the analytic
+-    # fp32 inv_freq before baking cos/sin, then verify the (now fp32) buffer against the
+-    # independent analytic oracle.
++    # inv_freq. The ViT is exported in fp32 by default for TRT accuracy, so
++    # re-derive the analytic fp32 inv_freq before baking cos/sin, then verify
++    # the buffer against the independent analytic oracle.
+     _restore_vision_rotary_inv_freq_fp32(vision, qwen_model.config.vision_config)
+     _assert_vision_rotary_matches_analytic(vision, qwen_model.config.vision_config)
+ 
+-    dtype = torch.bfloat16 if use_bf16 else torch.float32
++    dtype = (
++        resolve_dtype(precision_tag)
++        if precision_tag
++        else (torch.bfloat16 if use_bf16 else torch.float32)
++    )
+     vision = vision.to(dtype).eval().cuda()
+ 
+     # Compute chunk sizes from grid_thw for per-image attention splitting
+@@ -584,8 +635,12 @@ def export_vit_to_onnx(policy, output_dir, captured_vit, use_bf16=True, batch_si
+ 
+     logger.info(f"  pixel_values: {pixel_values.shape} ({pixel_values.dtype})")
+ 
+-    precision_tag = "bf16" if use_bf16 else "fp32"
+-    output_path = os.path.join(output_dir, f"vit_{precision_tag}.onnx")
++    # --- Quantization hook: calibrate / quantize the wrapper in-place ---
++    if pre_export_fn is not None:
++        pre_export_fn(wrapper)
++
++    ptag = precision_tag or ("bf16" if use_bf16 else "fp32")
++    output_path = os.path.join(output_dir, f"vit_{ptag}.onnx")
+     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+ 
+     output_names = ["image_embeds", "deepstack_features"]
+@@ -608,15 +663,17 @@ def export_vit_to_onnx(policy, output_dir, captured_vit, use_bf16=True, batch_si
+     _consolidate_external_data(output_path)
+     verify_onnx_export(output_path)
+ 
+-    # ORT verification: compare ONNX output against PyTorch wrapper
+-    # Must run BEFORE restoring attention, since wrapper uses patched attention
+-    verify_onnx_with_ort(
+-        onnx_path=output_path,
+-        pytorch_module=wrapper,
+-        sample_inputs={"pixel_values": pixel_values},
+-        output_names=output_names,
+-        label="ViT",
+-    )
++    # ORT verification: compare ONNX output against PyTorch wrapper.
++    # Must run BEFORE restoring attention, since wrapper uses patched attention.
++    # Skip for quantized models (TRT custom Q/DQ ops are not runnable in ORT).
++    if pre_export_fn is None:
++        verify_onnx_with_ort(
++            onnx_path=output_path,
++            pytorch_module=wrapper,
++            sample_inputs={"pixel_values": pixel_values},
++            output_names=output_names,
++            label="ViT",
++        )
+ 
+     # Restore original attention
+     _restore_vision_attention(vision, originals)
+@@ -629,7 +686,10 @@ def export_vit_to_onnx(policy, output_dir, captured_vit, use_bf16=True, batch_si
+ # ============================================================
+ 
+ 
+-def export_llm_to_onnx(policy, captured_llm, output_dir, use_bf16=True, batch_size=1):
++def export_llm_to_onnx(
++    policy, captured_llm, output_dir, use_bf16=True, batch_size=1,
++    *, precision_tag=None, pre_export_fn=None, fuse_gateup=False,
++):
+     """Export the Qwen3-VL text model (LLM) to ONNX.
+ 
+     The LLM receives inputs_embeds (with vision tokens already scattered in),
+@@ -651,6 +711,14 @@ def export_llm_to_onnx(policy, captured_llm, output_dir, use_bf16=True, batch_si
+         deepstack_2:    [num_vis_tokens, hidden_size]  (deepstack feature for layer 2)
+     Output:
+         embeddings: [B, seq_len, hidden_size]
++
++    Quantization hooks (optional, used by the FP8/NVFP4 policies in main()):
++        precision_tag:  Precision tag driving the export dtype, the output
++                        filename (e.g. "nvfp4" -> llm_nvfp4.onnx), and the
++                        NVFP4 2DQ post-processing.
++        pre_export_fn:  Called as ``pre_export_fn(wrapper)`` after the wrapper is
++                        built but before ``torch.onnx.export``.
++        fuse_gateup:    Fuse Gate/Up projections into one Linear per layer.
+     """
+     logger.info("\n" + "=" * 80)
+     logger.info("Exporting LLM (Qwen3-VL Text Model) to ONNX")
+@@ -831,7 +899,14 @@ def export_llm_to_onnx(policy, captured_llm, output_dir, use_bf16=True, batch_si
+     wrapper.load_state_dict(dst_state)
+     logger.info(f"  Loaded {loaded} weight tensors, skipped {skipped}")
+ 
+-    dtype = torch.bfloat16 if use_bf16 else torch.float32
++    if fuse_gateup:
++        fuse_llm_gateup(wrapper)
++
++    dtype = (
++        resolve_dtype(precision_tag)
++        if precision_tag
++        else (torch.bfloat16 if use_bf16 else torch.float32)
++    )
+     wrapper = wrapper.to(dtype).eval().cuda()
+ 
+     # Create dummy inputs from captured shapes
+@@ -879,8 +954,12 @@ def export_llm_to_onnx(policy, captured_llm, output_dir, use_bf16=True, batch_si
+     for name, tensor in zip(input_names, export_inputs):
+         logger.info(f"    {name}: {tensor.shape} ({tensor.dtype})")
+ 
+-    precision_tag = "bf16" if use_bf16 else "fp32"
+-    output_path = os.path.join(output_dir, f"llm_{precision_tag}.onnx")
++    # --- Quantization hook: calibrate / quantize the wrapper in-place ---
++    if pre_export_fn is not None:
++        pre_export_fn(wrapper)
++
++    ptag = precision_tag or ("bf16" if use_bf16 else "fp32")
++    output_path = os.path.join(output_dir, f"llm_{ptag}.onnx")
+     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+ 
+     logger.info(f"  Exporting to {output_path}...")
+@@ -899,8 +978,9 @@ def export_llm_to_onnx(policy, captured_llm, output_dir, use_bf16=True, batch_si
+         )
+ 
+     logger.info("  LLM exported successfully!")
+-    _consolidate_external_data(output_path)
+-    verify_onnx_export(output_path)
++    is_nvfp4 = precision_tag == "nvfp4"
++    _consolidate_external_data(output_path, enable_nvfp4=is_nvfp4)
++    verify_onnx_export(output_path, skip_check=is_nvfp4)
+     return output_path
+ 
+ 
+@@ -938,7 +1018,10 @@ def prepare_observation(policy, dataset, traj_idx=0):
+ # ============================================================
+ 
+ 
+-def export_vl_self_attention_to_onnx(policy, output_dir, vl_seq_len, use_bf16=True, batch_size=1):
++def export_vl_self_attention_to_onnx(
++    policy, output_dir, vl_seq_len, use_bf16=True, batch_size=1,
++    *, dtype_override=None, pre_export_fn=None,
++):
+     """Export the vl_self_attention (SelfAttentionTransformer) to ONNX.
+ 
+     This module sits between VLLN and the DiT, transforming backbone
+@@ -957,7 +1040,7 @@ def export_vl_self_attention_to_onnx(policy, output_dir, vl_seq_len, use_bf16=Tr
+     logger.info("=" * 80)
+ 
+     config = policy.model.action_head.config
+-    dtype = torch.bfloat16 if use_bf16 else torch.float32
++    dtype = dtype_override or (torch.bfloat16 if use_bf16 else torch.float32)
+     model = vl_sa.to(dtype).eval().cuda()
+ 
+     hidden_states = torch.randn(
+@@ -968,6 +1051,9 @@ def export_vl_self_attention_to_onnx(policy, output_dir, vl_seq_len, use_bf16=Tr
+     output_path = os.path.join(output_dir, "vl_self_attention.onnx")
+     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+ 
++    if pre_export_fn is not None:
++        pre_export_fn(model)
++
+     logger.info(f"  Exporting to {output_path}...")
+     with torch.inference_mode():
+         torch.onnx.export(
+@@ -982,10 +1068,12 @@ def export_vl_self_attention_to_onnx(policy, output_dir, vl_seq_len, use_bf16=Tr
+             },
+             opset_version=19,
+             do_constant_folding=True,
++            export_params=True,
+             dynamo=False,
+         )
+ 
+     logger.info("  VL Self-Attention exported successfully!")
++    _consolidate_external_data(output_path)
+     verify_onnx_export(output_path)
+     return output_path
+ 
+@@ -995,7 +1083,10 @@ def export_vl_self_attention_to_onnx(policy, output_dir, vl_seq_len, use_bf16=Tr
+ # ============================================================
+ 
+ 
+-def export_state_encoder_to_onnx(policy, output_dir, use_bf16=True, batch_size=1):
++def export_state_encoder_to_onnx(
++    policy, output_dir, use_bf16=True, batch_size=1,
++    *, dtype_override=None,
++):
+     """Export the state encoder (CategorySpecificMLP) to ONNX.
+ 
+     N1.7 change: input_dim = max_state_dim * state_history_length.
+@@ -1012,7 +1103,7 @@ def export_state_encoder_to_onnx(policy, output_dir, use_bf16=True, batch_size=1
+     config = policy.model.action_head.config
+     state_encoder = policy.model.action_head.state_encoder
+ 
+-    dtype = torch.bfloat16 if use_bf16 else torch.float32
++    dtype = dtype_override or (torch.bfloat16 if use_bf16 else torch.float32)
+     model = state_encoder.to(dtype).eval().cuda()
+ 
+     # N1.7: state is flattened to [B, 1, max_state_dim * state_history_length]
+@@ -1058,7 +1149,10 @@ def export_state_encoder_to_onnx(policy, output_dir, use_bf16=True, batch_size=1
+ # ============================================================
+ 
+ 
+-def export_action_encoder_to_onnx(policy, output_dir, use_bf16=True, batch_size=1):
++def export_action_encoder_to_onnx(
++    policy, output_dir, use_bf16=True, batch_size=1,
++    *, dtype_override=None,
++):
+     """Export the action encoder (MultiEmbodimentActionEncoder) to ONNX.
+ 
+     Input: actions [B, action_horizon, max_action_dim], timesteps [B], embodiment_id [B]
+@@ -1071,7 +1165,7 @@ def export_action_encoder_to_onnx(policy, output_dir, use_bf16=True, batch_size=
+     config = policy.model.action_head.config
+     action_encoder = policy.model.action_head.action_encoder
+ 
+-    dtype = torch.bfloat16 if use_bf16 else torch.float32
++    dtype = dtype_override or (torch.bfloat16 if use_bf16 else torch.float32)
+     model = action_encoder.to(dtype).eval().cuda()
+ 
+     actions = torch.randn(
+@@ -1110,7 +1204,53 @@ def export_action_encoder_to_onnx(policy, output_dir, use_bf16=True, batch_size=
+ # ============================================================
+ 
+ 
+-def export_dit_to_onnx(policy, captured_inputs, output_path, use_bf16=True, batch_size=1):
++def _dit_attn_bool_mask_to_additive_pre_hook(module, args, kwargs):
++    """Convert bool attention_mask to additive (0/-inf) in the compute dtype."""
++    am = kwargs.get("attention_mask")
++    if am is None or am.dtype != torch.bool:
++        return None
++    q = args[0] if args else kwargs.get("hidden_states")
++    if q is None:
++        return None
++    dtype = q.dtype
++    zero = torch.zeros((), dtype=dtype, device=am.device)
++    ninf = torch.full((), float("-inf"), dtype=dtype, device=am.device)
++    kwargs["attention_mask"] = torch.where(am, zero, ninf)
++    return args, kwargs
++
++
++def _patch_dit_attn_for_export(dit_model):
++    """Register pre-hooks on every BasicTransformerBlock.attn1 to enable TRT
++    mha_v2 fusion on cross-attn. Returns handles for restoration."""
++    handles = []
++    blocks = getattr(dit_model, "transformer_blocks", None)
++    if blocks is None:
++        logger.warning("  DiT has no transformer_blocks; skipping mha_v2 fusion patch")
++        return handles
++    for blk in blocks:
++        attn = getattr(blk, "attn1", None)
++        if attn is None:
++            continue
++        h = attn.register_forward_pre_hook(
++            _dit_attn_bool_mask_to_additive_pre_hook, with_kwargs=True
++        )
++        handles.append(h)
++    logger.info(
++        f"  Patched {len(handles)} DiT attn blocks: bool mask -> additive "
++        f"(enables TRT mha_v2 fusion on cross-attn)"
++    )
++    return handles
++
++
++def _unpatch_dit_attn(handles):
++    for h in handles:
++        h.remove()
++
++
++def export_dit_to_onnx(
++    policy, captured_inputs, output_path, use_bf16=True, batch_size=1,
++    *, precision_tag=None, pre_export_fn=None,
++):
+     """Export the DiT (AlternateVLDiT) to ONNX.
+ 
+     N1.7: image_mask and backbone_attention_mask are always present
+@@ -1121,6 +1261,12 @@ def export_dit_to_onnx(policy, captured_inputs, output_path, use_bf16=True, batc
+            timestep [B], image_mask [B, vl_seq_len],
+            backbone_attention_mask [B, vl_seq_len]
+     Output: [B, sa_seq_len, hidden_size]
++
++    Quantization hooks (optional, used by the FP8/NVFP4 policies in main()):
++        precision_tag:  Precision tag driving the export dtype and the NVFP4
++                        2DQ post-processing (the caller names the output file).
++        pre_export_fn:  Called as ``pre_export_fn(wrapped_model)`` after the
++                        wrapper is built but before ``torch.onnx.export``.
+     """
+     logger.info("\n" + "=" * 80)
+     logger.info("Exporting DiT to ONNX")
+@@ -1129,9 +1275,41 @@ def export_dit_to_onnx(policy, captured_inputs, output_path, use_bf16=True, batc
+     dit_model = policy.model.action_head.model
+     dit_model.eval()
+ 
+-    dtype = torch.bfloat16 if use_bf16 else torch.float32
++    enable_nvfp4 = precision_tag == "nvfp4"
++    dtype = (
++        resolve_dtype(precision_tag)
++        if precision_tag
++        else (torch.bfloat16 if use_bf16 else torch.float32)
++    )
+     dit_model = dit_model.to(dtype).cuda()
+ 
++    # Build the DiT wrapper up front so callers can run calibration through it.
++    has_image_mask = captured_inputs.image_mask is not None
++    has_backbone_mask = captured_inputs.backbone_attention_mask is not None
++
++    # Wrapper to convert positional args -> keyword args for DiT.
++    # torch.onnx.export uses positional args: `dit.forward(arg1, arg2...)`.
++    # DiT module uses keyword args: `dit.forward(hidden_states=....)`.
++    class DiTWrapper(torch.nn.Module):
++        def __init__(self, dit, use_image_mask, use_backbone_mask):
++            super().__init__()
++            self.dit = dit
++            self.use_image_mask = use_image_mask
++            self.use_backbone_mask = use_backbone_mask
++
++        def forward(
++            self, sa_embs, vl_embs, timestep, image_mask=None, backbone_attention_mask=None
++        ):
++            kwargs = {}
++            if self.use_image_mask and image_mask is not None:
++                kwargs["image_mask"] = image_mask
++            if self.use_backbone_mask and backbone_attention_mask is not None:
++                kwargs["backbone_attention_mask"] = backbone_attention_mask
++            return self.dit(sa_embs, vl_embs, timestep, **kwargs)
++
++    wrapped_model = DiTWrapper(dit_model, has_image_mask, has_backbone_mask)
++    wrapped_model = wrapped_model.to(dtype).eval().cuda()
++
+     # Use captured shapes but replace batch dim (index 0) with batch_size
+     sa_shape = (batch_size,) + captured_inputs.sa_embs.shape[1:]
+     vl_shape = (batch_size,) + captured_inputs.vl_embs.shape[1:]
+@@ -1143,8 +1321,6 @@ def export_dit_to_onnx(policy, captured_inputs, output_path, use_bf16=True, batc
+ 
+     export_inputs = [sa_embs, vl_embs, timestep]
+     input_names = ["sa_embs", "vl_embs", "timestep"]
+-    has_image_mask = captured_inputs.image_mask is not None
+-    has_backbone_mask = captured_inputs.backbone_attention_mask is not None
+ 
+     if has_image_mask:
+         im_shape = (batch_size,) + captured_inputs.image_mask.shape[1:]
+@@ -1168,30 +1344,9 @@ def export_dit_to_onnx(policy, captured_inputs, output_path, use_bf16=True, batc
+     # specializes vl_seq_len here, which breaks the dynamic TensorRT profile.
+     logger.info(f"Exporting to {output_path} with legacy ONNX exporter...")
+ 
+-    # Create a wrapper to handle keyword arguments
+-    # torch.onnx.export uses positional args: `dit.forward(arg1, arg2...)`
+-    # DiT module uses keyword args: `dit.forward(hidden_states=....)`
+-    # The DiTWrapper handles this translation
+-    # Wrapper to convert positional args -> keyword args for DiT
+-    class DiTWrapper(torch.nn.Module):
+-        def __init__(self, dit, use_image_mask, use_backbone_mask):
+-            super().__init__()
+-            self.dit = dit
+-            self.use_image_mask = use_image_mask
+-            self.use_backbone_mask = use_backbone_mask
+-
+-        def forward(
+-            self, sa_embs, vl_embs, timestep, image_mask=None, backbone_attention_mask=None
+-        ):
+-            kwargs = {}
+-            if self.use_image_mask and image_mask is not None:
+-                kwargs["image_mask"] = image_mask
+-            if self.use_backbone_mask and backbone_attention_mask is not None:
+-                kwargs["backbone_attention_mask"] = backbone_attention_mask
+-            return self.dit(sa_embs, vl_embs, timestep, **kwargs)
+-
+-    wrapped_model = DiTWrapper(dit_model, has_image_mask, has_backbone_mask)
+-    wrapped_model.eval()
++    # --- Quantization hook: calibrate / quantize the wrapper in-place ---
++    if pre_export_fn is not None:
++        pre_export_fn(wrapped_model)
+ 
+     # vl_seq_len varies with input text length — mark it dynamic so the TRT engine
+     # can handle any sequence length seen at runtime, not just the export-time value.
+@@ -1204,28 +1359,32 @@ def export_dit_to_onnx(policy, captured_inputs, output_path, use_bf16=True, batc
+         dit_dynamic_axes["backbone_attention_mask"] = {1: "vl_seq_len"}
+ 
+     logger.info(f"  Exporting to {output_path}...")
+-    with torch.inference_mode():
+-        torch.onnx.export(
+-            wrapped_model,
+-            tuple(export_inputs),
+-            output_path,
+-            input_names=input_names,
+-            output_names=["output"],
+-            opset_version=19,
+-            do_constant_folding=True,
+-            export_params=True,
+-            dynamic_axes=dit_dynamic_axes,
+-            dynamo=False,  # DiT specializes vl_seq_len under dynamo; legacy exporter needed
+-        )
++    mha_patch_handles = _patch_dit_attn_for_export(dit_model)
++    try:
++        with torch.inference_mode():
++            torch.onnx.export(
++                wrapped_model,
++                tuple(export_inputs),
++                output_path,
++                input_names=input_names,
++                output_names=["output"],
++                opset_version=19,
++                do_constant_folding=True,
++                export_params=True,
++                dynamic_axes=dit_dynamic_axes,
++                dynamo=False,
++            )
++    finally:
++        _unpatch_dit_attn(mha_patch_handles)
+ 
+     logger.info("  DiT exported successfully!")
+ 
+     # Consolidate scattered external data files into a single .data file.
+     # torch.onnx.export scatters large tensors into many small files (one per tensor).
+     # TensorRT's parser expects external data in a single file adjacent to the .onnx.
+-    _consolidate_external_data(output_path)
++    _consolidate_external_data(output_path, enable_nvfp4=enable_nvfp4)
+ 
+-    verify_onnx_export(output_path)
++    verify_onnx_export(output_path, skip_check=enable_nvfp4)
+     return output_path
+ 
+ 
+@@ -1234,7 +1393,10 @@ def export_dit_to_onnx(policy, captured_inputs, output_path, use_bf16=True, batc
+ # ============================================================
+ 
+ 
+-def export_action_decoder_to_onnx(policy, output_dir, use_bf16=True, batch_size=1):
++def export_action_decoder_to_onnx(
++    policy, output_dir, use_bf16=True, batch_size=1,
++    *, dtype_override=None,
++):
+     """Export the action decoder (CategorySpecificMLP) to ONNX.
+ 
+     Input: model_output [B, sa_seq_len, hidden_size], embodiment_id [B]
+@@ -1247,7 +1409,7 @@ def export_action_decoder_to_onnx(policy, output_dir, use_bf16=True, batch_size=
+     config = policy.model.action_head.config
+     action_decoder = policy.model.action_head.action_decoder
+ 
+-    dtype = torch.bfloat16 if use_bf16 else torch.float32
++    dtype = dtype_override or (torch.bfloat16 if use_bf16 else torch.float32)
+     model = action_decoder.to(dtype).eval().cuda()
+ 
+     # sa_seq_len = 1 (state) + action_horizon
+@@ -1288,6 +1450,23 @@ def export_action_decoder_to_onnx(policy, output_dir, use_bf16=True, batch_size=
+ 
+ def main(args):
+     args.embodiment_tag = EmbodimentTag.resolve(args.embodiment_tag)
++
++    optimized_profile = args.execution_profile == "optimized"
++    if optimized_profile and args.export_mode == "dit_only":
++        raise ValueError(
++            "--execution-profile optimized requires --export-mode action_head or full_pipeline"
++        )
++
++    # Per-component precision tags come from the shared policy table so export,
++    # engine build, and runtime can never disagree on artifact names.
++    precisions = component_precisions(args.quantization)
++    vit_prec = precisions["vit"]
++    llm_prec = precisions["llm"]
++    dit_prec = precisions["dit"]
++    aux_prec = precisions["aux"]
++    aux_dtype = resolve_dtype(aux_prec)
++    quantized = args.quantization != "none"
++
+     logger.info("=" * 80)
+     logger.info("GR00T N1.7 ONNX Export Script")
+     logger.info("=" * 80)
+@@ -1295,6 +1474,11 @@ def main(args):
+     logger.info(f"Dataset path: {args.dataset_path}")
+     logger.info(f"Embodiment: {args.embodiment_tag}")
+     logger.info(f"Export mode: {args.export_mode}")
++    logger.info(f"Quantization: {args.quantization}")
++    logger.info(
++        f"Component precisions: vit={vit_prec}, llm={llm_prec}, dit={dit_prec}, aux={aux_prec}"
++    )
++    logger.info(f"Execution profile: {args.execution_profile}")
+     logger.info(f"Batch size: {args.batch_size}")
+     logger.info(f"Output directory: {args.output_dir}")
+     logger.info("=" * 80)
+@@ -1405,8 +1589,26 @@ def main(args):
+         "embodiment_tag": str(args.embodiment_tag),
+         "export_mode": args.export_mode,
+         "precision": args.precision,
++        "vit_precision": vit_prec,
++        "llm_precision": llm_prec,
++        "dit_precision": dit_prec,
++        "aux_precision": aux_prec,
++        "quantization": args.quantization,
++        "execution_profile": args.execution_profile,
++        "optimized_action_head": optimized_profile,
++        "action_head_format_version": (
++            ACTION_HEAD_FORMAT_VERSION if optimized_profile else None
++        ),
++        "num_inference_timesteps": int(policy.model.action_head.num_inference_timesteps),
++        "num_timestep_buckets": int(policy.model.action_head.num_timestep_buckets),
+         "batch_size": args.batch_size,
+     }
++    if quantized:
++        export_metadata["calibration"] = {
++            "dataset": args.calib_dataset_path or args.dataset_path,
++            "embodiment": str(args.embodiment_tag),
++            "samples": args.calib_size,
++        }
+     # The ViT engine bakes pos/rotary buffers for this grid_thw and takes only
+     # pixel_values as input; record the grid so the runtime can reject a
+     # mismatched image config instead of silently using wrong embeddings.
+@@ -1414,92 +1616,169 @@ def main(args):
+         export_metadata["vit_grid_thw"] = [
+             [int(x) for x in row] for row in vit_capture.grid_thw.tolist()
+         ]
++
++    logger.info("\n" + format_quantization_summary(export_metadata))
+     os.makedirs(args.output_dir, exist_ok=True)
+     metadata_path = os.path.join(args.output_dir, "export_metadata.json")
+     with open(metadata_path, "w") as f:
+         json.dump(export_metadata, f, indent=2)
+     logger.info(f"  Saved export metadata to {metadata_path}")
+ 
+-    # Step 4: Export
++    # Step 3.5: capture calibration inputs. Must run on the still-unquantized
++    # policy: modelopt fake-quant mutates modules in place during Step 4, so a
++    # later capture would observe quantized upstream activations.
+     bs = args.batch_size
+-    if args.export_mode == "dit_only":
+-        logger.info("\n[Step 4] Exporting DiT to ONNX (dit_only mode)...")
+-        dit_output_path = os.path.join(args.output_dir, "dit_bf16.onnx")
+-        export_dit_to_onnx(
++    calib_batches: dict = {}
++    llm_input_names = None
++    dit_input_names = ["sa_embs", "vl_embs", "timestep"]
++    if dit_capture.image_mask is not None:
++        dit_input_names.append("image_mask")
++    if dit_capture.backbone_attention_mask is not None:
++        dit_input_names.append("backbone_attention_mask")
++
++    if quantized:
++        from calibration import calibrate_component, capture_calibration_batches
++
++        needed = {"dit"}
++        if args.export_mode == "full_pipeline":
++            needed |= {"vit", "llm"}
++            if not isinstance(policy.model.action_head.vl_self_attention, nn.Identity):
++                needed.add("vl_sa")
++        logger.info("\n[Step 3.5] Capturing calibration data (before any quantization)...")
++        calib_batches = capture_calibration_batches(
++            policy,
++            dataset_path=args.calib_dataset_path or args.dataset_path,
++            calib_size=args.calib_size,
++            components=needed,
++        )
++        if args.export_mode == "full_pipeline":
++            llm_input_names = ["inputs_embeds", "attention_mask", "position_ids"]
++            if num_deepstack > 0 and llm_capture.visual_pos_masks is not None:
++                llm_input_names.append("visual_pos_masks")
++                llm_input_names.extend(f"deepstack_{i}" for i in range(num_deepstack))
++
++    def _pre_export(component, tag, input_names=None):
++        """Calibration hook for one component; None for high-precision tags."""
++        if tag not in ("fp8", "nvfp4"):
++            return None
++
++        def fn(wrapper):
++            calibrate_component(
++                wrapper, component, tag, calib_batches[component], input_names=input_names
++            )
++
++        return fn
++
++    def _export_action_encoder_component():
++        if optimized_profile:
++            return export_optimized_action_encoder(
++                policy, args.output_dir, dtype=aux_dtype, batch_size=bs
++            )
++        return export_action_encoder_to_onnx(
++            policy, args.output_dir, batch_size=bs, dtype_override=aux_dtype
++        )
++
++    def _export_dit_component():
++        output_path = os.path.join(args.output_dir, f"dit_{dit_prec}.onnx")
++        pre_export_fn = _pre_export("dit", dit_prec, input_names=dit_input_names)
++        if optimized_profile:
++            if dit_capture.image_mask is None or dit_capture.backbone_attention_mask is None:
++                raise ValueError("Optimized action head requires both DiT attention masks")
++            return export_optimized_dit(
++                policy,
++                dit_capture,
++                output_path,
++                precision_tag=dit_prec,
++                batch_size=bs,
++                pre_export_fn=pre_export_fn,
++            )
++        return export_dit_to_onnx(
+             policy=policy,
+             captured_inputs=dit_capture,
+-            output_path=dit_output_path,
+-            use_bf16=True,
++            output_path=output_path,
+             batch_size=bs,
++            precision_tag=dit_prec,
++            pre_export_fn=pre_export_fn,
+         )
+ 
++    # Step 4: Export
++    if args.export_mode == "dit_only":
++        logger.info(f"\n[Step 4] Exporting DiT to ONNX (dit_only, precision={dit_prec})...")
++        _export_dit_component()
++
+     elif args.export_mode == "action_head":
+         logger.info("\n[Step 4] Exporting action head components to ONNX...")
+ 
+         # 4a. State Encoder
+         logger.info("\n--- [4a] State Encoder ---")
+-        export_state_encoder_to_onnx(policy, args.output_dir, use_bf16=True, batch_size=bs)
++        export_state_encoder_to_onnx(
++            policy, args.output_dir, batch_size=bs, dtype_override=aux_dtype
++        )
+ 
+         # 4b. Action Encoder
+         logger.info("\n--- [4b] Action Encoder ---")
+-        export_action_encoder_to_onnx(policy, args.output_dir, use_bf16=True, batch_size=bs)
++        _export_action_encoder_component()
+ 
+         # 4c. DiT
+-        logger.info("\n--- [4c] DiT ---")
+-        dit_output_path = os.path.join(args.output_dir, "dit_bf16.onnx")
+-        export_dit_to_onnx(
+-            policy=policy,
+-            captured_inputs=dit_capture,
+-            output_path=dit_output_path,
+-            use_bf16=True,
+-            batch_size=bs,
+-        )
++        logger.info(f"\n--- [4c] DiT (precision={dit_prec}) ---")
++        _export_dit_component()
+ 
+         # 4d. Action Decoder
+         logger.info("\n--- [4d] Action Decoder ---")
+-        export_action_decoder_to_onnx(policy, args.output_dir, use_bf16=True, batch_size=bs)
++        export_action_decoder_to_onnx(
++            policy, args.output_dir, batch_size=bs, dtype_override=aux_dtype
++        )
+ 
+     elif args.export_mode == "full_pipeline":
+         logger.info("\n[Step 4] Exporting full pipeline to ONNX...")
+-        logger.info("  (ViT TRT + LLM TRT + Action Head TRT)")
+ 
+-        # 4a. ViT — exported in FP32 to avoid TRT BF16 kernel fusion accuracy issues
+-        # ViT is patch-level: for batch_size > 1, num_patches scales by batch_size
+-        logger.info("\n--- [4a] ViT (Qwen3-VL Vision, FP32 for TRT accuracy) ---")
+-        export_vit_to_onnx(policy, args.output_dir, vit_capture, use_bf16=False, batch_size=bs)
++        # 4a. ViT
++        logger.info(f"\n--- [4a] ViT (precision={vit_prec}) ---")
++        export_vit_to_onnx(
++            policy, args.output_dir, vit_capture,
++            batch_size=bs,
++            precision_tag=vit_prec,
++            pre_export_fn=_pre_export("vit", vit_prec),
++        )
+ 
+         # 4b. LLM
+-        logger.info("\n--- [4b] LLM (Qwen3-VL Text Model) ---")
+-        export_llm_to_onnx(policy, llm_capture, args.output_dir, use_bf16=True, batch_size=bs)
++        logger.info(f"\n--- [4b] LLM (precision={llm_prec}) ---")
++        export_llm_to_onnx(
++            policy, llm_capture, args.output_dir,
++            batch_size=bs,
++            precision_tag=llm_prec,
++            pre_export_fn=_pre_export("llm", llm_prec, input_names=llm_input_names),
++            fuse_gateup=optimized_profile,
++        )
+ 
+-        # 4c. VL Self-Attention (if present)
++        # 4c. VL Self-Attention (if present). Under a quantized policy only its
++        # FFN linears are quantized to FP8; attention stays high precision.
+         logger.info("\n--- [4c] VL Self-Attention ---")
+         export_vl_self_attention_to_onnx(
+-            policy, args.output_dir, vl_seq_len=vl_seq_len, use_bf16=True, batch_size=bs
++            policy, args.output_dir, vl_seq_len=vl_seq_len, batch_size=bs,
++            dtype_override=aux_dtype,
++            pre_export_fn=_pre_export("vl_sa", "fp8" if quantized else aux_prec),
+         )
+ 
+         # 4d. State Encoder
+         logger.info("\n--- [4d] State Encoder ---")
+-        export_state_encoder_to_onnx(policy, args.output_dir, use_bf16=True, batch_size=bs)
++        export_state_encoder_to_onnx(
++            policy, args.output_dir, batch_size=bs, dtype_override=aux_dtype
++        )
+ 
+         # 4e. Action Encoder
+         logger.info("\n--- [4e] Action Encoder ---")
+-        export_action_encoder_to_onnx(policy, args.output_dir, use_bf16=True, batch_size=bs)
++        _export_action_encoder_component()
+ 
+         # 4f. DiT
+-        logger.info("\n--- [4f] DiT ---")
+-        dit_output_path = os.path.join(args.output_dir, "dit_bf16.onnx")
+-        export_dit_to_onnx(
+-            policy=policy,
+-            captured_inputs=dit_capture,
+-            output_path=dit_output_path,
+-            use_bf16=True,
+-            batch_size=bs,
+-        )
++        logger.info(f"\n--- [4f] DiT (precision={dit_prec}) ---")
++        _export_dit_component()
+ 
+         # 4g. Action Decoder
+         logger.info("\n--- [4g] Action Decoder ---")
+-        export_action_decoder_to_onnx(policy, args.output_dir, use_bf16=True, batch_size=bs)
++        export_action_decoder_to_onnx(
++            policy, args.output_dir, batch_size=bs, dtype_override=aux_dtype
++        )
+ 
+     # Summary
+     logger.info("\n" + "=" * 80)
+@@ -1516,7 +1795,22 @@ def main(args):
+ 
+ @dataclass
+ class ExportConfig:
+-    """Configuration for exporting GR00T N1.7 model to ONNX."""
++    """Configuration for exporting GR00T N1.7 model to ONNX.
++
++    Usage:
++        # BF16 baseline (default)
++        python export_onnx_n1d7.py --model-path ... --dataset-path ...
++
++        # Fixed quantized precision recipes (see COMPONENT_PRECISIONS)
++        python export_onnx_n1d7.py --model-path ... --dataset-path ... \\
++            --quantization fp8 --export-mode full_pipeline
++        python export_onnx_n1d7.py --model-path ... --dataset-path ... \\
++            --quantization mixed_nvfp4 --export-mode full_pipeline
++
++        # Cross-KV cache + folded timestep + CUDA-graph action head
++        python export_onnx_n1d7.py --model-path ... --dataset-path ... \\
++            --execution-profile optimized --export-mode full_pipeline
++    """
+ 
+     model_path: str
+     """Path to the model checkpoint (required)."""
+@@ -1531,17 +1825,29 @@ class ExportConfig:
+     """Output directory for ONNX models."""
+ 
+     export_mode: ExportMode = ExportMode.dit_only
+-    """Export mode: 'dit_only', 'action_head' (4 components), or 'full_pipeline' (ViT + action head)."""
++    """Export mode: 'dit_only', 'action_head' (4 components), or 'full_pipeline'."""
+ 
+     precision: Literal["bf16"] = "bf16"
+-    """Export precision for the generated ONNX graph.
+-
+-    Currently fixed to 'bf16': every Step 4 exporter passes a hardcoded
+-    `use_bf16=` argument and does not read this field beyond writing it
+-    into export_metadata.json. Re-introducing 'fp16'/'fp32'/'fp8' here
+-    requires plumbing this field into each exporter first; until then
+-    the Literal is narrowed so the CLI cannot accept a value the export
+-    will ignore."""
++    """Export precision of the default (non-quantized) graph.
++
++    Fixed to 'bf16' (with the ViT promoted to FP32 for TRT accuracy).
++    Quantized exports are selected via --quantization, which maps to a fixed
++    per-component precision recipe in
++    n1d7_optimization_config.COMPONENT_PRECISIONS."""
++
++    execution_profile: ExecutionProfile = "baseline"
++    """'optimized' adds the cross-KV-cache action head (CUDA-graph runtime) and
++    fuses the LLM Gate/Up projections. Requires action_head or full_pipeline
++    export mode."""
++
++    quantization: QuantizationPolicy = "none"
++    """Quantization policy: none (BF16 baseline), fp8, or mixed_nvfp4."""
++
++    calib_dataset_path: Optional[str] = None
++    """LeRobot dataset for calibration. Defaults to --dataset-path."""
++
++    calib_size: int = 10
++    """Number of calibration samples (default: 10)."""
+ 
+     batch_size: int = 1
+     """Batch size baked into the exported ONNX models (default: 1)."""
+diff --git a/scripts/deployment/n1d7_optimization_config.py b/scripts/deployment/n1d7_optimization_config.py
+new file mode 100644
+index 0000000..ffc1b8b
+--- /dev/null
++++ b/scripts/deployment/n1d7_optimization_config.py
+@@ -0,0 +1,137 @@
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: Apache-2.0
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""Shared precision policy and artifact schema for the optional N1.7 TRT
++quantization and execution optimizations.
++
++This module is the single source of truth for how a ``--quantization`` policy
++maps to per-component precision tags. Export (artifact naming, torch dtype,
++calibration recipe selection), engine build (TRT boundary precision), and the
++runtime (engine file resolution) all derive from :data:`COMPONENT_PRECISIONS`
++so the three stages can never disagree on artifact names.
++"""
++
++from dataclasses import dataclass
++import os
++from typing import Any, Literal, Optional
++
++import torch
++
++
++ExecutionProfile = Literal["baseline", "optimized"]
++QuantizationPolicy = Literal["none", "fp8", "mixed_nvfp4"]
++
++ACTION_HEAD_CONSTANTS_FILENAME = "action_head_constants.pt"
++ACTION_HEAD_FORMAT_VERSION = 1
++
++# Per-component precision tags for each quantization policy. A tag names the
++# quantization *recipe* of a component, not a single dtype: "nvfp4" components
++# keep their accuracy-sensitive layers in FP8 (LLM o_proj/down_proj, DiT
++# attention) — calibration.py holds the exact per-layer breakdown. "none"
++# reproduces the baseline export exactly (FP32 ViT for TRT accuracy, BF16
++# everywhere else).
++COMPONENT_PRECISIONS: dict[str, dict[str, str]] = {
++    "none": {"vit": "fp32", "llm": "bf16", "dit": "bf16", "aux": "bf16"},
++    "fp8": {"vit": "fp8", "llm": "fp8", "dit": "fp8", "aux": "fp16"},
++    "mixed_nvfp4": {"vit": "fp8", "llm": "nvfp4", "dit": "nvfp4", "aux": "fp16"},
++}
++
++QUANTIZED_TAGS = frozenset({"fp8", "nvfp4"})
++
++# FP8/NVFP4 are Q/DQ recipes on top of an FP16 torch graph, so their tags
++# resolve to float16 for export.
++_PRECISION_TO_DTYPE: dict[str, torch.dtype] = {
++    "fp16": torch.float16,
++    "bf16": torch.bfloat16,
++    "fp32": torch.float32,
++    "fp8": torch.float16,
++    "nvfp4": torch.float16,
++}
++
++
++def component_precisions(quantization: QuantizationPolicy) -> dict[str, str]:
++    """Map a quantization policy to its per-component precision tags."""
++    return dict(COMPONENT_PRECISIONS[quantization])
++
++
++def resolve_dtype(precision: str) -> torch.dtype:
++    """Torch dtype used to build/export a component with this precision tag."""
++    if precision not in _PRECISION_TO_DTYPE:
++        raise ValueError(
++            f"Unsupported precision '{precision}', choose from {list(_PRECISION_TO_DTYPE)}"
++        )
++    return _PRECISION_TO_DTYPE[precision]
++
++
++def trt_boundary_precision(precision: str) -> str:
++    """TRT network I/O precision for an artifact precision tag.
++
++    FP8/NVFP4 live in internal Q/DQ nodes; the network boundary stays FP16.
++    """
++    return "fp16" if precision in QUANTIZED_TAGS else precision
++
++
++def format_quantization_summary(metadata: Optional[dict[str, Any]]) -> str:
++    """One user-facing quantization summary shared by export, build, and runtime."""
++    if not metadata or "quantization" not in metadata:
++        return "Quantization: none (no quantization metadata)"
++    quantization = metadata["quantization"]
++    lines = [f"Quantization: {quantization}"]
++    if quantization != "none":
++        lines.append(
++            "  vit={vit}, llm={llm}, dit={dit}, aux={aux}".format(
++                vit=metadata.get("vit_precision", "?"),
++                llm=metadata.get("llm_precision", "?"),
++                dit=metadata.get("dit_precision", "?"),
++                aux=metadata.get("aux_precision", "?"),
++            )
++        )
++        calibration = metadata.get("calibration")
++        if calibration:
++            lines.append(
++                "  Calibration: dataset={dataset}, embodiment={embodiment}, "
++                "samples={samples}".format(
++                    dataset=calibration.get("dataset"),
++                    embodiment=calibration.get("embodiment"),
++                    samples=calibration.get("samples"),
++                )
++            )
++    return "\n".join(lines)
++
++
++@dataclass(frozen=True)
++class OptimizationArtifacts:
++    """Resolved optimized-action-head artifact paths for one deployment directory."""
++
++    cross_kv: str
++    constants: str
++    format_version: int
++
++    @classmethod
++    def from_metadata(
++        cls,
++        root: str,
++        metadata: Optional[dict[str, Any]],
++        *,
++        artifact_kind: Literal["onnx", "engine"],
++    ) -> Optional["OptimizationArtifacts"]:
++        if not metadata or not metadata.get("optimized_action_head", False):
++            return None
++        dit_precision = metadata.get("dit_precision", "bf16")
++        return cls(
++            cross_kv=os.path.join(root, f"dit_cross_kv_{dit_precision}.{artifact_kind}"),
++            constants=os.path.join(root, ACTION_HEAD_CONSTANTS_FILENAME),
++            format_version=int(metadata.get("action_head_format_version") or 0),
++        )
+diff --git a/scripts/deployment/n1d7_optimized_export.py b/scripts/deployment/n1d7_optimized_export.py
+new file mode 100644
+index 0000000..f3c7bd5
+--- /dev/null
++++ b/scripts/deployment/n1d7_optimized_export.py
+@@ -0,0 +1,478 @@
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: Apache-2.0
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""Export-only graph transformations for optional N1.7 TensorRT optimizations.
++
++Shared export helpers (external-data consolidation, ONNX verification, DiT
++attention-mask patching) are imported lazily from ``export_onnx_n1d7`` because
++that module imports this one at the top level.
++"""
++
++import logging
++import os
++from typing import Callable, Optional
++
++import numpy as np
++import torch
++import torch.nn as nn
++import torch.nn.functional as F
++
++from n1d7_optimization_config import (
++    ACTION_HEAD_CONSTANTS_FILENAME,
++    resolve_dtype,
++)
++
++
++logger = logging.getLogger(__name__)
++
++
++def _concatenate_linear_projections(linears: tuple[nn.Linear, ...]) -> nn.Linear:
++    """Concatenate same-input Linear layers along their output dimension."""
++    if not linears:
++        raise ValueError("At least one Linear projection is required")
++    if any(layer.in_features != linears[0].in_features for layer in linears):
++        raise ValueError("Fused Linear projections must have identical input sizes")
++
++    has_bias = [layer.bias is not None for layer in linears]
++    if len(set(has_bias)) != 1:
++        raise ValueError("Fused Linear projections must use the same bias setting")
++
++    fused = nn.Linear(
++        linears[0].in_features,
++        sum(layer.out_features for layer in linears),
++        bias=has_bias[0],
++        device=linears[0].weight.device,
++        dtype=linears[0].weight.dtype,
++    )
++    with torch.no_grad():
++        fused.weight.copy_(torch.cat([layer.weight for layer in linears], dim=0))
++        if fused.bias is not None:
++            fused.bias.copy_(torch.cat([layer.bias for layer in linears], dim=0))
++    return fused
++
++
++class FusedQwenMLP(nn.Module):
++    """Export-only Qwen gated MLP with a single Gate/Up projection."""
++
++    def __init__(self, source: nn.Module):
++        super().__init__()
++        self.config = source.config
++        self.hidden_size = source.hidden_size
++        self.intermediate_size = source.intermediate_size
++        self.down_proj = source.down_proj
++        self.act_fn = source.act_fn
++        projections = (source.gate_proj, source.up_proj)
++        self.gateup_out_features = tuple(layer.out_features for layer in projections)
++        self.gateup_proj = _concatenate_linear_projections(projections)
++
++    def forward(self, hidden_states):
++        gate_states, up_states = self.gateup_proj(hidden_states).split(
++            self.gateup_out_features, dim=-1
++        )
++        return self.down_proj(self.act_fn(gate_states) * up_states)
++
++
++def fuse_llm_gateup(wrapper: nn.Module) -> int:
++    """Fuse each decoder layer's Gate/Up projections into one export-only Linear."""
++    for decoder_layer in wrapper.layers:
++        decoder_layer.mlp = FusedQwenMLP(decoder_layer.mlp)
++    logger.info("  Fused Gate/Up LLM projections in %d layers", len(wrapper.layers))
++    return len(wrapper.layers)
++
++
++class DiTCrossKV(nn.Module):
++    """Project fixed VL embeddings to per-cross-block K/V once per frame."""
++
++    def __init__(self, dit: nn.Module):
++        super().__init__()
++        self.dit = dit
++
++    def forward(self, vl_embs):
++        keys = []
++        values = []
++        for index, block in enumerate(self.dit.transformer_blocks):
++            if index % 2 == 1:
++                continue
++            attention = block.attn1
++            encoder_states = vl_embs
++            if attention.norm_cross:
++                encoder_states = attention.norm_encoder_hidden_states(encoder_states)
++            key = attention.to_k(encoder_states)
++            value = attention.to_v(encoder_states)
++            batch_size, seq_len, inner_dim = key.shape
++            head_dim = inner_dim // attention.heads
++            key = key.view(batch_size, seq_len, attention.heads, head_dim).transpose(1, 2)
++            value = value.view(batch_size, seq_len, attention.heads, head_dim).transpose(1, 2)
++            if attention.norm_k is not None:
++                key = attention.norm_k(key)
++            keys.append(key)
++            values.append(value)
++        return torch.stack(keys), torch.stack(values)
++
++
++class CachedCrossKVDiT(nn.Module):
++    """DiT consuming cached cross-K/V and precomputed timestep modulation."""
++
++    def __init__(self, dit: nn.Module):
++        super().__init__()
++        self.dit = dit
++
++    @staticmethod
++    def _cross_attention(attention, hidden_states, key, value, attention_mask):
++        residual = hidden_states
++        batch_size = hidden_states.shape[0]
++        query = attention.to_q(hidden_states)
++        head_dim = query.shape[-1] // attention.heads
++        query = query.view(batch_size, -1, attention.heads, head_dim).transpose(1, 2)
++        if attention.norm_q is not None:
++            query = attention.norm_q(query)
++
++        zero = torch.zeros((), dtype=query.dtype, device=query.device)
++        negative_infinity = torch.full(
++            (), float("-inf"), dtype=query.dtype, device=query.device
++        )
++        additive_mask = torch.where(
++            attention_mask[:, None, None, :], zero, negative_infinity
++        )
++        hidden_states = F.scaled_dot_product_attention(
++            query,
++            key,
++            value,
++            attn_mask=additive_mask,
++            dropout_p=0.0,
++            is_causal=False,
++        )
++        hidden_states = hidden_states.transpose(1, 2).reshape(
++            batch_size, -1, attention.heads * head_dim
++        )
++        hidden_states = attention.to_out[0](hidden_states.to(query.dtype))
++        hidden_states = attention.to_out[1](hidden_states)
++        if attention.residual_connection:
++            hidden_states = hidden_states + residual
++        return hidden_states / attention.rescale_output_factor
++
++    def forward(
++        self,
++        sa_embs,
++        cross_keys,
++        cross_values,
++        adaln_modulations,
++        output_modulation,
++        image_mask,
++        backbone_attention_mask,
++    ):
++        hidden_states = sa_embs.contiguous()
++        image_attention_mask = image_mask & backbone_attention_mask
++        non_image_attention_mask = (~image_mask) & backbone_attention_mask
++
++        cache_index = 0
++        for index, block in enumerate(self.dit.transformer_blocks):
++            scale, shift = adaln_modulations[index].chunk(2, dim=-1)
++            normalized = block.norm1.norm(hidden_states)
++            normalized = normalized * (1 + scale[:, None]) + shift[:, None]
++            if block.pos_embed is not None:
++                normalized = block.pos_embed(normalized)
++
++            if index % 2 == 1:
++                attention_output = block.attn1(normalized)
++            else:
++                if index % (2 * self.dit.attend_text_every_n_blocks) == 0:
++                    attention_mask = non_image_attention_mask
++                else:
++                    attention_mask = image_attention_mask
++                attention_output = self._cross_attention(
++                    block.attn1,
++                    normalized,
++                    cross_keys[cache_index],
++                    cross_values[cache_index],
++                    attention_mask,
++                )
++                cache_index += 1
++
++            if block.final_dropout:
++                attention_output = block.final_dropout(attention_output)
++            hidden_states = attention_output + hidden_states
++            hidden_states = block.ff(block.norm3(hidden_states)) + hidden_states
++
++        shift, scale = output_modulation.chunk(2, dim=-1)
++        hidden_states = self.dit.norm_out(hidden_states)
++        hidden_states = hidden_states * (1 + scale[:, None]) + shift[:, None]
++        return self.dit.proj_out_2(hidden_states)
++
++
++def save_action_head_constants(policy, dit_model, output_dir: str, batch_size: int):
++    """Evaluate fixed timesteps once and persist action-head modulation constants."""
++    action_head = policy.model.action_head
++    num_steps = int(action_head.num_inference_timesteps)
++    num_buckets = int(action_head.num_timestep_buckets)
++    timestep_ids = torch.tensor(
++        [int(step / float(num_steps) * num_buckets) for step in range(num_steps)],
++        dtype=torch.int64,
++        device=next(dit_model.parameters()).device,
++    )
++
++    adaln_modulations = []
++    output_modulations = []
++    action_time_embeddings = []
++    action_encoder = action_head.action_encoder
++    action_device = next(action_encoder.parameters()).device
++    horizon = int(action_head.config.action_horizon)
++    with torch.inference_mode():
++        for timestep_id in timestep_ids:
++            timestep = timestep_id.expand(batch_size)
++            timestep_embedding = dit_model.timestep_encoder(timestep)
++            block_modulations = [
++                block.norm1.linear(block.norm1.silu(timestep_embedding))
++                for block in dit_model.transformer_blocks
++            ]
++            adaln_modulations.append(torch.stack(block_modulations))
++            output_modulations.append(dit_model.proj_out_1(F.silu(timestep_embedding)))
++            action_timestep = timestep_id.to(action_device).expand(batch_size, horizon)
++            action_time_embeddings.append(action_encoder.pos_encoding(action_timestep))
++
++    constants = {
++        "format_version": 1,
++        "timesteps": timestep_ids.detach().cpu(),
++        "action_time_embeddings": torch.stack(action_time_embeddings).detach().cpu(),
++        "adaln_modulations": torch.stack(adaln_modulations).detach().cpu(),
++        "output_modulations": torch.stack(output_modulations).detach().cpu(),
++    }
++    constants_path = os.path.join(output_dir, ACTION_HEAD_CONSTANTS_FILENAME)
++    torch.save(constants, constants_path)
++    logger.info("  Saved fixed timestep/AdaLN constants to %s", constants_path)
++    return constants
++
++
++def export_optimized_action_encoder(
++    policy,
++    output_dir: str,
++    *,
++    dtype: torch.dtype,
++    batch_size: int,
++):
++    """Export Action Encoder with precomputed timestep embeddings as input."""
++    from export_onnx_n1d7 import verify_onnx_export
++
++    action_encoder = policy.model.action_head.action_encoder
++    config = policy.model.action_head.config
++
++    class ActionEncoderWithTimeEmbedding(nn.Module):
++        def __init__(self, encoder):
++            super().__init__()
++            self.action_encoder = encoder
++
++        def forward(self, actions, timestep_embedding, embodiment_id):
++            action_embedding = self.action_encoder.W1(actions, embodiment_id)
++            hidden_states = torch.cat([action_embedding, timestep_embedding], dim=-1)
++            hidden_states = self.action_encoder.W2(hidden_states, embodiment_id)
++            hidden_states = hidden_states * torch.sigmoid(hidden_states)
++            return self.action_encoder.W3(hidden_states, embodiment_id)
++
++    model = ActionEncoderWithTimeEmbedding(action_encoder.to(dtype)).eval().cuda()
++    actions = torch.randn(
++        batch_size,
++        config.action_horizon,
++        config.max_action_dim,
++        dtype=dtype,
++        device="cuda",
++    )
++    time_ids = torch.zeros(
++        batch_size, config.action_horizon, dtype=torch.int64, device="cuda"
++    )
++    with torch.inference_mode():
++        timestep_embedding = action_encoder.pos_encoding(time_ids).to(dtype)
++    embodiment_id = torch.zeros(batch_size, dtype=torch.int64, device="cuda")
++
++    output_path = os.path.join(output_dir, "action_encoder.onnx")
++    with torch.inference_mode():
++        torch.onnx.export(
++            model,
++            (actions, timestep_embedding, embodiment_id),
++            output_path,
++            input_names=["actions", "timestep_embedding", "embodiment_id"],
++            output_names=["output"],
++            opset_version=19,
++            do_constant_folding=True,
++        )
++    verify_onnx_export(output_path)
++    return output_path
++
++
++def export_optimized_dit(
++    policy,
++    captured_inputs,
++    output_path: str,
++    *,
++    precision_tag: str,
++    batch_size: int,
++    pre_export_fn: Optional[Callable] = None,
++):
++    """Export split Cross-KV and cached/modulated DiT engines."""
++    from export_onnx_n1d7 import (
++        _consolidate_external_data,
++        _patch_dit_attn_for_export,
++        _unpatch_dit_attn,
++        verify_onnx_export,
++    )
++
++    dtype = resolve_dtype(precision_tag)
++    enable_nvfp4 = precision_tag == "nvfp4"
++    dit_model = policy.model.action_head.model.to(dtype).eval().cuda()
++
++    class CalibrationWrapper(nn.Module):
++        def __init__(self, dit):
++            super().__init__()
++            self.dit = dit
++
++        def forward(
++            self,
++            sa_embs,
++            vl_embs,
++            timestep,
++            image_mask,
++            backbone_attention_mask,
++        ):
++            return self.dit(
++                sa_embs,
++                vl_embs,
++                timestep,
++                image_mask=image_mask,
++                backbone_attention_mask=backbone_attention_mask,
++            )
++
++    wrapped_model = CalibrationWrapper(dit_model).to(dtype).eval().cuda()
++    sa_embs = captured_inputs.sa_embs[:1].expand(
++        batch_size, *captured_inputs.sa_embs.shape[1:]
++    ).to(device="cuda", dtype=dtype)
++    vl_embs = captured_inputs.vl_embs[:1].expand(
++        batch_size, *captured_inputs.vl_embs.shape[1:]
++    ).to(device="cuda", dtype=dtype)
++    image_mask = captured_inputs.image_mask[:1].expand(
++        batch_size, *captured_inputs.image_mask.shape[1:]
++    ).to(device="cuda", dtype=torch.bool)
++    backbone_attention_mask = captured_inputs.backbone_attention_mask[:1].expand(
++        batch_size, *captured_inputs.backbone_attention_mask.shape[1:]
++    ).to(device="cuda", dtype=torch.bool)
++    if pre_export_fn is not None:
++        pre_export_fn(wrapped_model)
++
++    constants = save_action_head_constants(
++        policy, dit_model, os.path.dirname(output_path), batch_size
++    )
++    cross_kv_model = DiTCrossKV(dit_model).to(dtype).eval().cuda()
++    optimized_dit = CachedCrossKVDiT(dit_model).to(dtype).eval().cuda()
++    with torch.inference_mode():
++        cross_keys, cross_values = cross_kv_model(vl_embs)
++
++    adaln_modulations = constants["adaln_modulations"][0].to("cuda", dtype=dtype)
++    output_modulation = constants["output_modulations"][0].to("cuda", dtype=dtype)
++    reference_timestep = constants["timesteps"][0].to("cuda").expand(batch_size)
++    with torch.inference_mode():
++        reference_output = wrapped_model(
++            sa_embs,
++            vl_embs,
++            reference_timestep,
++            image_mask,
++            backbone_attention_mask,
++        )
++        optimized_output = optimized_dit(
++            sa_embs,
++            cross_keys,
++            cross_values,
++            adaln_modulations,
++            output_modulation,
++            image_mask,
++            backbone_attention_mask,
++        )
++    cosine = F.cosine_similarity(
++        reference_output.float().flatten().unsqueeze(0),
++        optimized_output.float().flatten().unsqueeze(0),
++    ).item()
++    max_abs = (reference_output.float() - optimized_output.float()).abs().max().item()
++    logger.info(
++        "  Optimized DiT PyTorch equivalence: cosine=%.8f, max_abs=%.6f",
++        cosine,
++        max_abs,
++    )
++    if not np.isfinite(cosine) or cosine < 0.999:
++        raise RuntimeError(f"Optimized DiT equivalence check failed: cosine={cosine:.8f}")
++
++    cross_kv_path = os.path.join(
++        os.path.dirname(output_path),
++        os.path.basename(output_path).replace("dit_", "dit_cross_kv_", 1),
++    )
++    with torch.inference_mode():
++        torch.onnx.export(
++            cross_kv_model,
++            (vl_embs,),
++            cross_kv_path,
++            input_names=["vl_embs"],
++            output_names=["cross_keys", "cross_values"],
++            opset_version=19,
++            do_constant_folding=True,
++            export_params=True,
++            dynamic_axes={
++                "vl_embs": {1: "vl_seq_len"},
++                "cross_keys": {3: "vl_seq_len"},
++                "cross_values": {3: "vl_seq_len"},
++            },
++            dynamo=False,
++        )
++    _consolidate_external_data(cross_kv_path)
++    verify_onnx_export(cross_kv_path)
++
++    optimized_inputs = (
++        sa_embs,
++        cross_keys,
++        cross_values,
++        adaln_modulations,
++        output_modulation,
++        image_mask,
++        backbone_attention_mask,
++    )
++    input_names = [
++        "sa_embs",
++        "cross_keys",
++        "cross_values",
++        "adaln_modulations",
++        "output_modulation",
++        "image_mask",
++        "backbone_attention_mask",
++    ]
++    attention_handles = _patch_dit_attn_for_export(dit_model)
++    try:
++        with torch.inference_mode():
++            torch.onnx.export(
++                optimized_dit,
++                optimized_inputs,
++                output_path,
++                input_names=input_names,
++                output_names=["output"],
++                opset_version=19,
++                do_constant_folding=True,
++                export_params=True,
++                dynamic_axes={
++                    "cross_keys": {3: "vl_seq_len"},
++                    "cross_values": {3: "vl_seq_len"},
++                    "image_mask": {1: "vl_seq_len"},
++                    "backbone_attention_mask": {1: "vl_seq_len"},
++                },
++                dynamo=False,
++            )
++    finally:
++        _unpatch_dit_attn(attention_handles)
++    _consolidate_external_data(output_path, enable_nvfp4=enable_nvfp4)
++    verify_onnx_export(output_path, skip_check=enable_nvfp4)
++    return output_path
+diff --git a/scripts/deployment/n1d7_optimized_runtime.py b/scripts/deployment/n1d7_optimized_runtime.py
+new file mode 100644
+index 0000000..e9a8061
+--- /dev/null
++++ b/scripts/deployment/n1d7_optimized_runtime.py
+@@ -0,0 +1,557 @@
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: Apache-2.0
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""Self-contained runtime for optional optimized N1.7 TensorRT action heads.
++
++A CUDA graph is captured for exactly one input signature (the first one seen —
++in deployment the batch size is baked at export time, so only the language
++instruction length varies). Any other signature runs the same TensorRT engines
++eagerly with transient buffers, so memory stays bounded no matter how many
++distinct instruction lengths a session sees.
++"""
++
++from dataclasses import dataclass
++import gc
++import logging
++import os
++from typing import Optional
++
++import torch
++from transformers.feature_extraction_utils import BatchFeature
++
++from n1d7_optimization_config import (
++    ACTION_HEAD_FORMAT_VERSION,
++    OptimizationArtifacts,
++)
++from trt_torch import Engine
++
++
++logger = logging.getLogger(__name__)
++
++
++class GraphSafeEngine(Engine):
++    """Engine variant with stable output addresses and asynchronous execution."""
++
++    def __init__(self, file, plugins=None):
++        super().__init__(file, plugins=plugins or [])
++        self._output_cache = {}
++        self._closed = False
++
++    def close(self):
++        """Release cached buffers, then use the upstream Engine lifecycle."""
++        if self._closed:
++            return
++        self._output_cache.clear()
++        super().close()
++        self.plugins = []
++
++    def _get_output_tensor(self, name, shape, dtype, device, cache):
++        if not cache:
++            return torch.empty(tuple(shape), dtype=dtype, device=device)
++        key = (name, tuple(shape), dtype, device.type, device.index)
++        output = self._output_cache.get(key)
++        if output is None:
++            output = torch.empty(tuple(shape), dtype=dtype, device=device)
++            self._output_cache[key] = output
++        return output
++
++    def set_runtime_tensor_shape(self, name, shape):
++        if self._closed:
++            raise RuntimeError(f"TensorRT engine is closed: {self.file}")
++        if not self.execution_context.set_input_shape(name, shape):
++            raise RuntimeError(f"Failed to set runtime shape for {name}: {tuple(shape)}")
++
++    def forward(self, *args, **kwargs):
++        if self._closed:
++            raise RuntimeError(f"TensorRT engine is closed: {self.file}")
++        return_list = kwargs.pop("return_list", False)
++        synchronize = kwargs.pop("synchronize", False)
++        # Stable (cached) output addresses are required under CUDA graph
++        # capture; transient eager calls pass cache_outputs=False so one-off
++        # shapes don't grow the cache.
++        cache_outputs = kwargs.pop("cache_outputs", True)
++        references = []
++        stream = torch.cuda.current_stream()
++
++        for index, tensor in enumerate(args):
++            name, _shape, dtype = self.in_meta[index]
++            self._bind_input(name, dtype, tensor, references)
++        for name, _shape, dtype in self.in_meta:
++            if name in kwargs:
++                self._bind_input(name, dtype, kwargs[name], references)
++
++        if len(references) != len(self.in_meta):
++            raise ValueError(
++                f"Expected {len(self.in_meta)} input tensors, received {len(references)}"
++            )
++
++        for name, _shape, dtype in self.out_meta:
++            runtime_shape = self.execution_context.get_tensor_shape(name)
++            output = self._get_output_tensor(
++                name, runtime_shape, dtype, references[0].device, cache_outputs
++            )
++            self.execution_context.set_tensor_address(name, output.data_ptr())
++            references.append(output)
++
++        if not self.execution_context.execute_async_v3(stream.cuda_stream):
++            raise RuntimeError(f"TensorRT execution failed for {self.file}")
++        if synchronize:
++            stream.synchronize()
++
++        outputs = references[len(self.in_meta) :]
++        if return_list:
++            return outputs
++        return {item[0]: outputs[index] for index, item in enumerate(self.out_meta)}
++
++    def _bind_input(self, name, dtype, tensor, references):
++        if not isinstance(tensor, torch.Tensor):
++            raise TypeError(f"Input {name} must be a torch.Tensor")
++        runtime_shape = self.execution_context.get_tensor_shape(name)
++        if runtime_shape != tensor.shape:
++            raise ValueError(f"Invalid input shape for {name}: {tensor.shape} != {runtime_shape}")
++        if tensor.dtype != dtype:
++            raise TypeError(f"Invalid input dtype for {name}: {tensor.dtype} != {dtype}")
++        if not tensor.is_cuda:
++            raise ValueError(f"Input {name} must be a CUDA tensor")
++        tensor = tensor.contiguous()
++        self.execution_context.set_tensor_address(name, tensor.data_ptr())
++        references.append(tensor)
++
++
++@dataclass
++class ActionHeadGraphState:
++    backbone_features: torch.Tensor
++    image_mask: torch.Tensor
++    backbone_attention_mask: torch.Tensor
++    state: torch.Tensor
++    embodiment_id: torch.Tensor
++    actions: torch.Tensor
++    initial_actions: torch.Tensor
++    time_embeddings: torch.Tensor
++    adaln_modulations: torch.Tensor
++    output_modulations: torch.Tensor
++    position_embeddings: Optional[torch.Tensor]
++    graph: Optional[torch.cuda.CUDAGraph] = None
++    output: Optional[torch.Tensor] = None
++
++
++class OptimizedActionHeadRunner:
++    """Own optimized action-head engines, constants, buffers, graph, and teardown."""
++
++    def __init__(self, action_head, engine_dir: str, metadata: dict, dit_engine_path: str):
++        artifacts = OptimizationArtifacts.from_metadata(
++            engine_dir, metadata, artifact_kind="engine"
++        )
++        if artifacts is None:
++            raise ValueError("OptimizedActionHeadRunner requires optimized metadata")
++        if artifacts.format_version != ACTION_HEAD_FORMAT_VERSION:
++            raise ValueError(
++                f"Unsupported action-head format version: {artifacts.format_version}"
++            )
++        for path in (artifacts.cross_kv, artifacts.constants):
++            if not os.path.exists(path):
++                raise FileNotFoundError(f"Missing optimized action-head artifact: {path}")
++
++        self.action_head = action_head
++        self.engine_dir = engine_dir
++        self.metadata = metadata
++        self.closed = False
++        # One CUDA graph for the first input signature; other signatures run
++        # eagerly with transient buffers (see module docstring).
++        self._graph_state: Optional[ActionHeadGraphState] = None
++        self._graph_signature = None
++        self._capture_failed = False
++        self._eager_signatures_warned = set()
++
++        vl_sa_path = os.path.join(engine_dir, "vl_self_attention.engine")
++        self.vl_sa_engine = (
++            GraphSafeEngine(vl_sa_path) if os.path.exists(vl_sa_path) else None
++        )
++        self.state_encoder_engine = GraphSafeEngine(
++            os.path.join(engine_dir, "state_encoder.engine")
++        )
++        self.action_encoder_engine = GraphSafeEngine(
++            os.path.join(engine_dir, "action_encoder.engine")
++        )
++        self.cross_kv_engine = GraphSafeEngine(artifacts.cross_kv)
++        self.dit_engine = GraphSafeEngine(dit_engine_path)
++        self.action_decoder_engine = GraphSafeEngine(
++            os.path.join(engine_dir, "action_decoder.engine")
++        )
++        self._validate_interfaces()
++        self.constants = self._load_constants(artifacts.constants)
++        self.position_embeddings = self._make_position_embeddings()
++
++    @classmethod
++    def maybe_create(
++        cls,
++        action_head,
++        engine_dir: str,
++        metadata: Optional[dict],
++        dit_engine_path: str,
++    ) -> Optional["OptimizedActionHeadRunner"]:
++        artifacts = OptimizationArtifacts.from_metadata(
++            engine_dir, metadata, artifact_kind="engine"
++        )
++        if artifacts is None:
++            return None
++        return cls(action_head, engine_dir, metadata or {}, dit_engine_path)
++
++    def _validate_interfaces(self):
++        action_inputs = {item[0] for item in self.action_encoder_engine.in_meta}
++        dit_inputs = {item[0] for item in self.dit_engine.in_meta}
++        expected_dit = {
++            "sa_embs",
++            "cross_keys",
++            "cross_values",
++            "adaln_modulations",
++            "output_modulation",
++            "image_mask",
++            "backbone_attention_mask",
++        }
++        if "timestep_embedding" not in action_inputs or not expected_dit.issubset(
++            dit_inputs
++        ):
++            raise RuntimeError(
++                "Optimized metadata does not match the Action Encoder/DiT interfaces"
++            )
++
++    def _load_constants(self, path: str):
++        constants = torch.load(path, map_location="cpu", weights_only=True)
++        if constants.get("format_version") != ACTION_HEAD_FORMAT_VERSION:
++            raise ValueError(
++                f"Unsupported constants format: {constants.get('format_version')}"
++            )
++        device = next(self.action_head.vlln.parameters()).device
++        result = {
++            "action_time_embeddings": constants["action_time_embeddings"].to(
++                device=device,
++                dtype=self.action_encoder_engine.dtype_of("timestep_embedding"),
++            ).contiguous(),
++            "adaln_modulations": constants["adaln_modulations"].to(
++                device=device, dtype=self.dit_engine.dtype_of("adaln_modulations")
++            ).contiguous(),
++            "output_modulations": constants["output_modulations"].to(
++                device=device, dtype=self.dit_engine.dtype_of("output_modulation")
++            ).contiguous(),
++        }
++        if result["action_time_embeddings"].shape[0] != int(
++            self.action_head.num_inference_timesteps
++        ):
++            raise ValueError("Exported and runtime denoising step counts differ")
++        return result
++
++    def _make_position_embeddings(self):
++        if not self.action_head.config.add_pos_embed:
++            return None
++        device = next(self.action_head.vlln.parameters()).device
++        position_ids = torch.arange(
++            self.action_head.config.action_horizon, dtype=torch.long, device=device
++        )
++        return self.action_head.position_embedding(position_ids).unsqueeze(0).to(
++            self.action_encoder_engine.dtype_of("actions")
++        ).contiguous()
++
++    def __call__(self, backbone_output, action_input, options=None):
++        if "action" in action_input:
++            raise NotImplementedError(
++                "Optimized TensorRT action-head graph does not support RTC action overlap"
++            )
++        del options
++        if self.closed:
++            raise RuntimeError("Optimized action-head runner is closed")
++        if backbone_output.image_mask is None:
++            raise ValueError("Optimized action head requires image_mask")
++        if backbone_output.backbone_attention_mask is None:
++            raise ValueError("Optimized action head requires backbone_attention_mask")
++
++        signature = self._signature(backbone_output, action_input)
++
++        # Capture the single CUDA graph on the first call.
++        if self._graph_state is None and not self._capture_failed:
++            state = self._make_graph_state(backbone_output, action_input)
++            try:
++                self._capture_graph(state)
++                self._graph_state = state
++                self._graph_signature = signature
++                logger.info("Captured action-head CUDA graph for signature %s", signature)
++            except Exception:
++                logger.exception(
++                    "CUDA graph capture failed; running eager TensorRT path"
++                )
++                self._capture_failed = True
++                return BatchFeature(
++                    data={"action_pred": self._execute(state, cache_outputs=False)}
++                )
++            # The fresh state already holds this call's inputs and diffusion
++            # noise. Replay without the noise refresh below, so a seeded run
++            # (verify_n1d7_trt) consumes the same first RNG draw as the
++            # PyTorch reference it is compared against.
++            state.graph.replay()
++            return BatchFeature(data={"action_pred": state.output})
++
++        if self._graph_state is not None and signature == self._graph_signature:
++            state = self._graph_state
++            self._copy_inputs(state, backbone_output, action_input)
++            # Latest N1.7 samples fresh diffusion noise on every inference.
++            # The graph reads this persistent buffer, so refresh it before replay.
++            if not hasattr(self.action_head, "init_actions"):
++                state.initial_actions.normal_()
++            state.graph.replay()
++            return BatchFeature(data={"action_pred": state.output})
++
++        # Different signature (or capture failed): eager TensorRT fallback with
++        # transient buffers — nothing is cached, memory stays bounded.
++        if signature not in self._eager_signatures_warned:
++            self._eager_signatures_warned.add(signature)
++            logger.warning(
++                "Optimized action head running eager TensorRT fallback for input "
++                "signature %s (CUDA graph is captured only for %s)",
++                signature,
++                self._graph_signature,
++            )
++        state = self._make_graph_state(backbone_output, action_input)
++        return BatchFeature(data={"action_pred": self._execute(state, cache_outputs=False)})
++
++    def _signature(self, backbone_output, action_input):
++        return (
++            tuple(backbone_output.backbone_features.shape),
++            backbone_output.backbone_features.dtype,
++            tuple(backbone_output.image_mask.shape),
++            tuple(backbone_output.backbone_attention_mask.shape),
++            tuple(action_input.state.shape),
++            tuple(action_input.embodiment_id.shape),
++            backbone_output.backbone_features.device.index,
++        )
++
++    @staticmethod
++    def _reshape_state(state):
++        if state.ndim == 3 and state.shape[1] > 1:
++            return state.view(state.shape[0], 1, -1)
++        return state
++
++    def _copy_inputs(self, state, backbone_output, action_input):
++        state.backbone_features.copy_(backbone_output.backbone_features)
++        state.image_mask.copy_(backbone_output.image_mask)
++        state.backbone_attention_mask.copy_(backbone_output.backbone_attention_mask)
++        state.state.copy_(self._reshape_state(action_input.state))
++        state.embodiment_id.copy_(action_input.embodiment_id)
++
++    def _make_graph_state(self, backbone_output, action_input):
++        device = backbone_output.backbone_features.device
++        batch_size = backbone_output.backbone_features.shape[0]
++        constants_batch = self.constants["action_time_embeddings"].shape[1]
++        if constants_batch != batch_size:
++            raise ValueError(
++                f"Runtime batch {batch_size} != exported constants batch {constants_batch}"
++            )
++        vlln_parameter = next(self.action_head.vlln.parameters(), None)
++        vlln_dtype = (
++            vlln_parameter.dtype
++            if vlln_parameter is not None
++            else backbone_output.backbone_features.dtype
++        )
++        auxiliary_dtype = self.state_encoder_engine.dtype_of("state")
++        action_state = self._reshape_state(action_input.state)
++        actions = torch.empty(
++            batch_size,
++            self.action_head.config.action_horizon,
++            self.action_head.action_dim,
++            device=device,
++            dtype=auxiliary_dtype,
++        )
++        if hasattr(self.action_head, "init_actions"):
++            initial_actions = self.action_head.init_actions.expand_as(actions).to(
++                device=device, dtype=auxiliary_dtype
++            ).contiguous()
++        else:
++            initial_actions = torch.randn_like(actions)
++
++        state = ActionHeadGraphState(
++            backbone_features=torch.empty(
++                backbone_output.backbone_features.shape,
++                device=device,
++                dtype=vlln_dtype,
++            ),
++            image_mask=torch.empty_like(backbone_output.image_mask),
++            backbone_attention_mask=torch.empty_like(
++                backbone_output.backbone_attention_mask
++            ),
++            state=torch.empty(action_state.shape, device=device, dtype=auxiliary_dtype),
++            embodiment_id=torch.empty(
++                action_input.embodiment_id.shape, device=device, dtype=torch.int64
++            ),
++            actions=actions,
++            initial_actions=initial_actions,
++            time_embeddings=self.constants["action_time_embeddings"],
++            adaln_modulations=self.constants["adaln_modulations"],
++            output_modulations=self.constants["output_modulations"],
++            position_embeddings=self.position_embeddings,
++        )
++        self._copy_inputs(state, backbone_output, action_input)
++        return state
++
++    def _execute(self, state, cache_outputs=True):
++        backbone_features = self.action_head.vlln(state.backbone_features)
++        if self.vl_sa_engine is not None:
++            backbone_features = backbone_features.to(
++                self.vl_sa_engine.dtype_of("hidden_states")
++            )
++            self.vl_sa_engine.set_runtime_tensor_shape(
++                "hidden_states", backbone_features.shape
++            )
++            vl_embs = self.vl_sa_engine(backbone_features, cache_outputs=cache_outputs)[
++                "output"
++            ]
++        else:
++            vl_embs = self.action_head.vl_self_attention(backbone_features)
++
++        vl_embs = vl_embs.to(self.cross_kv_engine.dtype_of("vl_embs"))
++        self.cross_kv_engine.set_runtime_tensor_shape("vl_embs", vl_embs.shape)
++        cross_kv = self.cross_kv_engine(vl_embs, cache_outputs=cache_outputs)
++
++        self.state_encoder_engine.set_runtime_tensor_shape("state", state.state.shape)
++        self.state_encoder_engine.set_runtime_tensor_shape(
++            "embodiment_id", state.embodiment_id.shape
++        )
++        state_features = self.state_encoder_engine(
++            state.state, state.embodiment_id, cache_outputs=cache_outputs
++        )["output"]
++
++        actions = state.actions
++        actions.copy_(state.initial_actions)
++        dit_dtype = self.dit_engine.dtype_of("sa_embs")
++        time_delta = 1.0 / self.action_head.num_inference_timesteps
++        for step in range(self.action_head.num_inference_timesteps):
++            timestep_embedding = state.time_embeddings[step]
++            self.action_encoder_engine.set_runtime_tensor_shape("actions", actions.shape)
++            self.action_encoder_engine.set_runtime_tensor_shape(
++                "timestep_embedding", timestep_embedding.shape
++            )
++            self.action_encoder_engine.set_runtime_tensor_shape(
++                "embodiment_id", state.embodiment_id.shape
++            )
++            action_features = self.action_encoder_engine(
++                actions,
++                timestep_embedding,
++                state.embodiment_id,
++                cache_outputs=cache_outputs,
++            )["output"]
++            if state.position_embeddings is not None:
++                action_features = action_features + state.position_embeddings
++
++            dit_inputs = {
++                "sa_embs": torch.cat((state_features, action_features), dim=1).to(
++                    dit_dtype
++                ),
++                "cross_keys": cross_kv["cross_keys"],
++                "cross_values": cross_kv["cross_values"],
++                "adaln_modulations": state.adaln_modulations[step],
++                "output_modulation": state.output_modulations[step],
++                "image_mask": state.image_mask,
++                "backbone_attention_mask": state.backbone_attention_mask,
++            }
++            for name, tensor in dit_inputs.items():
++                self.dit_engine.set_runtime_tensor_shape(name, tensor.shape)
++            model_output = self.dit_engine(cache_outputs=cache_outputs, **dit_inputs)[
++                "output"
++            ]
++
++            self.action_decoder_engine.set_runtime_tensor_shape(
++                "model_output", model_output.shape
++            )
++            self.action_decoder_engine.set_runtime_tensor_shape(
++                "embodiment_id", state.embodiment_id.shape
++            )
++            prediction = self.action_decoder_engine(
++                model_output, state.embodiment_id, cache_outputs=cache_outputs
++            )["output"]
++            actions.add_(
++                prediction[:, -self.action_head.action_horizon :], alpha=time_delta
++            )
++        return actions
++
++    def _capture_graph(self, state):
++        current_stream = torch.cuda.current_stream()
++        warmup_stream = torch.cuda.Stream()
++        warmup_stream.wait_stream(current_stream)
++        with torch.cuda.stream(warmup_stream):
++            for _ in range(3):
++                self._execute(state)
++        warmup_stream.synchronize()
++        current_stream.wait_stream(warmup_stream)
++
++        graph = torch.cuda.CUDAGraph()
++        capture_stream = torch.cuda.Stream()
++        capture_stream.wait_stream(current_stream)
++        with torch.cuda.graph(graph, stream=capture_stream):
++            output = self._execute(state)
++        current_stream.wait_stream(capture_stream)
++        state.graph = graph
++        state.output = output
++
++    def close(self):
++        if self.closed:
++            return
++        self.closed = True
++        if torch.cuda.is_available():
++            torch.cuda.synchronize()
++        if self._graph_state is not None:
++            self._graph_state.graph = None
++            self._graph_state.output = None
++            self._graph_state = None
++        gc.collect()
++        for engine in self.engines:
++            if engine is not None:
++                engine.close()
++        gc.collect()
++        if torch.cuda.is_available():
++            torch.cuda.empty_cache()
++
++    @property
++    def engines(self):
++        return (
++            self.vl_sa_engine,
++            self.state_encoder_engine,
++            self.action_encoder_engine,
++            self.cross_kv_engine,
++            self.dit_engine,
++            self.action_decoder_engine,
++        )
++
++
++def release_replaced_action_modules(action_head, runner: OptimizedActionHeadRunner):
++    """Delete only PyTorch modules replaced by the optimized runner."""
++    if runner.vl_sa_engine is not None and hasattr(action_head, "vl_self_attention"):
++        del action_head.vl_self_attention
++    for name in ("model", "state_encoder", "action_encoder", "action_decoder"):
++        if hasattr(action_head, name):
++            delattr(action_head, name)
++    torch.cuda.empty_cache()
++
++
++def close_optimized_action_head(policy):
++    """Destroy the runner's CUDA graph before its TensorRT execution contexts.
++
++    Engines stored as plain module attributes are closed by
++    ``trt_model_forward.close_tensorrt_engines``, which calls this first.
++    """
++    action_head = getattr(getattr(policy, "model", None), "action_head", None)
++    runner = getattr(action_head, "_trt_optimization_runner", None)
++    if runner is not None:
++        if torch.cuda.is_available():
++            torch.cuda.synchronize()
++        runner.close()
++        action_head._trt_optimization_runner = None
+diff --git a/scripts/deployment/standalone_inference_script.py b/scripts/deployment/standalone_inference_script.py
+index 227d40e..84b1e81 100644
+--- a/scripts/deployment/standalone_inference_script.py
++++ b/scripts/deployment/standalone_inference_script.py
+@@ -849,6 +849,16 @@ def main(args: ArgsConfig):
+             f"No valid trajectories to process. Requested IDs {args.traj_ids} are all out of range (dataset has {len(dataset)} trajectories, valid IDs: 0-{len(dataset) - 1})."
+         )
+ 
++    if args.inference_mode == "trt_full_pipeline":
++        # Release the engines here rather than leaving them to interpreter
++        # shutdown: the optimized runtime's CUDA graph must be destroyed before
++        # the execution contexts it references, and shutdown frees module globals
++        # in an arbitrary order, which intermittently hangs or segfaults inside
++        # the C++ destructors.
++        from trt_model_forward import close_tensorrt_engines
++
++        close_tensorrt_engines(policy)
++
+     logging.info("=" * 80)
+     logging.info("Done")
+     return pred_actions, obs
+diff --git a/scripts/deployment/trt_model_forward.py b/scripts/deployment/trt_model_forward.py
+index 5b0906a..7e7a060 100644
+--- a/scripts/deployment/trt_model_forward.py
++++ b/scripts/deployment/trt_model_forward.py
+@@ -51,6 +51,7 @@ Architecture (action_head mode):
+ 
+ from contextlib import contextmanager
+ from functools import partial
++import json
+ import logging
+ import os
+ import sys
+@@ -72,7 +73,83 @@ from _trt_contract import (  # noqa: E402
+     assert_engine_matches_policy,
+     assert_grid_thw_matches,
+ )
++from n1d7_optimization_config import (  # noqa: E402
++    OptimizationArtifacts,
++    format_quantization_summary,
++)
+ from trt_torch import Engine  # noqa: E402
++from n1d7_optimized_runtime import (  # noqa: E402
++    OptimizedActionHeadRunner,
++    close_optimized_action_head,
++    release_replaced_action_modules,
++)
++
++
++_COMPONENT_PRECISION_KEYS = {
++    "vit": "vit_precision",
++    "llm": "llm_precision",
++    "dit": "dit_precision",
++}
++_ENGINE_METADATA_CACHE = {}
++
++
++def _load_engine_metadata(engine_dir):
++    """Load per-component precision metadata.
++
++    The metadata file (``export_metadata.json``) is written by
++    ``export_onnx_n1d7.py`` into the ONNX output directory. We look in the
++    following locations, in order:
++
++    1. ``<engine_dir>/export_metadata.json``        — standalone-shipped engines
++    2. ``<engine_dir>/../onnx/export_metadata.json`` — default build layout
++       produced by ``build_trt_pipeline.py``
++
++    Returns the parsed dict, or ``None`` if no metadata is found.
++    """
++    if engine_dir in _ENGINE_METADATA_CACHE:
++        return _ENGINE_METADATA_CACHE[engine_dir]
++
++    candidates = [
++        os.path.join(engine_dir, "export_metadata.json"),
++        os.path.join(os.path.dirname(os.path.abspath(engine_dir)), "onnx", "export_metadata.json"),
++    ]
++    metadata = None
++    for path in candidates:
++        if os.path.exists(path):
++            with open(path) as f:
++                metadata = json.load(f)
++            logger.info(f"Loaded engine metadata from {path}")
++            break
++    _ENGINE_METADATA_CACHE[engine_dir] = metadata
++    return metadata
++
++
++def _engine_path(engine_dir, component, default_precision="bf16"):
++    """Build the engine file path for a given component.
++
++    Resolution order:
++    1. If ``export_metadata.json`` is present, use the per-component precision
++       recorded there (auto-detection). A quantized bundle resolves to that
++       name even if the file is missing, so the caller fails with the right
++       expected filename instead of silently loading a mismatched engine.
++    2. Otherwise, fall back to the legacy BF16 engine names.
++    """
++    metadata = _load_engine_metadata(engine_dir)
++    precision_key = _COMPONENT_PRECISION_KEYS.get(component)
++    if metadata is not None and precision_key is not None and precision_key in metadata:
++        resolved = os.path.join(engine_dir, f"{component}_{metadata[precision_key]}.engine")
++        if os.path.exists(resolved):
++            logger.info(
++                f"  [{component}] precision={metadata[precision_key]} "
++                "(from export_metadata.json)"
++            )
++            return resolved
++        if metadata.get("quantization", "none") != "none":
++            return resolved
++
++    if component == "vit":
++        return _resolve_vit_engine_path(engine_dir)
++    return os.path.join(engine_dir, f"{component}_{default_precision}.engine")
+ 
+ 
+ def _assert_supports_trt_padding_strip(attention_mask: torch.Tensor) -> None:
+@@ -163,7 +240,7 @@ def _qwen3_vit_and_scatter(self, vl_input):
+ 
+     pixel_values = vl_input["pixel_values"]
+     grid_thw = vl_input["image_grid_thw"]
+-    engine_dtype = torch.bfloat16
++    engine_dtype = self.vit_engine.out_meta[0][2]
+ 
+     # The ViT engine baked pos/rotary buffers for the export-time grid; a
+     # different runtime grid would silently corrupt vision features.
+@@ -368,8 +445,11 @@ def qwen3_backbone_llm_trt_forward(self, vl_input):
+         "embeddings"
+     ]
+ 
+-    if backbone_features.dtype != torch.bfloat16:
+-        backbone_features = backbone_features.to(torch.bfloat16)
++    # Cast LLM output to the engine's output dtype; downstream action head
++    # handles further casting to match its own engine dtypes.
++    llm_out_dtype = self.llm_engine.out_meta[0][2]
++    if backbone_features.dtype != llm_out_dtype:
++        backbone_features = backbone_features.to(llm_out_dtype)
+ 
+     return BatchFeature(
+         data={
+@@ -438,9 +518,11 @@ def qwen3_backbone_full_trt_forward(self, vl_input):
+         "embeddings"
+     ]
+ 
+-    # Cast LLM output back to BF16 — downstream (vl_self_attention, DiT) expect BF16.
+-    if backbone_features.dtype != torch.bfloat16:
+-        backbone_features = backbone_features.to(torch.bfloat16)
++    # Cast LLM output to the engine's output dtype; downstream action head
++    # handles further casting to match its own engine dtypes.
++    llm_out_dtype = self.llm_engine.out_meta[0][2]
++    if backbone_features.dtype != llm_out_dtype:
++        backbone_features = backbone_features.to(llm_out_dtype)
+ 
+     return BatchFeature(
+         data={
+@@ -471,9 +553,15 @@ def action_head_tensorrt_forward(self, backbone_output, action_input, options=No
+     """
+     # --- VLLN (PyTorch) + vl_self_attention (TRT if available, else PyTorch) ---
+     backbone_features = backbone_output.backbone_features
++    # Keep dtype consistent with the PyTorch LayerNorm parameters to avoid
++    # fp16/bf16 mismatch when TRT backbone output precision differs.
++    vlln_param = next(self.vlln.parameters(), None)
++    vlln_dtype = vlln_param.dtype if vlln_param is not None else backbone_features.dtype
++    if backbone_features.dtype != vlln_dtype:
++        backbone_features = backbone_features.to(vlln_dtype)
+     backbone_features = self.vlln(backbone_features)
+     if hasattr(self, "vl_sa_engine") and self.vl_sa_engine is not None:
+-        engine_dtype = torch.bfloat16
++        engine_dtype = self.vl_sa_engine.in_meta[0][2]
+         if backbone_features.dtype != engine_dtype:
+             backbone_features = backbone_features.to(engine_dtype)
+         self.vl_sa_engine.set_runtime_tensor_shape("hidden_states", backbone_features.shape)
+@@ -486,13 +574,15 @@ def action_head_tensorrt_forward(self, backbone_output, action_input, options=No
+     batch_size = vl_embs.shape[0]
+     device = vl_embs.device
+ 
+-    engine_dtype = torch.bfloat16
++    # Derive expected dtypes from the loaded TRT engines
++    dit_dtype = self.dit_engine.in_meta[0][2]          # sa_embs dtype
++    aux_dtype = self.state_encoder_engine.in_meta[0][2]  # state dtype
+ 
+     # Ensure consistent dtypes
+-    if vl_embs.dtype != engine_dtype:
+-        vl_embs = vl_embs.to(engine_dtype)
+-    if action_input.state.dtype != engine_dtype:
+-        action_input.state = action_input.state.to(engine_dtype)
++    if vl_embs.dtype != dit_dtype:
++        vl_embs = vl_embs.to(dit_dtype)
++    if action_input.state.dtype != aux_dtype:
++        action_input.state = action_input.state.to(aux_dtype)
+     if embodiment_id.dtype != torch.int64:
+         embodiment_id = embodiment_id.to(torch.int64)
+ 
+@@ -520,7 +610,7 @@ def action_head_tensorrt_forward(self, backbone_output, action_input, options=No
+     else:
+         actions = torch.randn(
+             size=(batch_size, self.config.action_horizon, self.action_dim),
+-            dtype=engine_dtype,
++            dtype=aux_dtype,
+             device=device,
+         )
+ 
+@@ -541,17 +631,17 @@ def action_head_tensorrt_forward(self, backbone_output, action_input, options=No
+         self.action_encoder_engine.set_runtime_tensor_shape("timesteps", timesteps_tensor.shape)
+         self.action_encoder_engine.set_runtime_tensor_shape("embodiment_id", embodiment_id.shape)
+         action_features = self.action_encoder_engine(
+-            actions.to(engine_dtype), timesteps_tensor, embodiment_id
++            actions.to(aux_dtype), timesteps_tensor, embodiment_id
+         )["output"]
+ 
+         # Maybe add position embedding (stays in PyTorch)
+         if self.config.add_pos_embed:
+             pos_ids = torch.arange(action_features.shape[1], dtype=torch.long, device=device)
+-            pos_embs = self.position_embedding(pos_ids).unsqueeze(0).to(engine_dtype)
++            pos_embs = self.position_embedding(pos_ids).unsqueeze(0).to(aux_dtype)
+             action_features = action_features + pos_embs
+ 
+         # Concatenate state + action embeddings
+-        sa_embs = torch.cat((state_features, action_features), dim=1).to(engine_dtype)
++        sa_embs = torch.cat((state_features, action_features), dim=1).to(dit_dtype)
+ 
+         # DiT TRT
+         self.dit_engine.set_runtime_tensor_shape("sa_embs", sa_embs.shape)
+@@ -593,44 +683,68 @@ def action_head_tensorrt_forward(self, backbone_output, action_input, options=No
+ 
+ # Engines each mode swaps in with no PyTorch fallback: their absence must fail
+ # fast with a build hint rather than a bare FileNotFoundError from Engine.load.
+-_ACTION_HEAD_ENGINES = (
++_ACTION_HEAD_STATIC_ENGINES = (
+     "state_encoder.engine",
+     "action_encoder.engine",
+-    "dit_bf16.engine",
+     "action_decoder.engine",
+ )
+-_MANDATORY_ENGINES = {
+-    InferenceMode.n17_full_pipeline: _ACTION_HEAD_ENGINES,
+-    InferenceMode.action_head: _ACTION_HEAD_ENGINES,
+-}
+ 
+ 
+-def setup_tensorrt_engines(policy, trt_engine_path, mode=InferenceMode.n17_full_pipeline):
+-    """Load TRT engines, delete PyTorch modules, and monkey-patch forward methods.
++def _required_action_head_engines(engine_dir: str) -> tuple[str, ...]:
++    required = [
++        *_ACTION_HEAD_STATIC_ENGINES,
++        os.path.basename(_engine_path(engine_dir, "dit")),
++    ]
++    metadata = _load_engine_metadata(engine_dir)
++    artifacts = OptimizationArtifacts.from_metadata(
++        engine_dir, metadata, artifact_kind="engine"
++    )
++    if artifacts is not None:
++        required.extend(
++            (os.path.basename(artifacts.cross_kv), os.path.basename(artifacts.constants))
++        )
++    return tuple(required)
+ 
+-    Args:
+-        policy: Gr00tPolicy instance
+-        trt_engine_path: Path to directory containing TRT engine files
+-        mode: an :class:`~gr00t.deployment.modes.InferenceMode` (or its string
+-            value) selecting which engine subset to swap in. Invalid values raise.
++
++def setup_tensorrt_engines(
++    policy, trt_engine_path, mode=InferenceMode.n17_full_pipeline
++):
++    """Load a validated TRT engine bundle and patch the selected inference path.
++
++    Per-component precision and optional optimized-action-head artifacts are
++    auto-detected from export_metadata.json. Legacy bundles without metadata
++    fall back to the historical BF16 engine names.
+     """
+     mode = InferenceMode(mode)
+-    required = _MANDATORY_ENGINES.get(mode)
+-    if required is not None:
++    metadata = _load_engine_metadata(trt_engine_path)
++    if metadata is not None:
++        logger.info(
++            "Auto-detected component precisions: vit=%s, llm=%s, dit=%s",
++            metadata.get("vit_precision"),
++            metadata.get("llm_precision"),
++            metadata.get("dit_precision"),
++        )
++    else:
++        logger.info(
++            "No export_metadata.json found in %s; using legacy BF16 engine names.",
++            trt_engine_path,
++        )
++    print(format_quantization_summary(metadata))
++
++    if mode in (InferenceMode.n17_full_pipeline, InferenceMode.action_head):
+         assert_engine_bundle_present(
+             trt_engine_path,
+-            required,
++            _required_action_head_engines(trt_engine_path),
+             mode=mode.value,
+             source=f"setup_tensorrt_engines({mode})",
+         )
+-    _meta = assert_engine_matches_policy(
++
++    checked_metadata = assert_engine_matches_policy(
+         policy, trt_engine_path, source=f"setup_tensorrt_engines({mode})"
+     )
+-
+-    # Stash the ViT engine's baked grid_thw so the runtime ViT path can reject a
+-    # mismatched image config. None for older bundles (no recorded grid).
+-    policy.model.backbone._vit_baked_grid_thw = _meta.get("vit_grid_thw") if _meta else None
+-
++    policy.model.backbone._vit_baked_grid_thw = (
++        checked_metadata.get("vit_grid_thw") if checked_metadata else None
++    )
+     _INFERENCE_MODE_DISPATCH[mode](policy, trt_engine_path)
+ 
+ 
+@@ -645,9 +759,13 @@ def close_tensorrt_engines(policy):
+     """
+     # The sim wrapper exposes the inner Gr00tPolicy as ``.policy``; a remote
+     # PolicyClient has no model and no engines to close.
+-    model = getattr(getattr(policy, "policy", policy), "model", None)
++    inner_policy = getattr(policy, "policy", policy)
++    model = getattr(inner_policy, "model", None)
+     if model is None:
+         return
++    # Destroy the optimized runner's CUDA graph (and its engines) before the
++    # remaining TensorRT execution contexts.
++    close_optimized_action_head(inner_policy)
+     closed = set()
+     for module in model.modules():
+         # Snapshot the attribute values: close() runs C++ destructors, so avoid
+@@ -681,7 +799,7 @@ def _setup_n17_full_pipeline(policy, trt_engine_path):
+     with TRT engines. PyTorch ops kept: embed_tokens, masked_scatter,
+     get_rope_index (lightweight, <1ms).
+ 
+-    Falls back to PyTorch LLM if llm_bf16.engine is not found.
++    Falls back to PyTorch LLM if the LLM engine is not found.
+     """
+     backbone = policy.model.backbone
+     qwen_model = backbone.model  # Qwen3VLForConditionalGeneration
+@@ -693,7 +811,7 @@ def _setup_n17_full_pipeline(policy, trt_engine_path):
+     backbone._image_token_id = qwen_model.config.image_token_id
+ 
+     # Load ViT TRT engine (optional — PyTorch ViT used as fallback for accuracy)
+-    vit_engine_path = _resolve_vit_engine_path(trt_engine_path)
++    vit_engine_path = _engine_path(trt_engine_path, "vit")
+     use_vit_trt = os.path.exists(vit_engine_path)
+     if use_vit_trt:
+         print(f"Loading ViT engine: {vit_engine_path}")
+@@ -706,7 +824,7 @@ def _setup_n17_full_pipeline(policy, trt_engine_path):
+         print(f"  ViT engine not found at {vit_engine_path}, keeping PyTorch ViT")
+ 
+     # Load LLM TRT engine (if available)
+-    llm_engine_path = os.path.join(trt_engine_path, "llm_bf16.engine")
++    llm_engine_path = _engine_path(trt_engine_path, "llm")
+     use_llm_trt = os.path.exists(llm_engine_path)
+ 
+     if use_llm_trt:
+@@ -736,6 +854,23 @@ def _setup_n17_full_pipeline(policy, trt_engine_path):
+         print("  No backbone TRT engines loaded, backbone remains in PyTorch")
+ 
+     # --- Action head setup ---
++    optimized_runner = OptimizedActionHeadRunner.maybe_create(
++        action_head,
++        trt_engine_path,
++        _load_engine_metadata(trt_engine_path),
++        dit_engine_path=_engine_path(trt_engine_path, "dit"),
++    )
++    if optimized_runner is not None:
++        release_replaced_action_modules(action_head, optimized_runner)
++        action_head._trt_optimization_runner = optimized_runner
++        action_head.get_action = optimized_runner
++        llm_status = "TRT" if use_llm_trt else "PyTorch"
++        vit_status = "TRT" if backbone.vit_engine else "PyTorch"
++        print("N1.7 optimized full-pipeline TRT engines loaded.")
++        print(f"  ViT: {vit_status} | LLM: {llm_status} | Action Head: TRT CUDA graph")
++        return
++    action_head._trt_optimization_runner = None
++
+     # Load vl_self_attention TRT engine (if available)
+     vl_sa_engine_path = os.path.join(trt_engine_path, "vl_self_attention.engine")
+     if os.path.exists(vl_sa_engine_path):
+@@ -767,7 +902,9 @@ def _setup_n17_full_pipeline(policy, trt_engine_path):
+     action_head.action_encoder_engine = Engine(
+         os.path.join(trt_engine_path, "action_encoder.engine")
+     )
+-    action_head.dit_engine = Engine(os.path.join(trt_engine_path, "dit_bf16.engine"))
++    dit_path = _engine_path(trt_engine_path, "dit")
++    print(f"Loading DiT engine: {dit_path}")
++    action_head.dit_engine = Engine(dit_path)
+     action_head.action_decoder_engine = Engine(
+         os.path.join(trt_engine_path, "action_decoder.engine")
+     )
+@@ -797,7 +934,7 @@ def _setup_vit_llm_only(policy, trt_engine_path):
+     backbone._image_token_id = qwen_model.config.image_token_id
+ 
+     # Load ViT TRT engine
+-    vit_engine_path = _resolve_vit_engine_path(trt_engine_path)
++    vit_engine_path = _engine_path(trt_engine_path, "vit")
+     if not os.path.exists(vit_engine_path):
+         raise FileNotFoundError(
+             f"ViT TRT engine not found: {vit_engine_path}\n"
+@@ -810,7 +947,7 @@ def _setup_vit_llm_only(policy, trt_engine_path):
+     print("  Deleted PyTorch ViT (replaced by TRT engine)")
+ 
+     # Load LLM TRT engine
+-    llm_engine_path = os.path.join(trt_engine_path, "llm_bf16.engine")
++    llm_engine_path = _engine_path(trt_engine_path, "llm")
+     if not os.path.exists(llm_engine_path):
+         raise FileNotFoundError(
+             f"LLM TRT engine not found: {llm_engine_path}\n"
+@@ -838,6 +975,20 @@ def _setup_action_head(policy, trt_engine_path):
+     TRT engines.
+     """
+     action_head = policy.model.action_head
++    optimized_runner = OptimizedActionHeadRunner.maybe_create(
++        action_head,
++        trt_engine_path,
++        _load_engine_metadata(trt_engine_path),
++        dit_engine_path=_engine_path(trt_engine_path, "dit"),
++    )
++    if optimized_runner is not None:
++        release_replaced_action_modules(action_head, optimized_runner)
++        action_head._trt_optimization_runner = optimized_runner
++        action_head.get_action = optimized_runner
++        print("Optimized action-head TRT engines loaded with CUDA graph replay.")
++        print("  Backbone remains in PyTorch (Qwen3-VL).")
++        return
++    action_head._trt_optimization_runner = None
+ 
+     # Delete PyTorch modules that are replaced by TRT
+     if hasattr(action_head, "model"):
+@@ -862,7 +1013,9 @@ def _setup_action_head(policy, trt_engine_path):
+     action_head.action_encoder_engine = Engine(
+         os.path.join(trt_engine_path, "action_encoder.engine")
+     )
+-    action_head.dit_engine = Engine(os.path.join(trt_engine_path, "dit_bf16.engine"))
++    dit_path = _engine_path(trt_engine_path, "dit")
++    print(f"Loading DiT engine: {dit_path}")
++    action_head.dit_engine = Engine(dit_path)
+     action_head.action_decoder_engine = Engine(
+         os.path.join(trt_engine_path, "action_decoder.engine")
+     )
+@@ -888,14 +1041,14 @@ def _setup_dit_only(policy, trt_engine_path):
+     torch.cuda.empty_cache()
+ 
+     # Load DiT TRT engine
+-    # Support both naming conventions
+-    dit_path = os.path.join(trt_engine_path, "dit_bf16.engine")
++    # Support both naming conventions (legacy bundles predate metadata).
++    dit_path = _engine_path(trt_engine_path, "dit")
+     if not os.path.exists(dit_path):
+-        dit_path = os.path.join(trt_engine_path, "dit_model_bf16.engine")
+-    if not os.path.exists(dit_path):
+-        # Try the old naming convention
+-        dit_path = os.path.join(trt_engine_path, "dit_model_bf16.trt")
+-
++        for legacy_name in ("dit_model_bf16.engine", "dit_model_bf16.trt"):
++            legacy_path = os.path.join(trt_engine_path, legacy_name)
++            if os.path.exists(legacy_path):
++                dit_path = legacy_path
++                break
+     print(f"Loading DiT engine: {dit_path}")
+     action_head.dit_engine = Engine(dit_path)
+ 
+@@ -919,7 +1072,7 @@ def _setup_dit_only(policy, trt_engine_path):
+         vl_embs = backbone_features
+         batch_size = vl_embs.shape[0]
+         device = vl_embs.device
+-        engine_dtype = torch.bfloat16
++        engine_dtype = action_head.dit_engine.in_meta[0][2]
+ 
+         actions = torch.randn(
+             size=(batch_size, action_head.config.action_horizon, action_head.action_dim),
+diff --git a/scripts/deployment/verify_n1d7_trt.py b/scripts/deployment/verify_n1d7_trt.py
+index a0b88a2..be406cc 100644
+--- a/scripts/deployment/verify_n1d7_trt.py
++++ b/scripts/deployment/verify_n1d7_trt.py
+@@ -259,6 +259,9 @@ def main(args: VerifyConfig | None = None):
+     else:
+         print("\n  FAIL — Significant divergence")
+ 
++    from trt_model_forward import close_tensorrt_engines
++
++    close_tensorrt_engines(policy)
+     return cosine
+ 
+ 
+diff --git a/tests/scripts/deployment/test_trt_pipeline.py b/tests/scripts/deployment/test_trt_pipeline.py
+index 9fe5811..44546f8 100644
+--- a/tests/scripts/deployment/test_trt_pipeline.py
++++ b/tests/scripts/deployment/test_trt_pipeline.py
+@@ -57,6 +57,12 @@ from build_trt_pipeline import (  # noqa: E402
+     _run_export,
+     _run_verify,
+ )
++from n1d7_optimization_config import (  # noqa: E402
++    COMPONENT_PRECISIONS,
++    OptimizationArtifacts,
++    component_precisions,
++    trt_boundary_precision,
++)
+ import pytest  # noqa: E402
+ import tensorrt as trt  # noqa: E402
+ from test_support.runtime import (  # noqa: E402
+@@ -179,3 +185,112 @@ def test_build_trt_pipeline_missing_model_path() -> None:
+     assert "Please provide --model-path" in combined, (
+         f"Expected error 'Please provide --model-path' in output:\n{combined}"
+     )
++
++
++# ---------------------------------------------------------------------------
++# Quantization-policy artifact naming tests (CPU-only)
++#
++# Regression class: `--quantization fp8 --export-mode dit_only` once exported
++# dit_fp8.onnx while the pipeline build step looked for dit_bf16.onnx. Export,
++# build, benchmark, and runtime must all derive artifact names from the shared
++# COMPONENT_PRECISIONS table / export metadata.
++# ---------------------------------------------------------------------------
++
++
++def _metadata_for(quantization: str) -> dict:
++    precisions = component_precisions(quantization)
++    return {
++        "vit_precision": precisions["vit"],
++        "llm_precision": precisions["llm"],
++        "dit_precision": precisions["dit"],
++        "aux_precision": precisions["aux"],
++        "quantization": quantization,
++    }
++
++
++def test_component_precisions_none_matches_baseline_artifacts() -> None:
++    """The 'none' policy must reproduce the baseline export exactly."""
++    assert component_precisions("none") == {
++        "vit": "fp32",
++        "llm": "bf16",
++        "dit": "bf16",
++        "aux": "bf16",
++    }
++
++
++@pytest.mark.parametrize("quantization", ["fp8", "mixed_nvfp4"])
++def test_quantized_recipes_build_with_fp16_boundary(quantization: str) -> None:
++    """FP8/NVFP4 artifacts carry Q/DQ nodes internally; TRT I/O stays FP16."""
++    precisions = component_precisions(quantization)
++    for component in ("vit", "llm", "dit"):
++        assert trt_boundary_precision(precisions[component]) == "fp16"
++    assert precisions["aux"] == "fp16"
++
++
++@pytest.mark.parametrize("quantization", sorted(COMPONENT_PRECISIONS))
++def test_runtime_engine_path_matches_export_naming(quantization: str, tmp_path) -> None:
++    """The runtime resolves exactly the engine name the export/build produce."""
++    import json
++
++    from trt_model_forward import _engine_path
++
++    dit_precision = component_precisions(quantization)["dit"]
++    engine_name = f"dit_{dit_precision}.engine"
++    (tmp_path / "export_metadata.json").write_text(json.dumps(_metadata_for(quantization)))
++    (tmp_path / engine_name).touch()
++
++    assert _engine_path(str(tmp_path), "dit") == str(tmp_path / engine_name)
++
++
++def test_runtime_engine_path_reports_missing_quantized_engine(tmp_path) -> None:
++    """A quantized bundle with a missing engine must resolve to the expected
++    quantized filename (so the caller errors with the right path), not silently
++    fall back to the legacy BF16 name."""
++    import json
++
++    from trt_model_forward import _engine_path
++
++    (tmp_path / "export_metadata.json").write_text(json.dumps(_metadata_for("mixed_nvfp4")))
++
++    assert _engine_path(str(tmp_path), "dit").endswith("dit_nvfp4.engine")
++
++
++def test_optimization_artifacts_resolved_from_flat_metadata() -> None:
++    metadata = {
++        "optimized_action_head": True,
++        "dit_precision": "nvfp4",
++        "action_head_format_version": 1,
++    }
++    artifacts = OptimizationArtifacts.from_metadata("/bundle", metadata, artifact_kind="engine")
++    assert artifacts.cross_kv == "/bundle/dit_cross_kv_nvfp4.engine"
++    assert artifacts.constants == "/bundle/action_head_constants.pt"
++    assert artifacts.format_version == 1
++
++    assert (
++        OptimizationArtifacts.from_metadata(
++            "/bundle", {"optimized_action_head": False}, artifact_kind="onnx"
++        )
++        is None
++    )
++    assert OptimizationArtifacts.from_metadata("/bundle", None, artifact_kind="onnx") is None
++
++
++def test_cli_rejects_optimized_profile_with_dit_only() -> None:
++    """Invalid mode combinations fail fast, before any model loading."""
++    result = subprocess.run(
++        [
++            sys.executable,
++            _PIPELINE_SCRIPT,
++            "--model-path",
++            "/unused",
++            "--execution-profile",
++            "optimized",
++            "--export-mode",
++            "dit_only",
++        ],
++        capture_output=True,
++        text=True,
++    )
++    assert result.returncode != 0
++    combined = result.stdout + result.stderr
++    assert "--execution-profile optimized requires" in combined
