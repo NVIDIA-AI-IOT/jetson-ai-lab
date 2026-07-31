@@ -20,10 +20,20 @@ Deploy NVIDIA's [Isaac GR00T N1.7](https://github.com/NVIDIA/Isaac-GR00T) **Visi
 
 The same foundation model is post-trained onto different robot bodies, so the pipeline in this tutorial is not specific to any one embodiment:
 
-| Unitree G1 | AgiBot G1 | YAM |
-|---|---|---|
-| ![GR00T policy running on the Unitree G1](/images/tutorials/groot-n17-unitree-g1.gif) | ![GR00T policy running on the AgiBot G1](/images/tutorials/groot-n17-agibot-g1.gif) | ![GR00T policy running on YAM](/images/tutorials/groot-n17-yam.gif) |
-
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: start; margin: 1.5rem 0;">
+  <figure style="margin: 0;">
+    <img src="/images/tutorials/groot-n17-unitree-g1.gif" alt="GR00T policy running on the Unitree G1" style="width: 100%; height: auto; display: block; border-radius: 0.5rem;" />
+    <figcaption style="margin-top: 0.5rem; text-align: center; font-size: 0.875rem; font-weight: 600;">Unitree G1</figcaption>
+  </figure>
+  <figure style="margin: 0;">
+    <img src="/images/tutorials/groot-n17-agibot-g1.gif" alt="GR00T policy running on the AgiBot G1" style="width: 100%; height: auto; display: block; border-radius: 0.5rem;" />
+    <figcaption style="margin-top: 0.5rem; text-align: center; font-size: 0.875rem; font-weight: 600;">AgiBot G1</figcaption>
+  </figure>
+  <figure style="margin: 0;">
+    <img src="/images/tutorials/groot-n17-yam.gif" alt="GR00T policy running on YAM" style="width: 100%; height: auto; display: block; border-radius: 0.5rem;" />
+    <figcaption style="margin-top: 0.5rem; text-align: center; font-size: 0.875rem; font-weight: 600;">YAM</figcaption>
+  </figure>
+</div>
 
 The backbone is [`nvidia/Cosmos-Reason2-2B`](https://huggingface.co/nvidia/Cosmos-Reason2-2B), a **Qwen3-VL architecture** VLM (its config declares `Qwen3VLForConditionalGeneration`), loaded as a separate gated download rather than being bundled in the GR00T checkpoint, which is why Step 4 requires accepting its license. GR00T does not run all of it: the checkpoint sets `select_layer: 16`, and the loader physically pops text layers off the top until 16 remain, so 12 of Cosmos-Reason2-2B's 28 text layers are discarded before inference.
 
