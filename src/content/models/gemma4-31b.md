@@ -1,7 +1,7 @@
 ---
 title: "Gemma 4 31B"
 model_id: "gemma4-31b"
-short_description: "Google's Gemma 4 31B variant with Q4_K_M GGUF support on Jetson through llama.cpp"
+short_description: "Google's flagship Gemma 4 model with NVFP4, W4A16, and GGUF deployment paths on Jetson"
 family: "Google Gemma4"
 icon: "💎"
 is_new: false
@@ -9,7 +9,7 @@ order: 4
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "32GB RAM"
-precision: "Q4_K_M GGUF"
+precision: "NVFP4 / W4A16 / Q4_K_M GGUF"
 parameters: "31B"
 modalities: ["Text", "Image"]
 context_length: "256K"
@@ -26,26 +26,10 @@ serving:
         - thor_t5000
         - thor_t4000
         - orin_agx_64
-      serve_command_orin: |-
-        sudo docker run -it --rm --pull always \
-          --runtime=nvidia --network host \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          ghcr.io/nvidia-ai-iot/vllm:gemma4-jetson-orin \
-          vllm serve cyankiwi/gemma-4-31B-it-AWQ-4bit \
-            --gpu-memory-utilization 0.75 \
-            --enable-auto-tool-choice \
-            --reasoning-parser gemma4 \
-            --tool-call-parser gemma4
-      serve_command_thor: |-
-        sudo docker run -it --rm --pull always \
-          --runtime=nvidia --network host \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          vllm/vllm-openai:latest \
-          nvidia/Gemma-4-31B-IT-NVFP4 \
-            --gpu-memory-utilization 0.75 \
-            --enable-auto-tool-choice \
-            --reasoning-parser gemma4 \
-            --tool-call-parser gemma4
+      serve_command_orin: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest google/gemma-4-31B-it-qat-w4a16-ct --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-31B-it-assistant","num_speculative_tokens":3}'
+      serve_command_thor: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/Gemma-4-31B-IT-NVFP4 --quantization modelopt --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-31B-it-assistant","num_speculative_tokens":3}'
     - engine: "llama.cpp"
       type: "Container"
       modules_supported:

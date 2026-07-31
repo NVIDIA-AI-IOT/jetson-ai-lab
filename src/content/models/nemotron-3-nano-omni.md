@@ -4,7 +4,7 @@ model_id: "nemotron-3-nano-omni"
 short_description: "NVIDIA's multimodal reasoning model with language, vision, audio, and video understanding — 30B total / 3B active MoE, available in NVFP4, FP8, and BF16."
 family: "NVIDIA Nemotron"
 icon: "⚡"
-is_new: true
+is_new: false
 order: 4
 type: "Multimodal"
 vision_capable: true

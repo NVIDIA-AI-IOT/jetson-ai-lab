@@ -4,7 +4,7 @@ model_id: "minimax-m2-7"
 short_description: "MiniMax's 230B agentic MoE flagship for software engineering and self-evolving agent harnesses with llama.cpp at 4-bit"
 family: "MiniMax M2.7"
 icon: "🌀"
-is_new: true
+is_new: false
 order: 1
 type: "Text"
 vision_capable: false

@@ -9,13 +9,13 @@ order: 4
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "4GB RAM"
-precision: "AWQ 4-bit"
+precision: "NVFP4 / W4A16"
 parameters: "4B"
 modalities: ["Text", "Image"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "2.5GB"
-hf_checkpoint: "cyankiwi/Qwen3.5-4B-AWQ-4bit"
+hf_checkpoint: "Qwen/Qwen3.5-4B"
 huggingface_url: "https://huggingface.co/Qwen/Qwen3.5-4B"
 minimum_jetson: "Orin Nano"
 # Optional: gray tabs via matrix_modules_disabled. Per-engine allowlists: supported_inference_engines[].modules_supported (from minimum_jetson).
@@ -28,26 +28,10 @@ supported_inference_engines:
       - orin_agx_64
       - orin_nx_16
       - orin_nano_8
-    serve_command_orin: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
-        vllm serve cyankiwi/Qwen3.5-4B-AWQ-4bit \
-          --gpu-memory-utilization 0.8 \
-          --enable-prefix-caching \
-          --reasoning-parser qwen3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder
-    serve_command_thor: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        vllm/vllm-openai:latest \
-        cyankiwi/Qwen3.5-4B-AWQ-4bit \
-          --gpu-memory-utilization 0.8 \
-          --enable-prefix-caching \
-          --reasoning-parser qwen3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder
+    serve_command_orin: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest RedHatAI/Qwen3.5-4B-quantized.w4a16 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
+    serve_command_thor: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest AxionML/Qwen3.5-4B-NVFP4 --quantization modelopt --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
 benchmark_key: "Qwen3.5-4B"
 ---
 
@@ -69,5 +53,5 @@ Qwen3.5 4B offers a balanced point in the Qwen3.5 family for local multimodal in
 ## Additional Resources
 
 - [Original Model](https://huggingface.co/Qwen/Qwen3.5-4B) - Base Qwen3.5 4B checkpoint
-- [AWQ Checkpoint](https://huggingface.co/cyankiwi/Qwen3.5-4B-AWQ-4bit) - Quantized checkpoint used here
-
+- [W4A16 Checkpoint](https://huggingface.co/RedHatAI/Qwen3.5-4B-quantized.w4a16) - Jetson Orin checkpoint
+- [NVFP4 Checkpoint](https://huggingface.co/AxionML/Qwen3.5-4B-NVFP4) - Jetson Thor checkpoint
