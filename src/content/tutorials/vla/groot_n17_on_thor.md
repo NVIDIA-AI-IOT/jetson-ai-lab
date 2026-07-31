@@ -8,6 +8,8 @@ tags: ["vla", "gr00t", "isaac-gr00t", "n1.7", "robotics", "jetson-thor", "tensor
 authors:
   - name: "Aditya Sahu"
     github: "adsahu-nv"
+  - name: "Anqi Liu"
+    github: "liuanqi-libra7"
 ---
 
 Deploy NVIDIA's [Isaac GR00T N1.7](https://github.com/NVIDIA/Isaac-GR00T) **Vision-Language-Action (VLA)** model on **NVIDIA Jetson AGX Thor** with TensorRT mixed NVFP4 quantization, taking end-to-end inference from 125 ms down to **39.9 ms**, a 3.1x speedup at 25 Hz, with no measurable loss in task success.
