@@ -24,7 +24,7 @@ supported_inference_engines:
     serve_command_orin: >-
       sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest cyankiwi/Qwen3.6-27B-AWQ-INT4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
     serve_command_thor: >-
-      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/Qwen3.6-27B-NVFP4 --quantization modelopt --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/Qwen3.6-27B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
 benchmark:
   thor:
     concurrency1: 13
@@ -60,7 +60,7 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm
 ### Jetson Thor
 
 ```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/Qwen3.6-27B-NVFP4 --quantization modelopt --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
+sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/Qwen3.6-27B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
 ```
 
 ## Speculative Decoding with MTP
