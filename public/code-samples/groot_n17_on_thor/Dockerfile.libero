@@ -1,0 +1,12 @@
+# Adds offscreen GL (EGL + OSMesa) to the GR00T Thor image so MuJoCo/LIBERO
+# can render headless. The base image ships no GL stack at all.
+FROM gr00t-thor
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libegl1 libgl1 libglvnd0 libgles2 \
+        libosmesa6 libosmesa6-dev \
+        libglfw3 libxrandr2 libxinerama1 libxcursor1 libxi6 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV NVIDIA_DRIVER_CAPABILITIES=graphics,utility,compute
