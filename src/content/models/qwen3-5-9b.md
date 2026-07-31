@@ -27,26 +27,10 @@ supported_inference_engines:
       - thor_t4000
       - orin_agx_64
       - orin_nx_16
-    serve_command_orin: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
-        vllm serve RedHatAI/Qwen3.5-9B-quantized.w4a16 \
-          --gpu-memory-utilization 0.8 \
-          --enable-prefix-caching \
-          --reasoning-parser qwen3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder
-    serve_command_thor: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        vllm/vllm-openai:latest \
-        AxionML/Qwen3.5-9B-NVFP4 \
-          --gpu-memory-utilization 0.8 \
-          --enable-prefix-caching \
-          --reasoning-parser qwen3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder
+    serve_command_orin: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest RedHatAI/Qwen3.5-9B-quantized.w4a16 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
+    serve_command_thor: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest AxionML/Qwen3.5-9B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
 benchmark_key: "Qwen3.5-9B"
 ---
 
@@ -70,4 +54,3 @@ Qwen3.5 9B is a dense vision-language model in the Qwen3.5 family aimed at stron
 - [Original Model](https://huggingface.co/Qwen/Qwen3.5-9B) - Base Qwen3.5 9B checkpoint
 - [W4A16 Checkpoint](https://huggingface.co/RedHatAI/Qwen3.5-9B-quantized.w4a16) - Jetson Orin checkpoint
 - [NVFP4 Checkpoint](https://huggingface.co/AxionML/Qwen3.5-9B-NVFP4) - Jetson Thor checkpoint
-

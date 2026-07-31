@@ -4,33 +4,27 @@ model_id: "qwen3-6-27b"
 short_description: "Alibaba's dense 27 billion parameter language model with native tool calling and MTP speculative decoding"
 family: "Alibaba Qwen3.6"
 icon: "🔮"
-is_new: true
+is_new: false
 order: 2
 type: "Text"
 vision_capable: false
 memory_requirements: "18GB RAM"
-precision: "NVFP4"
+precision: "NVFP4 / AWQ-INT4"
 model_size: "19GB"
 hf_checkpoint: "Qwen/Qwen3.6-27B"
 huggingface_url: "https://huggingface.co/Qwen/Qwen3.6-27B"
-minimum_jetson: "AGX Thor"
+minimum_jetson: "AGX Orin"
 supported_inference_engines:
   - engine: "vLLM"
     type: "Container"
     modules_supported:
       - thor_t5000
       - thor_t4000
-    serve_command_thor: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        --entrypoint "" \
-        vllm/vllm-openai:latest \
-        bash -c "pip install -q 'vllm[audio]' && exec vllm serve nvidia/Qwen3.6-27B-NVFP4 \
-          --gpu-memory-utilization 0.8 \
-          --enable-prefix-caching \
-          --reasoning-parser qwen3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder"
+      - orin_agx_64
+    serve_command_orin: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest cyankiwi/Qwen3.6-27B-AWQ-INT4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
+    serve_command_thor: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/Qwen3.6-27B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
 benchmark:
   thor:
     concurrency1: 13
@@ -57,26 +51,21 @@ Qwen3.6 27B is a dense language model from Alibaba Cloud's Qwen3.6 family. With 
 
 ## Running with vLLM
 
+### Jetson Orin
+
 ```bash
-sudo docker run -it --rm --pull always \
-  --runtime=nvidia --network host \
-  --entrypoint "" \
-  vllm/vllm-openai:latest \
-  bash -c "pip install -q 'vllm[audio]' && exec vllm serve nvidia/Qwen3.6-27B-NVFP4 \
-    --gpu-memory-utilization 0.8 \
-    --enable-prefix-caching \
-    --reasoning-parser qwen3 \
-    --enable-auto-tool-choice \
-    --tool-call-parser qwen3_coder"
+sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest cyankiwi/Qwen3.6-27B-AWQ-INT4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
+```
+
+### Jetson Thor
+
+```bash
+sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/Qwen3.6-27B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
 ```
 
 ## Speculative Decoding with MTP
 
-This model supports **Multi-Token Prediction (MTP)** speculative decoding, which can significantly improve generation throughput. To enable it, add the following flag to your `vllm serve` command:
-
-```bash
---speculative-config '{"method": "mtp", "num_speculative_tokens": 4}'
-```
+Both platform commands enable native **Multi-Token Prediction (MTP-3)** speculative decoding.
 
 ## Qwen3.6 Family
 
@@ -89,3 +78,4 @@ This model supports **Multi-Token Prediction (MTP)** speculative decoding, which
 
 - [Hugging Face Model](https://huggingface.co/Qwen/Qwen3.6-27B) - Original model weights
 - [NVFP4 Checkpoint (Thor)](https://huggingface.co/nvidia/Qwen3.6-27B-NVFP4) - Quantized for Jetson Thor
+- [AWQ-INT4 Checkpoint (Orin)](https://huggingface.co/cyankiwi/Qwen3.6-27B-AWQ-INT4) - Quantized for Jetson Orin

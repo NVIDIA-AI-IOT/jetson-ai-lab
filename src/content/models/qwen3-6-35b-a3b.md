@@ -4,7 +4,7 @@ model_id: "qwen3-6-35b-a3b"
 short_description: "Alibaba's latest Mixture-of-Experts model with 35B total / 3B active parameters, featuring native tool calling and MTP speculative decoding"
 family: "Alibaba Qwen3.6"
 icon: "🔮"
-is_new: true
+is_new: false
 order: 1
 type: "Text"
 vision_capable: false
@@ -21,28 +21,10 @@ supported_inference_engines:
       - thor_t5000
       - thor_t4000
       - orin_agx_64
-    serve_command_orin: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
-        vllm serve cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit \
-          --gpu-memory-utilization 0.8 \
-          --enable-prefix-caching \
-          --reasoning-parser qwen3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder \
-          --max-model-len 4096
-    serve_command_thor: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        --entrypoint "" \
-        vllm/vllm-openai:latest \
-        bash -c "pip install -q 'vllm[audio]' && vllm serve RedHatAI/Qwen3.6-35B-A3B-NVFP4 \
-          --gpu-memory-utilization 0.8 \
-          --enable-prefix-caching \
-          --reasoning-parser qwen3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder"
+    serve_command_orin: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
+    serve_command_thor: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/Qwen3.6-35B-A3B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_xml --speculative-config '{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}'
 benchmark:
   orin:
     concurrency1: 30
@@ -81,26 +63,14 @@ Qwen3.6 35B-A3B is a Mixture-of-Experts (MoE) model from Alibaba Cloud's Qwen3.6
 <div class="device-panel" data-panel="orin">
 
 ```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host \
-  ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
-  vllm serve cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit \
-    --gpu-memory-utilization 0.8 --enable-prefix-caching \
-    --reasoning-parser qwen3 \
-    --enable-auto-tool-choice --tool-call-parser qwen3_coder \
-    --max-model-len 4096
+sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
 ```
 
 </div>
 <div class="device-panel" data-panel="thor" style="display:none">
 
 ```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host \
-  --entrypoint "" \
-  vllm/vllm-openai:latest \
-  bash -c "pip install -q 'vllm[audio]' && vllm serve RedHatAI/Qwen3.6-35B-A3B-NVFP4 \
-    --gpu-memory-utilization 0.8 --enable-prefix-caching \
-    --reasoning-parser qwen3 \
-    --enable-auto-tool-choice --tool-call-parser qwen3_coder"
+sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/Qwen3.6-35B-A3B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_xml --speculative-config '{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}'
 ```
 
 </div>
@@ -108,11 +78,7 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host \
 
 ## Speculative Decoding with MTP
 
-This model supports **Multi-Token Prediction (MTP)** speculative decoding, which can significantly improve generation throughput. To enable it, add the following flag to your `vllm serve` command:
-
-```bash
---speculative-config '{"method": "mtp", "num_speculative_tokens": 4}'
-```
+Both platform commands enable native **Multi-Token Prediction (MTP-3)** speculative decoding.
 
 ## Qwen3.6 Family
 
@@ -124,5 +90,5 @@ This model supports **Multi-Token Prediction (MTP)** speculative decoding, which
 ## Additional Resources
 
 - [Hugging Face Model](https://huggingface.co/Qwen/Qwen3.6-35B-A3B) - Original model weights
-- [NVFP4 Checkpoint (Thor)](https://huggingface.co/RedHatAI/Qwen3.6-35B-A3B-NVFP4) - Quantized for Jetson Thor
+- [NVFP4 Checkpoint (Thor)](https://huggingface.co/nvidia/Qwen3.6-35B-A3B-NVFP4) - Official NVIDIA checkpoint for Jetson Thor
 - [AWQ Checkpoint (Orin)](https://huggingface.co/cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit) - Quantized for Jetson Orin

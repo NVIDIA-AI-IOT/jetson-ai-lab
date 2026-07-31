@@ -9,7 +9,7 @@ order: 1
 type: "Text"
 vision_capable: false
 memory_requirements: "32GB RAM"
-precision: "FP4"
+precision: "NVFP4 / AWQ"
 parameters: "30B total / 3B activated"
 modalities: ["Text"]
 context_length: "256K"
@@ -30,33 +30,10 @@ serving:
         - thor_t4000
         - orin_agx_64
         - orin_nx_16
-      serve_command_orin: |-
-        sudo docker run -it --rm --pull always \
-          --runtime=nvidia --network host \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
-          vllm serve stelterlab/NVIDIA-Nemotron-3-Nano-30B-A3B-AWQ \
-            --gpu-memory-utilization 0.8 \
-            --trust-remote-code
-      serve_command_thor: |-
-        sudo docker run -it --rm --pull always \
-          --runtime=nvidia --network host \
-          -e HF_TOKEN=$HF_TOKEN \
-          -e VLLM_USE_FLASHINFER_MOE_FP4=1 \
-          -e VLLM_FLASHINFER_MOE_BACKEND=throughput \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          nvcr.io/nvidia/vllm:25.12.post1-py3 \
-          bash -c "wget -q -O /tmp/nano_v3_reasoning_parser.py \
-            --header=\"Authorization: Bearer \$HF_TOKEN\" \
-            https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4/resolve/main/nano_v3_reasoning_parser.py \
-            && vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 \
-              --gpu-memory-utilization 0.8 \
-              --trust-remote-code \
-              --enable-auto-tool-choice \
-              --tool-call-parser qwen3_coder \
-              --reasoning-parser-plugin /tmp/nano_v3_reasoning_parser.py \
-              --reasoning-parser nano_v3 \
-              --kv-cache-dtype fp8"
+      serve_command_orin: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest stelterlab/NVIDIA-Nemotron-3-Nano-30B-A3B-AWQ --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser nemotron_v3 --enable-auto-tool-choice --tool-call-parser qwen3_coder
+      serve_command_thor: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host vllm/vllm-openai:latest nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 --trust-remote-code --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser nemotron_v3 --enable-auto-tool-choice --tool-call-parser qwen3_coder
     - engine: "Ollama"
       type: "CLI"
       # Same CLI on AGX Orin 64GB-class and Thor (Jetson matrix tabs below).

@@ -66,15 +66,16 @@ const collectionModels = modelEntries.map(entry => {
 const models = collectionModels.sort((a, b) => a.order - b.order);
 
 const familyOrder: Record<string, number> = {
-  'Google Gemma4': 0,
-  'NVIDIA Nemotron': 1,
-  'NVIDIA Cosmos Reason': 2,
-  'Alibaba Qwen3.5': 3,
-  'OpenAI GPT OSS': 4,
-  'Alibaba Qwen3': 5,
-  'Mistral AI Ministral 3': 6,
-  'Meta Llama 3': 7,
-  'Google Gemma3': 8,
+  'Alibaba Qwen3.6': 0,
+  'Google Gemma4': 1,
+  'NVIDIA Nemotron': 2,
+  'NVIDIA Cosmos Reason': 3,
+  'Alibaba Qwen3.5': 4,
+  'OpenAI GPT OSS': 5,
+  'Alibaba Qwen3': 6,
+  'Mistral AI Ministral 3': 7,
+  'Meta Llama 3': 8,
+  'Google Gemma3': 9,
 };
 const families = Array.from(new Set(models.map(m => m.family)))
   .sort((a, b) => (familyOrder[a] ?? 99) - (familyOrder[b] ?? 99));
