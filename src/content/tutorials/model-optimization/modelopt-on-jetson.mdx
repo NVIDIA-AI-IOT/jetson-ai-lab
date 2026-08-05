@@ -1,0 +1,225 @@
+---
+title: "Optimize Models with NVIDIA Model Optimizer"
+description: "Quantize any Hugging Face model to NVFP4 directly on Jetson Thor with NVIDIA Model Optimizer and deploy it with vLLM."
+category: "Model Optimization"
+section: "Quantization"
+order: 2
+tags: ["quantization", "NVFP4", "ModelOpt", "PTQ", "vLLM", "Jetson Thor"]
+featured: false
+isNew: true
+authors:
+  - name: "Mainak Mallick"
+    github: "mmallick-nv"
+---
+
+# Optimize Models with NVIDIA Model Optimizer
+
+Most of the fastest checkpoints on this site (every `nvidia/*-NVFP4` model served with vLLM on Thor) were produced by [NVIDIA Model Optimizer](https://github.com/NVIDIA/Model-Optimizer) (ModelOpt).
+
+ModelOpt is NVIDIA's open-source library for compressing models before inference. It provides quantization, pruning, distillation, sparsity, and speculative decoding, and exports checkpoints that load directly into vLLM and TensorRT-LLM.
+
+NVFP4 is the 4-bit format that Jetson Thor's Blackwell FP4 Tensor Cores run natively: the weights of the linear (matrix-multiply) layers drop to 4-bit, so checkpoints shrink ~2–3× on disk and each token moves far fewer bytes through memory.
+
+But many models never get an official NVFP4 upload. This tutorial shows you how to make your own: quantize Qwen3.6-27B to NVFP4 **directly on Jetson Thor** using NVIDIA's own PTQ script, then serve it with vLLM.
+
+Everything below was run end to end on a Thor T5000, with a released ModelOpt from PyPI and no patches, no custom configs, and no edits to the exported checkpoint.
+
+<svg viewBox="0 0 640 160" role="img" aria-label="Qwen3.6-27B on Thor T5000 at 8 concurrent requests: BF16 26.25 tokens per second, NVFP4 70.14" style="max-width:640px;width:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+  <text x="0" y="16" font-size="13" font-weight="600" fill="#0b0b0b">Qwen3.6-27B on Thor T5000: throughput at 8 concurrent requests</text>
+  <text x="0" y="33" font-size="11" fill="#898781">tok/s, 2048-token input / 128-token output (measured)</text>
+  <text x="0" y="66" font-size="12" fill="#52514e">BF16</text>
+  <path d="M150,55 h167 a4,4 0 0 1 4,4 v12 a4,4 0 0 1 -4,4 h-167 z" fill="#6b7280"/>
+  <text x="331" y="70" font-size="12" font-weight="600" fill="#0b0b0b">26.25</text>
+  <text x="0" y="111" font-size="12" fill="#52514e">NVFP4</text>
+  <path d="M150,100 h443 a4,4 0 0 1 4,4 v12 a4,4 0 0 1 -4,4 h-443 z" fill="#A855F7"/>
+  <text x="548" y="115" font-size="12" font-weight="600" fill="#ffffff">70.14</text>
+  <line x1="150" y1="48" x2="150" y2="126" stroke="#c3c2b7" stroke-width="1"/>
+  <text x="0" y="148" font-size="11" fill="#898781">2.7x BF16 at c8, from a checkpoint 2.7x smaller</text>
+</svg>
+
+| Configuration | Weights | c1 tok/s | c8 tok/s | GPQA Diamond |
+|---|---|---|---|---|
+| BF16 (original) | 52 GB | 3.86 | 26.25 | **80.6%** |
+| NVFP4 | **19 GB** | **13.29** | **70.14** | 76.2% |
+
+c1 is one request at a time, c8 is eight concurrent requests, both at 2048-token input and 128-token output. NVFP4 is **3.4× faster at c1 and 2.7× at c8** from a checkpoint **2.7× smaller**, and costs 4.4 points of GPQA Diamond.
+
+<div style="display:flex;flex-wrap:wrap;gap:24px;margin:1.25rem 0;">
+<svg viewBox="0 0 320 130" role="img" aria-label="Weights on disk: 52 gigabytes BF16, 19 gigabytes NVFP4" style="width:320px;max-width:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+  <text x="0" y="16" font-size="13" font-weight="600" fill="#0b0b0b">Weights on disk</text>
+  <text x="0" y="50" font-size="12" fill="#52514e">BF16</text>
+  <path d="M76,40 h190 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-190 z" fill="#6b7280"/>
+  <text x="204" y="52" font-size="12" font-weight="600" fill="#ffffff">52 GB</text>
+  <text x="0" y="86" font-size="12" fill="#52514e">NVFP4</text>
+  <path d="M76,76 h69 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-69 z" fill="#A855F7"/>
+  <text x="155" y="88" font-size="12" font-weight="600" fill="#0b0b0b">19 GB</text>
+  <line x1="76" y1="34" x2="76" y2="96" stroke="#c3c2b7" stroke-width="1"/>
+  <text x="0" y="118" font-size="11" fill="#898781">2.7x smaller</text>
+</svg>
+<svg viewBox="0 0 320 130" role="img" aria-label="GPQA Diamond: BF16 80.6 percent, NVFP4 76.2 percent" style="width:320px;max-width:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+  <text x="0" y="16" font-size="13" font-weight="600" fill="#0b0b0b">Accuracy: GPQA Diamond</text>
+  <text x="0" y="50" font-size="12" fill="#52514e">BF16</text>
+  <path d="M76,40 h190 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-190 z" fill="#6b7280"/>
+  <text x="224" y="52" font-size="12" font-weight="600" fill="#ffffff">80.6%</text>
+  <text x="0" y="86" font-size="12" fill="#52514e">NVFP4</text>
+  <path d="M76,76 h180 a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h-180 z" fill="#A855F7"/>
+  <text x="214" y="88" font-size="12" font-weight="600" fill="#ffffff">76.2%</text>
+  <line x1="76" y1="34" x2="76" y2="96" stroke="#c3c2b7" stroke-width="1"/>
+  <text x="0" y="118" font-size="11" fill="#898781">bars start at 0; 4.4 points lost to NVFP4</text>
+</svg>
+</div>
+
+## Prerequisites
+
+| Requirement | Details |
+|-------------|---------|
+| **Device** | Jetson AGX Thor (T5000 128GB recommended; 32GB fits models up to ~8B) |
+| **Software** | JetPack 7.x, Docker with NVIDIA runtime |
+| **Account** | Not needed for `Qwen/Qwen3.6-27B` (ungated); a free [Hugging Face](https://huggingface.co/join) account is only required if you substitute a gated model |
+| **Disk** | ~1.5× the BF16 model size free (base + export), plus ~30 GB per container image (~60 GB for the PyTorch and vLLM images together). Calibration data is streamed, so it needs no meaningful disk. |
+
+<div class="admonition warning">
+<p><strong>Unified memory sizing.</strong> Quantization loads the <strong>full BF16 model</strong> before compressing it, so the sizing constraint comes from the base model rather than the output. Qwen3.6-27B is 52 GB of BF16 weights, which fits comfortably on a 128 GB Thor. Size your model against free memory on that basis: on a 32 GB device, stay at or below about 8B parameters.</p>
+</div>
+
+## Which Technique Should I Use?
+
+| Technique | What it does | Where it runs | Effort |
+|---|---|---|---|
+| **PTQ (post-training quantization)** | Compress weights to NVFP4/FP8 after training | On Jetson | Minutes |
+| **QAT (quantization-aware training)** | Recover accuracy lost to quantization with brief training | Jetson (≤4B) · workstation for larger | Hours |
+| **Pruning** | Remove weights/layers to shrink the model itself | Workstation (output deploys on Jetson) | Hours to days |
+| **Distillation** | Teach a small model to match a larger one | Workstation (output deploys on Jetson) | Days |
+| **Speculative decoding** | Propose several tokens per step, verify them in one pass: one flag on models with Multi-Token Prediction (MTP) heads, or train a draft module (a small helper model that proposes tokens) | **On Jetson (MTP)** · workstation for draft training | Minutes (MTP) |
+| **Sparsity** | Store only non-zero weights (2:4 pattern: two of every four consecutive weights zeroed) | Workstation · Jetson serving experimental | Hours |
+
+Pick by your goal: **PTQ to NVFP4** to speed up a model you already have, **QAT** if quantization costs you accuracy, **pruning** or **distillation** to make the model itself smaller, and **speculative decoding** to cut latency without changing the weights. This tutorial covers PTQ; for the others, see [Beyond PTQ](#beyond-ptq).
+
+## Environment Setup
+
+The NGC PyTorch container runs on Thor's iGPU and has everything except the Python bindings.
+
+### Step 1: Launch the container
+
+```bash
+sudo docker run -it --rm --runtime=nvidia --network host \
+  -v $HOME/.cache/huggingface:/root/.cache/huggingface \
+  -v $HOME/modelopt-work:/work \
+  nvcr.io/nvidia/pytorch:25.11-py3
+```
+
+[`Qwen/Qwen3.6-27B`](https://huggingface.co/Qwen/Qwen3.6-27B) itself is ungated, but the default calibration data is not, so you will need a Hugging Face token. Accept the licence for [`nvidia/Nemotron-Post-Training-Dataset-v2`](https://huggingface.co/datasets/nvidia/Nemotron-Post-Training-Dataset-v2), then make your token available inside the container with `hf auth login`, or add `-e HF_TOKEN=<your token>` to the `docker run` line above.
+
+### Step 2: Install ModelOpt and the Hugging Face bindings
+
+```bash
+pip install transformers==5.14.1 accelerate datasets
+pip install nvidia-modelopt==0.45.0
+```
+
+Install plain `nvidia-modelopt`, not the `[hf]` extra, which pins an older `transformers` and would downgrade the one you just installed.
+
+**Verify the stack:**
+
+```bash
+python3 -c "import torch, modelopt; print(torch.cuda.get_device_name(0), '| modelopt', modelopt.__version__)"
+```
+
+## Quantize a Model to NVFP4
+
+ModelOpt ships a post-training quantization script, so you do not write one. **Clone the repo at the release matching the library you installed, and run it:**
+
+```bash
+git clone --depth 1 --branch 0.45.0 \
+  https://github.com/NVIDIA/Model-Optimizer.git
+cd Model-Optimizer/examples/llm_ptq
+
+python3 hf_ptq.py \
+  --pyt_ckpt_path Qwen/Qwen3.6-27B \
+  --qformat nvfp4 \
+  --export_path /work/qwen36-27b-nvfp4 \
+  --trust_remote_code \
+  --calib_size 512
+```
+
+The script loads the model, runs a short **calibration** pass (sample text through the model so ModelOpt can record the range of values each layer produces, which sets the 4-bit scales), quantizes, and writes a standard Hugging Face checkpoint with `hf_quant_config.json`, the same layout as NVIDIA's official NVFP4 uploads.
+
+On Thor T5000 the whole run took **just over 14 minutes** for this 27B model with the base weights already cached: 1699 quantizers inserted, then calibration, then a 92-second export. Calibration is inference, not training.
+
+<div class="admonition note">
+<p><strong>Accept the calibration dataset licence first.</strong> ModelOpt 0.45 and newer calibrate on <code>cnn_nemotron_v2_mix</code> by default, which includes <code>nvidia/Nemotron-Post-Training-Dataset-v2</code>. That dataset is gated: accept its licence on its <a href="https://huggingface.co/datasets/nvidia/Nemotron-Post-Training-Dataset-v2">Hugging Face page</a>, then make your token available inside the container with <code>hf auth login</code> or <code>-e HF_TOKEN</code>. Without it the run stops immediately with <code>DatasetNotFoundError</code>. This is the same calibration data NVIDIA uses for its own published NVFP4 checkpoints.</p>
+</div>
+
+### What ModelOpt works out for itself
+
+Qwen3.6-27B is not a plain text model. It is a vision-language model whose checkpoint holds 1,199 tensors: 850 for the language model, **333 for the vision tower**, and 15 multi-token-prediction heads. Its attention is a hybrid, mixing standard attention with GatedDeltaNet linear-attention layers.
+
+None of that needed a flag. The exported `hf_quant_config.json` shows ModelOpt generated a 147-entry exclusion list on its own, including:
+
+- `model.visual*`: the entire vision tower, as a single glob
+- `model.language_model.layers.N.linear_attn.conv1d`, `in_proj_a`, `in_proj_b`: the linear-attention layers, excluded per layer
+- `lm_head` and `model.language_model.embed_tokens`
+
+with `quant_algo: NVFP4`, `kv_cache_quant_algo: FP8`, and `group_size: 16`.
+
+### Which quantization recipe?
+
+`--qformat nvfp4` quantizes every eligible linear layer. `--qformat nvfp4_mlp_only` leaves the attention projections in BF16 and quantizes only the MLP layers; attention holds few parameters but is sensitive to quantization error, so the trade is a bigger file for better accuracy. Several of NVIDIA's own published checkpoints use the `mlp_only` style, excluding `self_attn` throughout.
+
+Other formats swap in the same way: `--qformat fp8` (safest quality), `int8_sq`, `int4_awq`, `w4a8_awq`. The full matrix is in the [PTQ examples](https://github.com/NVIDIA/Model-Optimizer/tree/main/examples/llm_ptq).
+
+## Deploy with vLLM on Thor
+
+The export is a standard Hugging Face checkpoint. No edits, no repair step: point vLLM at it.
+
+```bash
+sudo docker run -it --rm --pull always \
+  --runtime=nvidia --network host \
+  -v $HOME/modelopt-work/qwen36-27b-nvfp4:/model \
+  -v $HOME/.cache/vllm:/root/.cache/vllm \
+  --entrypoint "" \
+  vllm/vllm-openai:v0.26.0-aarch64-ubuntu2404 \
+  vllm serve /model \
+    --gpu-memory-utilization 0.6 \
+    --max-model-len 40960 \
+    --trust-remote-code \
+    --reasoning-parser qwen3
+```
+
+<div class="admonition note">
+<p><strong>This model thinks before it answers.</strong> Qwen3.6 reasons at length before producing an answer. A single graduate-level question can take over 12,000 tokens. <code>{'--reasoning-parser qwen3'}</code> puts that reasoning in a separate <code>reasoning_content</code> field so <code>content</code> holds just the answer, and the larger <code>{'--max-model-len'}</code> gives it room to finish. Without enough headroom the model is cut off mid-thought and <code>content</code> comes back empty.</p>
+</div>
+
+<div class="admonition note">
+<p><strong>Startup takes a while the first time.</strong> vLLM reads the quantized weights quickly (18.77 GiB in 12.3 seconds in our run), but then spends several minutes on torch.compile, FP4 kernel autotuning, and CUDA graph capture before the server answers. Watch the log rather than assuming a hang. The very first run also pulls the ~30 GB image. The <code>/root/.cache/vllm</code> mount above is where vLLM keeps its compile and autotune caches; with <code>{'--rm'}</code> and no mount they are discarded when the container exits. On a board with other services resident, lower <code>{'--gpu-memory-utilization'}</code>.</p>
+</div>
+
+**That server runs in the foreground, so from a second terminal, query it:**
+
+```bash
+curl -s http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "/model", "messages": [{"role": "user", "content": "Why is the sky blue?"}], "max_tokens": 16384}'
+```
+
+vLLM's startup log should show `quantization=modelopt_fp4`, which confirms the FP4 Tensor Core path is active.
+
+## Beyond PTQ
+
+ModelOpt also supports quantization-aware training, pruning, distillation, speculative decoding, and sparsity; runnable recipes for each are in the [ModelOpt examples](https://github.com/NVIDIA/Model-Optimizer/tree/main/examples).
+
+## Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| `DatasetNotFoundError: ... is a gated dataset` | Accept the licence for `nvidia/Nemotron-Post-Training-Dataset-v2` and make your HF token available in the container |
+| `ImportError: cannot import name 'NVFP4StaticQuantizer'` | The `examples/` you cloned are newer than your installed ModelOpt; clone the tag matching `modelopt.__version__` |
+| Host OOM while loading | The BF16 base doesn't fit unified memory; use a bigger Thor or a smaller model (quantization can't start from weights it can't load) |
+| vLLM won't load the export | Use a vLLM new enough to know your model's architecture; **v0.26.0** serves this checkpoint |
+| Quality noticeably worse after PTQ | Increase `--calib_size` (512 → 1024), try `--qformat nvfp4_mlp_only` or `--qformat fp8`, or step up to QAT |
+
+## What's Next
+
+- Serve your quantized model behind the same commands as any [model on this site](/models/)
+- [Fine-tune on Jetson](/tutorials/finetune-on-jetson/) and quantize the result, all on-device
+- Browse NVIDIA's [pre-quantized checkpoint collection](https://huggingface.co/collections/nvidia/inference-optimized-checkpoints-with-model-optimizer) first in case someone has already quantized your model
