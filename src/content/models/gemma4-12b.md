@@ -27,7 +27,8 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
-        -v $HOME/.cache/huggingface:/root/.cache/huggingface \
+        -v ~/.cache/huggingface:/root/.cache/huggingface \
+        -v ~/.cache/vllm:/root/.cache/vllm \
         --entrypoint "" \
         vllm/vllm-openai:latest \
         vllm serve RedHatAI/gemma-4-12B-it-NVFP4 \

@@ -31,6 +31,8 @@ supported_inference_engines:
     serve_command_orin: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
+        -v ~/.cache/huggingface:/root/.cache/huggingface \
+        -v ~/.cache/vllm:/root/.cache/vllm \
         ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
         vllm serve Qwen/Qwen3.5-0.8B \
           --gpu-memory-utilization 0.8 \
@@ -41,6 +43,8 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
+        -v ~/.cache/huggingface:/root/.cache/huggingface \
+        -v ~/.cache/vllm:/root/.cache/vllm \
         vllm/vllm-openai:latest \
         Qwen/Qwen3.5-0.8B \
           --gpu-memory-utilization 0.8 \
@@ -68,4 +72,3 @@ Qwen3.5 0.8B is the smallest vision-language model in the Qwen3.5 lineup. It is 
 ## Additional Resources
 
 - [Hugging Face Model](https://huggingface.co/Qwen/Qwen3.5-0.8B) - Original checkpoint
-

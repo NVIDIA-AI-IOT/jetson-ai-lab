@@ -29,6 +29,8 @@ supported_inference_engines:
     serve_command_orin: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
+        -v ~/.cache/huggingface:/root/.cache/huggingface \
+        -v ~/.cache/vllm:/root/.cache/vllm \
         ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
         vllm serve Kbenkhaled/Qwen3.5-35B-A3B-quantized.w4a16 \
           --gpu-memory-utilization 0.8 \
@@ -39,6 +41,8 @@ supported_inference_engines:
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
+        -v ~/.cache/huggingface:/root/.cache/huggingface \
+        -v ~/.cache/vllm:/root/.cache/vllm \
         vllm/vllm-openai:latest \
         AxionML/Qwen3.5-35B-A3B-NVFP4 \
           --gpu-memory-utilization 0.8 \
@@ -87,6 +91,8 @@ Qwen3.5 35B-A3B is a Mixture-of-Experts (MoE) model from Alibaba Cloud's Qwen3.5
 
 ```bash
 sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  -v ~/.cache/vllm:/root/.cache/vllm \
   ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
   vllm serve Kbenkhaled/Qwen3.5-35B-A3B-quantized.w4a16 \
     --gpu-memory-utilization 0.8 --enable-prefix-caching \
@@ -99,6 +105,8 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host \
 
 ```bash
 sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  -v ~/.cache/vllm:/root/.cache/vllm \
   vllm/vllm-openai:latest \
   AxionML/Qwen3.5-35B-A3B-NVFP4 \
     --gpu-memory-utilization 0.8 --enable-prefix-caching \
@@ -129,4 +137,3 @@ This model supports **Multi-Token Prediction (MTP)** speculative decoding, which
 - [Hugging Face Model](https://huggingface.co/Qwen/Qwen3.5-35B-A3B) - Original model weights
 - [NVFP4 Checkpoint (Thor)](https://huggingface.co/AxionML/Qwen3.5-35B-A3B-NVFP4) - Quantized for Jetson Thor
 - [W4A16 Checkpoint (Orin)](https://huggingface.co/Kbenkhaled/Qwen3.5-35B-A3B-quantized.w4a16) - Quantized for Jetson Orin
-
