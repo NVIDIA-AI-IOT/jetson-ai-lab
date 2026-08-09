@@ -20,9 +20,9 @@ ModelOpt is NVIDIA's open-source library for compressing models before inference
 
 NVFP4 is the 4-bit format that Jetson Thor's Blackwell FP4 Tensor Cores run natively: the weights of the linear (matrix-multiply) layers drop to 4-bit, so checkpoints shrink ~2–3× on disk and each token moves far fewer bytes through memory.
 
-These steps aren't specific to Jetson: the same ModelOpt workflow runs on an x86 workstation too (swap the aarch64 vLLM image for the x86 build), and here we show it end to end on a Jetson Thor Dev Kit.
-
 But many models never get an official NVFP4 upload. This tutorial shows you how to make your own: quantize Qwen3.6-27B to NVFP4 **directly on Jetson Thor** using NVIDIA's own PTQ script, then serve it with vLLM.
+
+These steps aren't specific to Jetson: the same ModelOpt workflow runs on an x86 workstation too (swap the aarch64 vLLM image for the x86 build), and here we show it end to end on a Jetson Thor Dev Kit.
 
 Everything below was run end to end on a Thor T5000, with a released ModelOpt from PyPI and no patches, no custom configs, and no edits to the exported checkpoint.
 
