@@ -46,6 +46,19 @@
   ],
   "featuredModels": [
     {
+      "title": "Muse Glimmer 30B",
+      "description": "Meta's local agentic model with reasoning, tool use, image understanding, and DFlash acceleration",
+      "badge": "NEW",
+      "performance": {
+        "tokensPerSecond": "DFlash accelerated",
+        "memoryUsage": "24GB RAM",
+        "quantization": "K-Quant (~4-bit)",
+        "modelSize": "17GB"
+      },
+      "devices": ["Jetson AGX Orin", "Jetson Thor"],
+      "link": "/models/muse-glimmer-30b"
+    },
+    {
       "title": "Gemma 3n",
       "description": "Google's latest lightweight language model optimized for edge devices",
       "badge": "NEW",
