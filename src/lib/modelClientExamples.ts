@@ -113,7 +113,13 @@ export function buildClientCallExamples(
 
 		if (key === 'vllm') {
 			seen.add(key);
+			const servedModelMatch = runSample.match(
+				/--served-model-name(?:=|\s+)(?:"([^"]+)"|'([^']+)'|(\S+))/,
+			);
 			const model =
+				servedModelMatch?.[1] ||
+				servedModelMatch?.[2] ||
+				servedModelMatch?.[3] ||
 				opts.hfCheckpoint?.trim() ||
 				opts.modelId.replace(/-/g, '_') ||
 				'your-model-id';

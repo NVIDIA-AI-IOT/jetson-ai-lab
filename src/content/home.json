@@ -46,6 +46,19 @@
   ],
   "featuredModels": [
     {
+      "title": "Nemotron 3.5 Lightning",
+      "description": "Fast open-weight 30B MoE for responsive local agents with DSpark speculative decoding",
+      "badge": "NEW",
+      "performance": {
+        "tokensPerSecond": "115 Thor / 89 Orin",
+        "memoryUsage": "64GB RAM",
+        "quantization": "NVFP4",
+        "modelSize": "30B / 3B active"
+      },
+      "devices": ["Jetson AGX Orin", "Jetson AGX Thor"],
+      "link": "/models/nemotron3-5-lightning"
+    },
+    {
       "title": "Muse Glimmer 30B",
       "description": "Meta's local agentic model with reasoning, tool use, image understanding, and DFlash acceleration",
       "badge": "NEW",
