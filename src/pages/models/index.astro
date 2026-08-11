@@ -66,10 +66,10 @@ const collectionModels = modelEntries.map(entry => {
 const models = collectionModels.sort((a, b) => a.order - b.order);
 
 const familyOrder: Record<string, number> = {
+  'NVIDIA Nemotron': -2,
   'Meta Muse': -1,
   'Alibaba Qwen3.6': 0,
   'Google Gemma4': 1,
-  'NVIDIA Nemotron': 2,
   'NVIDIA Cosmos Reason': 3,
   'Alibaba Qwen3.5': 4,
   'OpenAI GPT OSS': 5,
