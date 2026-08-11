@@ -1,7 +1,7 @@
 ---
 title: "Nemotron 3.5 Lightning"
 model_id: "nemotron3-5-lightning"
-short_description: "Fast 30B MoE for local agents, delivering 115 tokens/sec on Jetson AGX Thor and 89 tokens/sec on Jetson AGX Orin"
+short_description: "NVIDIA's fast open-weight model for responsive local agents, reasoning, coding, and tool use. It delivers performance comparable to the much larger Nemotron 3 Super."
 family: "NVIDIA Nemotron"
 icon: "⚡"
 is_new: true
@@ -86,15 +86,15 @@ NVIDIA Nemotron 3.5 Lightning is a fast, open-weight 30B Mixture-of-Experts mode
 
 The model supports context lengths of up to one million tokens. Reasoning can be enabled or disabled, and a configurable reasoning budget lets users control how much reasoning the model performs before answering.
 
-The best performance we saw with this model averaged **115 tokens/sec on Jetson AGX Thor** and **89 tokens/sec on Jetson AGX Orin** across multi-step agentic workloads involving reasoning and tool calls.
+The best performance we saw with this model averaged 115 tokens/sec on Jetson AGX Thor and 89 tokens/sec on Jetson AGX Orin across multi-step agentic workloads involving reasoning and tool calls.
 
-Nemotron 3.5 Lightning supports several speculative decoding options, including built-in Multi-Token Prediction, DSpark, and DFlash. We tested the available approaches and found **DSpark with vLLM** delivered the best performance on both Jetson AGX Thor and Jetson AGX Orin.
+Nemotron 3.5 Lightning supports several speculative decoding options, including built-in Multi-Token Prediction, DSpark, and DFlash. We tested the available approaches and found DSpark with vLLM delivered the best performance on both Jetson AGX Thor and Jetson AGX Orin.
 
 ## Inputs and Outputs
 
-**Input:** Text
+Input: Text
 
-**Output:** Text
+Output: Text
 
 ## Supported Platforms
 
@@ -104,11 +104,11 @@ Nemotron 3.5 Lightning supports several speculative decoding options, including 
 
 ## Why Nemotron 3.5 Lightning on Jetson
 
-- **Super-class capability:** Performance close to Nemotron 3 Super in a model that is much faster and more practical to run locally.
-- **Responsive local agents:** Strong performance for multi-step reasoning, tool calls, coding assistants, and research workflows.
-- **Controllable reasoning:** Enable or disable reasoning and set a reasoning budget to balance quality, latency, and token usage.
-- **Long-context support:** Work with context lengths of up to one million tokens when memory allows.
-- **Fast speculative decoding:** Choose from MTP, DSpark, and DFlash, with DSpark providing the best results in our Jetson testing.
+- Super-class capability: Performance close to Nemotron 3 Super in a model that is much faster and more practical to run locally.
+- Responsive local agents: Strong performance for multi-step reasoning, tool calls, coding assistants, and research workflows.
+- Controllable reasoning: Enable or disable reasoning and set a reasoning budget to balance quality, latency, and token usage.
+- Long-context support: Work with context lengths of up to one million tokens when memory allows.
+- Fast speculative decoding: Choose from MTP, DSpark, and DFlash, with DSpark providing the best results in our Jetson testing.
 
 ## Speculative Decoding on Jetson
 
