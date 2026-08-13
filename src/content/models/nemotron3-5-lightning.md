@@ -80,6 +80,48 @@ serving:
           --enable-mamba-cache-stochastic-rounding \
           --mamba-cache-philox-rounds 5 \
           --mamba-cache-mode align
+    - engine: "llama.cpp"
+      type: "Container"
+      modules_supported:
+        - thor_t5000
+        - thor_t4000
+        - orin_agx_64
+      serve_command_orin: |-
+        docker run --rm -it \
+          --pull=always \
+          --runtime nvidia \
+          --network host \
+          -v ~/.cache/huggingface:/data/models/huggingface \
+          ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
+          llama-server \
+            -hf ggml-org/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF:Q4_K_M \
+            -hfd apolo13x/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-DFlash-GGUF \
+            --spec-type draft-dflash \
+            -ngl all \
+            -ngld all \
+            -fa on \
+            --temp 1.0 \
+            --top-p 0.95 \
+            --host 0.0.0.0 \
+            --port 8080
+      serve_command_thor: |-
+        docker run --rm -it \
+          --pull=always \
+          --runtime nvidia \
+          --network host \
+          -v ~/.cache/huggingface:/data/models/huggingface \
+          ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
+          llama-server \
+            -hf ggml-org/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF:Q4_K_M \
+            -hfd apolo13x/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-DFlash-GGUF \
+            --spec-type draft-dflash \
+            -ngl all \
+            -ngld all \
+            -fa on \
+            --temp 1.0 \
+            --top-p 0.95 \
+            --host 0.0.0.0 \
+            --port 8080
 ---
 
 NVIDIA Nemotron 3.5 Lightning is a fast, open-weight 30B Mixture-of-Experts model that activates only 3B parameters per token. It brings performance close to the much larger Nemotron 3 Super while remaining practical for local coding assistants, research agents, tool-calling workflows, and other always-on applications.
@@ -112,9 +154,9 @@ Output: Text
 
 ## Speculative Decoding on Jetson
 
-Nemotron 3.5 Lightning includes Multi-Token Prediction and is released with dedicated DSpark and DFlash checkpoints. The commands on this page use DSpark with five speculative tokens, which was the fastest configuration in our testing on both supported Jetson platforms.
+Nemotron 3.5 Lightning includes Multi-Token Prediction and is released with dedicated DSpark and DFlash checkpoints. The vLLM commands use DSpark with five speculative tokens, which was the fastest configuration in our testing on both supported Jetson platforms. The `llama.cpp` commands use the DFlash checkpoint.
 
-The server exposes an OpenAI-compatible API on port `8000` with reasoning parsing, automatic tool selection, and the Qwen3 Coder tool-call parser enabled.
+The vLLM server exposes an OpenAI-compatible API on port `8000` with reasoning parsing, automatic tool selection, and the Qwen3 Coder tool-call parser enabled. The `llama.cpp` server exposes its API on port `8080`.
 
 ## Additional Resources
 
