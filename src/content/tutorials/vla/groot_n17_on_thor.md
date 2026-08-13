@@ -1,6 +1,6 @@
 ---
-title: "Isaac GR00T N1.7 on Jetson Thor"
-description: "Deploy NVIDIA Isaac GR00T N1.7 Vision-Language-Action (VLA) model on NVIDIA Jetson AGX Thor with TensorRT mixed NVFP4 quantization."
+title: "Isaac GR00T 1.7 on Jetson Thor"
+description: "Deploy NVIDIA Isaac GR00T 1.7 Vision-Language-Action (VLA) model on NVIDIA Jetson AGX Thor with TensorRT mixed NVFP4 quantization."
 category: "VLA"
 section: "Vision-Language-Action Models"
 order: 2
@@ -12,11 +12,11 @@ authors:
     github: "liuanqi-libra7"
 ---
 
-Deploy NVIDIA's [Isaac GR00T N1.7](https://github.com/NVIDIA/Isaac-GR00T) **Vision-Language-Action (VLA)** model on **NVIDIA Jetson AGX Thor** with TensorRT mixed NVFP4 quantization, taking end-to-end inference from 125 ms down to **39.9 ms**, a 3.1x speedup at 25 Hz, with no measurable loss in task success.
+Deploy NVIDIA's [Isaac GR00T 1.7](https://github.com/NVIDIA/Isaac-GR00T) **Vision-Language-Action (VLA)** model on **NVIDIA Jetson AGX Thor** with TensorRT mixed NVFP4 quantization, taking end-to-end inference from 125 ms down to **39.9 ms**, a 3.1x speedup at 25 Hz, with no measurable loss in task success.
 
-## What is Isaac GR00T N1.7?
+## What is Isaac GR00T 1.7?
 
-[Isaac GR00T](https://github.com/NVIDIA/Isaac-GR00T) is NVIDIA's open foundation model for generalized humanoid robot reasoning and skills. **GR00T N1.7** pairs a vision-language backbone with a diffusion-transformer action head: it takes camera images, robot proprioceptive state, and a natural-language instruction, and emits a chunk of robot actions through a short flow-matching denoising loop.
+[Isaac GR00T](https://github.com/NVIDIA/Isaac-GR00T) is NVIDIA's open foundation model for generalized humanoid robot reasoning and skills. **GR00T 1.7** pairs a vision-language backbone with a diffusion-transformer action head: it takes camera images, robot proprioceptive state, and a natural-language instruction, and emits a chunk of robot actions through a short flow-matching denoising loop.
 
 The same foundation model is post-trained onto different robot bodies, so the pipeline in this tutorial is not specific to any one embodiment:
 
@@ -48,7 +48,7 @@ The model is a two-stage pipeline, and the two stages have very different perfor
 
 VLA models fuse a vision encoder, a language model, and an action decoder into one pipeline that has to run at real-time control rates. Jetson AGX Thor brings Blackwell-class GPU compute with up to 128 GB of unified memory, so a 3B-parameter VLA fits entirely on-device with room for the TensorRT engines alongside it. Critically, Thor's Blackwell GPU has **native NVFP4 support**, a 4-bit floating-point format with per-block scaling, which is what makes the aggressive quantization in this tutorial possible without the accuracy collapse you would get from 4-bit integer formats.
 
-![GR00T N1.7 end-to-end inference latency on Jetson AGX Thor](/images/tutorials/groot-n17-thor-latency.png)
+![GR00T 1.7 end-to-end inference latency on Jetson AGX Thor](/images/tutorials/groot-n17-thor-latency.png)
 
 ## Pipeline Overview
 
