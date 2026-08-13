@@ -5,7 +5,7 @@ short_description: "Alibaba's compact Qwen3.5 vision-language model for lightwei
 family: "Alibaba Qwen3.5"
 icon: "🔮"
 is_new: false
-order: 5
+order: 6
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "2GB RAM"
@@ -52,6 +52,33 @@ supported_inference_engines:
           --reasoning-parser qwen3 \
           --enable-auto-tool-choice \
           --tool-call-parser qwen3_coder
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+      - orin_agx_64
+      - orin_nx_16
+      - orin_nano_8
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_orin: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+        run-edgellm-model Vishva007/Qwen3.5-0.8B-W4A16-AutoRound-GPTQ --builder onnx --stage serve
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model AxionML/Qwen3.5-0.8B-NVFP4 --builder onnx --stage serve
 ---
 
 Qwen3.5 0.8B is the smallest vision-language model in the Qwen3.5 lineup. It is designed for lightweight local multimodal inference, fast iteration, and efficient Jetson deployment.

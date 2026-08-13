@@ -9,7 +9,7 @@ order: 3
 type: "Text"
 vision_capable: false
 memory_requirements: "16GB RAM"
-precision: "W4A16"
+precision: "NVFP4 / W4A16"
 parameters: "30B total / 3.3B activated"
 modalities: ["Text"]
 context_length: "128K"
@@ -45,6 +45,31 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         RedHatAI/Qwen3-30B-A3B-quantized.w4a16
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+      - orin_agx_64
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_orin: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+        run-edgellm-model Qwen/Qwen3-30B-A3B-GPTQ-Int4 --builder onnx --stage serve
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model nvidia/Qwen3-30B-A3B-NVFP4 --builder onnx --stage serve
 benchmark_key: "Qwen3-30B-A3B"
 benchmark_series:
   - "Qwen3-32B"
@@ -65,4 +90,3 @@ Qwen3 30B-A3B is a Mixture-of-Experts (MoE) model from Alibaba Cloud's Qwen3 fam
 - **Subject Matter Experts**: Fine-tuning for domain-specific expertise
 - **Multilingual Instruction Following**: Following instructions across 100+ languages
 - **Translation**: High-quality translation between supported languages
-

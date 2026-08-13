@@ -1,10 +1,10 @@
 ---
 title: "TensorRT Edge-LLM on Jetson"
-description: "Use NVIDIA TensorRT Edge-LLM with two example models: Cosmos Reason2 8B (VLM) on Jetson Thor and Qwen3-4B-Instruct (LLM) on Jetson Orin Nano. Covers quantization, ONNX export, TensorRT engine builds, and pure C++ on-device inference. The SDK supports Llama, Qwen3/3.5/3.6, InternVL3/3.5, Phi-4-Multimodal, Nemotron-Nano, Alpamayo R1, and more."
+description: "Download a published Hugging Face checkpoint, build every TensorRT engine, run offline inference and benchmarks, or launch a server with TensorRT Edge-LLM 0.10.0 on Jetson."
 category: "Model Optimization"
 section: "Edge LLM"
 order: 1
-tags: ["edge-llm", "tensorrt", "cosmos-reason2", "qwen3", "qwen3.5", "internvl3", "phi-4-multimodal", "nemotron-nano", "int4", "nvfp4", "quantization", "jetson-thor", "jetson-orin-nano", "vlm", "llm", "memory-optimization", "onnx", "c++"]
+tags: ["edge-llm", "tensorrt", "hugging-face", "jetson-thor", "jetson-orin", "vlm", "llm", "onnx", "c++", "direct-builder"]
 featured: false
 isNew: true
 authors:
@@ -12,934 +12,638 @@ authors:
     github: "adsahu-nv"
 ---
 
-import Tabs from '../../../components/Tabs.astro';
-
 # TensorRT Edge-LLM on Jetson
 
-[TensorRT Edge-LLM](https://github.com/NVIDIA/TensorRT-Edge-LLM) is NVIDIA's high-performance **C++ inference runtime** for LLMs and VLMs on embedded platforms. The workflow compiles trained models into optimized TensorRT engines; at run time, a small native binary loads those engines and serves requests with **no Python interpreter in the inference path**. Quantization (INT4, NVFP4, FP8) reduces weight footprint so larger models remain practical on memory-constrained devices. The SDK supports a wide range of models; see the full [Supported Models](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/main/docs/source/user_guide/getting_started/supported-models.md) list.
+[TensorRT Edge-LLM](https://github.com/NVIDIA/TensorRT-Edge-LLM) builds TensorRT
+engines for every component of a supported Hugging Face checkpoint and runs
+them through model-appropriate C++ runtimes. The supported path exports ONNX
+before building; 0.10.0 also includes an experimental weightless builder that
+compiles checkpoint-backed engines without ONNX. This page targets the 0.10.0 container and
+the release-specific [supported model and checkpoint list](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/release/0.10.0/docs/source/user_guide/getting_started/supported-models.md).
 
-## Overview
+The Jetson AI Lab workflow uses only published Hugging Face checkpoints. It
+does **not** run a quantizer or create a new quantized checkpoint. When a model
+needs INT4, GPTQ, FP8, or NVFP4, the command names an already-published
+checkpoint in that format.
 
-Edge-LLM supports a wide range of LLMs and VLMs across the entire Jetson family, from Orin Nano to Thor. See the full [Supported Models](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/main/docs/source/user_guide/getting_started/supported-models.md) list. In this tutorial, we walk through two examples that showcase the spectrum:
+## Quick Start
 
-| Model | Type | Parameters | Quantization | Target Device |
-|-------|------|------------|-------------|---------------|
-| [Cosmos-Reason2-8B](https://huggingface.co/nvidia/Cosmos-Reason2-8B) | VLM | 8B | NVFP4 | Jetson Thor |
-| [Qwen3-4B-Instruct](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507) | LLM | 4B | INT4 AWQ | Jetson Orin Nano 8 GB |
-
-Beyond these two examples, the same export → build → inference workflow applies to the full range of supported model families:
-
-<div style="overflow-x: auto; margin: 1rem 0 2rem;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 10px 14px; text-align: left; font-weight: 600;">Model Family</th>
-<th style="padding: 10px 14px; text-align: left; font-weight: 600;">Type</th>
-<th style="padding: 10px 14px; text-align: left; font-weight: 600;">Jetson Orin</th>
-<th style="padding: 10px 14px; text-align: left; font-weight: 600;">Jetson Thor</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Llama 3.x Instruct</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">LLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Qwen3 dense (0.6B–14B)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">LLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Qwen3.5 / Qwen3.6 text (0.8B–27B)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">LLM / VLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Qwen3-VL (2B–8B)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">VLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">InternVL3 / InternVL3.5 (1B–14B)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">VLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 AWQ</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Phi-4-Multimodal</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">VLM</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">FP16 · INT4 · NVFP4</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">Nemotron-Nano 4B / 9B</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">LLM (Mamba2+Attention)</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">BF16</td><td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">BF16 · FP8 · NVFP4</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 10px 14px; font-weight: 600;">Alpamayo R1</td><td style="padding: 10px 14px;">VLA (robotics)</td><td style="padding: 10px 14px;">FP16</td><td style="padding: 10px 14px;">FP16</td></tr>
-</tbody>
-</table>
-</div>
-
-The workflow:
-
-<div class="mermaid-diagram">
-
-```mermaid
-flowchart LR
-    subgraph S1["Step 1: Export (x86 / Thor)"]
-        direction LR
-        A["Hugging Face<br/>model"] --> B[Quantize] --> C["ONNX<br/>export"]
-    end
-    subgraph S2["Step 2: Build runtime (each Jetson)"]
-        D["Build and compile<br/>C++ engine"]
-    end
-    C -->|"Transfer ONNX<br/>to each device"| D
-    D --> S3["Step 3: Thor<br/>CR2 8B · NVFP4"]
-    D --> S4["Step 4: Orin Nano<br/>Qwen3 4B · INT4"]
-    style S3 fill:#0d9488,color:#fff,stroke:#0d9488
-    style S4 fill:#d97706,color:#fff,stroke:#d97706
-```
-
-</div>
-
-1. **Step 1: Export models** (Python, x86 or Thor). Quantize and convert HuggingFace models to portable ONNX files. Transfer them to your target Jetson(s).
-2. **Step 2: Build the C++ runtime** (each Jetson). Clone the repo, compile the C++ engine builder and inference binary. TensorRT engines are hardware-specific and **must be built on the device that will run them**.
-3. **Step 3: Cosmos Reason2 8B on Thor** (NVFP4). Build engines and run VLM inference on Jetson Thor.
-4. **Step 4: Qwen3-4B-Instruct on Orin Nano** (INT4 AWQ). Build engines and run LLM inference on Jetson Orin Nano 8 GB.
-
-## Prerequisites
-
-### x86 Host / Jetson Thor (for Step 1: Model Export)
-
-<div style="overflow-x: auto; margin: 0.75rem 0 1.75rem;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 12px 16px; text-align: left; font-weight: 600; width: 28%;">Requirement</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Details</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">OS</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Ubuntu 22.04 or 24.04</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">GPU</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">NVIDIA GPU with Compute Capability 8.0+ (Ampere or newer)</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">GPU VRAM</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">24 GB+ recommended (48 GB+ for FP8 export of 8B models)</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">CUDA</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">12.x or 13.x</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">Python</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">3.10+</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; font-weight: 600; color: #334155;">Docker</td><td style="padding: 12px 16px;">Optional but recommended</td></tr>
-</tbody>
-</table>
-</div>
-
-### Jetson Target Device (for Step 2: Build and Inference)
-
-<div style="overflow-x: auto; margin: 0.75rem 0 1.25rem;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 12px 16px; text-align: left; font-weight: 600; width: 26%;">Requirement</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Jetson Orin (AGX Orin / Orin NX / Orin Nano)</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Thor</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">JetPack</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">7.2 / Jetson Linux R39.2</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">7.1 / 7.2</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">CUDA</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">13.2 (included)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">13.x (included)</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">TensorRT</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">10.x+ (included)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">10.x+ (included)</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; font-weight: 600; color: #334155;">Storage</td><td style="padding: 12px 16px;">20–50 GB free (ONNX + engines)</td><td style="padding: 12px 16px;">20–50 GB free</td></tr>
-</tbody>
-</table>
-</div>
-
-## Quantization and Platform Compatibility
-
-<div style="overflow-x: auto; margin: 1.5rem 0;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Precision</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Memory savings<br/><span style="font-weight: 500; font-size: 0.85em;">(vs FP16)</span></th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Jetson Orin<br/><span style="font-weight: 500; font-size: 0.85em;">CC 8.7 (<code>sm_87</code>)</span></th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Jetson Thor<br/><span style="font-weight: 500; font-size: 0.85em;"><code>sm_110</code></span></th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">FP16</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Baseline</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Supported</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Supported</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">FP8</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">2x reduction</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Not available</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Supported</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">INT4 AWQ</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">4x reduction</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Supported</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Supported</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; font-weight: 500;">NVFP4</td><td style="padding: 12px 16px;">4x reduction</td><td style="padding: 12px 16px;">Not available</td><td style="padding: 12px 16px;">Supported</td></tr>
-</tbody>
-</table>
-</div>
-
-## Step 1: Export Models (x86 Host or Jetson Thor)
-
-This step converts HuggingFace models to quantized ONNX files. It requires significant GPU memory and Python, so it runs on either an **x86 workstation** or **Jetson Thor**, not on Orin devices.
-
-- **x86 workstation**: use this if you have a Linux PC or cloud GPU. After export, transfer the ONNX files to your Jetson.
-- **Jetson Thor**: run the export directly on Thor using the [NVIDIA PyTorch container](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch). No separate PC needed.
-
-### 1.1 Set Up the Environment
-
-<Tabs labels={["Jetson Thor (Docker)", "x86 Host (Docker)", "x86 Host (venv)"]}>
-<div class="nv-tab-panel active">
-
-On Thor, use the [NVIDIA PyTorch container](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) which ships with **PyTorch, CUDA, TensorRT, and ModelOpt** pre-installed for Jetson's aarch64/SBSA architecture.
+Download the workflow helper and create persistent cache directories:
 
 ```bash
-docker pull nvcr.io/nvidia/pytorch:26.05-py3
-
-docker run -it --runtime nvidia \
-    --name edgellm-export \
-    -v $(pwd):/workspace \
-    -w /workspace \
-    nvcr.io/nvidia/pytorch:26.05-py3 \
-    bash
+mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh \
+  -o "$HOME/run-edgellm-model"
+chmod +x "$HOME/run-edgellm-model"
 ```
 
-Inside the container, clone the repository and install. The `--system-site-packages` flag lets the venv inherit the container's NVIDIA-built PyTorch. We install Edge-LLM with `--no-deps` to prevent pip from replacing torch, then install the remaining dependencies separately while filtering out the torch lines.
+Free storage must cover the container, checkpoint, and device-specific engines
+at the same time. The ONNX workflow needs an additional copy of its exported
+graphs. Allow at least 35 GB for the small quick-start model; larger checkpoints
+require substantially more. On an 8 GB Orin Nano, use NVMe
+storage for the Docker data root and the two mounted cache directories. For a
+4B first build, also use NVMe-backed swap and stop the graphical desktop.
+
+Use the image that matches the Jetson GPU. The following command downloads a
+small public model, builds checkpoint-backed engines without ONNX, runs C++
+inference, and records prefill and decode benchmarks.
+
+### Jetson Orin
 
 ```bash
-git clone https://github.com/NVIDIA/TensorRT-Edge-LLM.git
-cd TensorRT-Edge-LLM
-git submodule update --init --recursive
-
-python3 -m venv --system-site-packages venv
-source venv/bin/activate
-
-pip3 install --no-deps .
-sed '/^torch/d' requirements.txt > /tmp/reqs.txt
-pip3 install -r /tmp/reqs.txt
+sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+  -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+  -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+  -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+  -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+  ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+  run-edgellm-model Vishva007/Qwen3.5-0.8B-W4A16-AutoRound-GPTQ
 ```
 
-If you are tempted to run a normal `pip install` instead, see [Troubleshooting](#troubleshooting) (first item: why plain pip breaks on Jetson).
-
-Set the workspace directory to `/workspace/` so exported files land directly on the host via the volume mount:
+### Jetson Thor
 
 ```bash
-export WORKSPACE_DIR=/workspace/tensorrt-edgellm-workspace
+sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+  -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+  -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+  -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+  -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+  ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+  run-edgellm-model AxionML/Qwen3.5-0.8B-NVFP4
 ```
 
-<div class="admonition warning">
-<p class="admonition-title">Use /workspace, not $HOME</p>
-<p>Inside the container <code>$HOME</code> is <code>/root</code>, which is <strong>not</strong> on the mounted volume. Always use <code>/workspace/...</code> so your ONNX files appear on the host automatically. When you <code>exit</code> the container, the workspace will be at <code>~/tensorrt-edgellm-workspace</code> (or wherever you ran <code>docker run</code> from).</p>
-</div>
+The helper caches matching engine artifacts. Repeating the command reuses
+them; `--builder onnx` additionally caches ONNX. Runs are stored under
+`$HOME/tensorrt-edgellm-workspace` with the
+generated input, output, profile, benchmark CSVs, `benchmark_summary.json`,
+manifest, log, and exact export/build/runtime commands. The command also prints
+the prefill and decode latency and tokens per second directly when it finishes.
+The `tensorrt-edgellm-0100-build` Docker volume also preserves C++ executables
+compiled by the first run, so later containers do not rebuild the same tools.
+When ONNX is selected, Hugging Face snapshots are exposed through a cache-local view
+of regular files; hard links avoid a second copy of the checkpoint when the
+cache and workspace use the same filesystem.
 
-</div>
+### Experimental Weightless Builder
 
-<div class="nv-tab-panel">
-
-Pull and launch the [NVIDIA PyTorch container](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch):
+The default `--builder weightless` invokes `tensorrt-edgellm-build` once to
+discover and compile every registered component from the checkpoint:
 
 ```bash
-docker pull nvcr.io/nvidia/pytorch:26.05-py3
-
-docker run --gpus all -it \
-    --name edgellm-export \
-    -v $(pwd):/workspace \
-    -w /workspace \
-    nvcr.io/nvidia/pytorch:26.05-py3 \
-    bash
+run-edgellm-model Qwen/Qwen2.5-0.5B-Instruct
 ```
 
-Inside the container, clone the repository and install:
+The weightless frontend is experimental in 0.10.0. `--builder direct` remains
+an alias. It is intended for offline C++
+inference and benchmarking; `--stage serve` continues to use the supported ONNX
+workflow. Weightless engines keep checkpoint-backed weights outside the plan, so
+the original checkpoint directory must remain mounted when they run. The helper
+passes that directory to `llm_inference` and `llm_bench` automatically.
+
+With no externalization override, the builder requests checkpoint-backed INT4
+FFN, INT4 MoE, NVFP4 MoE, LM-head, FP16, and embedding weights. FP8 and MXFP8
+weights remain folded into the TensorRT plan by design, so “weightless” does
+not mean every precision produces a zero-weight plan. Passing
+`--externalize-weight` selects an explicit narrower policy.
+
+## 0.10.0 Support Audit
+
+The following matrix separates the release-supported ONNX workflow, code
+present in the experimental weightless registry, and completed Jetson runtime
+evidence. “Registered” means the frontend has model-owned graph and artifact
+definitions; it does not mean every checkpoint, precision, and feature
+combination has weightless-builder L0 coverage.
+
+| Model family or contract | Modality and runtime | Weightless components | 0.10.0 HTTP server | Runtime evidence in this update |
+|---|---|---|---|---|
+| Llama 3.x | Text generation | LLM | Chat completions | Source-audited; not hardware-swept here |
+| Qwen2 / Qwen2.5 | Text generation | LLM | Chat completions | Qwen2.5 0.5B passed offline and through the server on Orin NX |
+| Qwen3 dense and MoE | Text generation | LLM | Chat completions | Source-audited; not hardware-swept here |
+| Qwen2.5-VL and Qwen3-VL, including Cosmos Reason2 | Image/video and text to text | LLM and visual | Multimodal chat completions | Source-audited; not hardware-swept here |
+| Qwen3.5 / Qwen3.6 / Qwen3.8 dense and MoE | Image and text to text | LLM and visual | Multimodal chat completions | Qwen3.5 0.8B, 2B, and 9B passed offline; Qwen3.8 27B NVFP4 passed text, image, video, and native-MTP serving on Thor |
+| InternVL3 / InternVL3.5 | Image and text to text | LLM and visual | Multimodal chat completions | Source-audited; not hardware-swept here |
+| Phi-4 Multimodal | Image and text to text after its required vision-LoRA merge | LLM and visual | Multimodal chat completions | Source-audited; not hardware-swept here |
+| Nemotron-3 / 3.5 text | Text generation | LLM | Chat completions | 30B-A3B ONNX passed on Thor; weightless engine generation did not |
+| Nemotron Nano Omni | Image/video/audio and text to text | LLM, visual, and audio | Multimodal chat completions | Source-audited; not hardware-swept here |
+| Gemma4 | Image, checkpoint-dependent audio, and text to text | LLM, visual, and audio | Multimodal chat completions with an FP16 KV cache | Public E2B W4A16 GPTQ text/image/audio serving passed on Thor |
+| DiffusionGemma | Block-diffusion text/image/video understanding | Diffusion LLM and visual | No; use its C++ block-diffusion runtime | Source-audited; not hardware-swept here |
+| Qwen3-ASR | Audio to text | LLM and audio | Chat audio and `/v1/audio/transcriptions` | Both endpoints transcribed the bundled LibriSpeech clip correctly on Thor |
+| Nemotron-3.5-ASR | Streaming audio to transcript | Not registered; use `--builder onnx` | No; use its FastConformer/RNN-T runtime | ONNX FastConformer and RNN-T passed on Orin NX |
+| Qwen3-TTS | Text/reference voice to audio | Talker, CodePredictor, Code2Wav, and clone encoders | `/v1/audio/speech` for CustomVoice; Base and VoiceDesign remain offline | CustomVoice passed offline on Orin NX and through the speech server on Thor |
+| Qwen3-Omni | Image/audio/text to text and optional speech | LLM, visual, audio, Talker, CodePredictor, and Code2Wav | Multimodal chat and audio output | Source-audited; not hardware-swept here |
+| Alpamayo | Video/trajectory/text to text and trajectory | LLM, visual, and action | No; use its action runtime | Source-audited; not hardware-swept here |
+| Cosmos3-Edge reasoner | Image/video and text to text | LLM and visual | Multimodal chat completions | Source-audited; not hardware-swept here |
+| Cosmos3-Edge policy | Image/video and instruction to action chunk | Understanding prefill, generation, and VAE encoder | No; use its policy runtime | Passed on Thor |
+
+MTP, EAGLE3, and DFlash are optional text-generation extensions, not separate
+modalities. They are disabled unless requested and do not change the base
+model's visual or audio contract:
+
+| Extension | Checkpoint contract | Helper option | HTTP server | Validation in this update |
+|---|---|---|---|---|
+| MTP | Draft layer embedded in Qwen3.5/Qwen3.8, or a matched Gemma4 assistant | `--mtp` and optional `--mtp-draft` | Prebuilt speculative bundle | Public Qwen3.5 4B and Qwen3.8 27B native MTP passed through the server on Thor |
+| EAGLE3 | Base model plus matching EAGLE3 draft checkpoint | `--eagle3 DRAFT` | Prebuilt speculative bundle | Public Qwen3 1.7B base/draft pair passed through the server on Orin NX |
+| DFlash | Base model plus matching DFlash draft checkpoint | `--dflash DRAFT` | Prebuilt speculative bundle | Public Qwen3.5 4B base/draft pair passed through the server on Thor |
+
+Speculative serving is text-only in 0.10.0. DSpark remains available to the
+offline helper with `--dspark`, but is not advertised as an HTTP-server
+contract by this release.
+
+The fixed release list contains 186 unique Hugging Face checkpoint IDs. An
+anonymous audit on August 13, 2026 returned `config.json` for 176; the four
+original Meta Llama IDs and six Cosmos Reason2 IDs returned access denied.
+Of the public configs, 158 map to a registered model type and 16 are official
+EAGLE3, DFlash, or DSpark draft IDs. Nemotron-3.5-ASR is intentionally
+ONNX-only. The public `google/gemma-4-12B-it-assistant` uses the unregistered
+`gemma4_unified_assistant` draft type, so its MTP pair must also use ONNX in
+0.10.0. All 49 deployment checkpoints named in this tutorial exposed both
+metadata and an actual weight artifact without a Hugging Face token during the
+same audit.
+Forty-eight of those 49 deployment checkpoints map to a weightless registry
+entry; the sole exception is the explicitly ONNX-only Nemotron-3.5-ASR row.
+A second `--stage serve` command audit reached the model-appropriate HTTP
+launcher for 42 checkpoints. It correctly kept DiffusionGemma, Cosmos3 policy,
+and Nemotron-3.5-ASR on their model-specific offline runtimes. It also rejected
+four Gemma4 NVFP4 checkpoints before export because their FP8 KV caches cannot
+serve shared-KV attention in Edge-LLM 0.10.0. This is command and contract
+coverage; the hardware table below separately identifies real engine and
+inference runs.
+
+Qwen3.8 was released after that fixed August 13 audit. Its public ModelOpt
+NVFP4 checkpoint was audited separately on August 14 and routes through the
+existing Qwen3.5 model implementation without a compatibility patch.
+
+The registry also contains Mistral, Qwen2-VL, and Qwen3-Omni-Next model types,
+but the 0.10.0 release does not publish a validated checkpoint recommendation
+for those families. They are frontend implementations, not deployment claims
+on this page. Quantization/calibration, all tensor-parallel ranks in one
+builder invocation, checkpoint-backed serving, GGUF, and unrecognized
+`compressed-tensors` formats are not supported by the weightless helper.
+
+## New 0.10.0 Model Contracts
+
+The helper selects the runtime from checkpoint metadata. Commands use the
+weightless frontend unless `--builder onnx` is shown explicitly:
 
 ```bash
-git clone https://github.com/NVIDIA/TensorRT-Edge-LLM.git
-cd TensorRT-Edge-LLM
-git submodule update --init --recursive
+# Nemotron 3.5 Lightning text generation
+run-edgellm-model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 \
+  --builder onnx
 
-python3 -m venv venv
-source venv/bin/activate
-pip3 install .
+# DiffusionGemma block-diffusion text/image/video understanding
+run-edgellm-model nvidia/diffusiongemma-26B-A4B-it-NVFP4 \
+  --builder onnx --image /data/input.jpg --prompt "Describe this image."
+
+# Cosmos3-Edge multimodal reasoner
+run-edgellm-model nvidia/Cosmos3-Edge \
+  --builder onnx --image /data/input.jpg --prompt "What should the robot do next?"
+
+# Qwen3.8 multimodal serving on Thor
+run-edgellm-model Inferact/Qwen3.8-27B-NVFP4 \
+  --builder onnx --stage serve
+
+# Cosmos3 policy: image + instruction -> action chunk
+run-edgellm-model nvidia/Cosmos3-Edge-Policy-DROID \
+  --image /data/observation.jpg --prompt "Pick up the banana and place it in the bowl."
+
+# Standalone RNN-T speech recognition: audio -> transcript
+run-edgellm-model nvidia/nemotron-3.5-asr-streaming-0.6b \
+  --builder onnx --audio /data/input.wav
+
+# Text to speech: text + speaker -> WAV audio
+run-edgellm-model Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice \
+  --prompt "TensorRT Edge-LLM is running on NVIDIA Jetson." --speaker ryan
 ```
 
-</div>
+Every checkpoint named on this page is public on Hugging Face and can be
+resolved without an access token.
 
-<div class="nv-tab-panel">
+Cosmos3 policy and Nemotron-3.5-ASR do not use the LLM JSON contract. The
+helper builds their model-specific binaries on first use, writes the policy
+action JSON or ASR transcript, and records their native end-to-end benchmark.
+Qwen3-TTS Base, CustomVoice, and VoiceDesign checkpoints similarly select the
+Qwen3-TTS executable and emit audio rather than text tokens.
 
-If you prefer not to use Docker, set up a virtual environment directly on your x86 host:
+### 0.10.0 Hardware Validation
+
+| Device | Container | Checkpoint and path | Result |
+|---|---|---|---|
+| Orin Nano 8 GB | `0.10.0-orin` | `QuantTrio/Qwen3.5-2B-AWQ`, experimental weightless builder; externalized INT4 LLM and vision engines | Image description coherent; prefill 904.5 tok/s at ISL 128; decode 20.6 tok/s at past-KV 128 and OSL 16; vision encoder 243.02 ms; 4.15 GB peak unified memory |
+| Orin NX 16 GB | `0.10.0-orin` | `Qwen/Qwen2.5-0.5B-Instruct`, experimental weightless builder | C++ answer coherent; prefill 3,607.6 tok/s at ISL 128; decode 59.2 tok/s at past-KV 128 and OSL 32 |
+| Orin NX 16 GB | `0.10.0-orin` | `Qwen/Qwen2.5-0.5B-Instruct`, ONNX export and OpenAI-compatible server | `/v1/models` returned the checkpoint; two-turn chat preserved context and correctly identified Paris and the Seine |
+| Orin NX 16 GB | `0.10.0-orin` | `Vishva007/Qwen3.5-0.8B-W4A16-AutoRound-GPTQ`, experimental weightless builder; LLM and vision engines | Text answer coherent; image request completed; prefill 1,651.5 tok/s at ISL 128; decode 67.0 tok/s at past-KV 128 and OSL 32; vision encoder 58.64 ms |
+| Orin NX 16 GB | `0.10.0-orin` | `Vishva007/Qwen3.5-0.8B-W4A16-AutoRound-GPTQ`, ONNX LLM and visual engines; OpenAI-compatible server | A real JPEG request returned HTTP 200 and correctly identified a woman and dog interacting on a beach |
+| Orin NX 16 GB | `0.10.0-orin` | `nvidia/nemotron-3.5-asr-streaming-0.6b`, ONNX export; FastConformer and RNN-T engines | Transcript matched the bundled golden text; 161.9 ms end to end for 3.505 s of audio; RTF 0.046 (21.6x real time) |
+| Orin NX 16 GB | `0.10.0-orin` | `Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice`, ONNX export; Talker, CodePredictor, and Code2Wav engines | Generated valid 5.76 s, 24 kHz mono WAV; ASR round trip preserved “is running on NVIDIA Jetson” with a product-name contraction; Talker 4,516.3 ms; Code2Wav 157.5 ms; 5.00 GB peak unified memory |
+| Orin NX 16 GB | `0.10.0-orin` | `Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice`, weightless Talker, CodePredictor, and Code2Wav engines; default helper path | Generated valid 4.88 s, 24 kHz mono WAV; independent Whisper round trip returned “Hello! NVIDIA Jetson is ready.”; Talker 4,952.1 ms; Code2Wav 181.7 ms; 4.38 GB peak unified memory |
+| Orin NX 16 GB | `0.10.0-orin` | `Qwen/Qwen3-1.7B` with `AngelSlim/Qwen3-1.7B_eagle3`, ONNX base/draft engines; speculative server | Health reported speculative decoding enabled and chat correctly returned `17 x 6 = 102` |
+| Jetson AGX Orin 64 GB | `0.10.0-orin` | `Vishva007/Qwen3.5-9B-W4A16-AutoRound-GPTQ`, experimental weightless builder; externalized INT4 LLM and FP16 visual weights | Image description coherent; prefill 1,078.6 tok/s at ISL 128; decode 27.6 tok/s at past-KV 128 and OSL 16; vision encoder 90.16 ms; 9.62 GB peak unified memory |
+| Jetson AGX Thor 128 GB | `0.10.0-thor` | `Qwen/Qwen3-ASR-0.6B`, ONNX LLM and audio engines; OpenAI-compatible server | Chat audio and `/v1/audio/transcriptions` both returned the correct LibriSpeech sentence, “Concord returned to its place amidst the tents.” |
+| Jetson AGX Thor 128 GB | `0.10.0-thor` | `Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice`, ONNX Talker, CodePredictor, and Code2Wav engines; speech server | `/v1/audio/speech` returned a valid 24 kHz mono WAV; Qwen3-ASR recovered “NVIDIA Jetson is ready for Edge AI.” |
+| Jetson AGX Thor 128 GB | `0.10.0-thor` | `Vishva007/gemma-4-E2B-it-W4A16-AutoRound-GPTQ`, ONNX LLM, visual, and audio engines; Gemma4 server adapter | Text preserved the `AURORA` context and named the Seine; image chat identified a woman and dog on a beach; audio chat exactly transcribed the bundled LibriSpeech sentence |
+| Jetson AGX Thor 128 GB | `0.10.0-thor` | `Inferact/Qwen3.8-27B-NVFP4`, ONNX LLM and visual engines; OpenAI-compatible server | Text preserved the `AURORA` context and named the Seine; image chat correctly described a woman interacting with a dog on a beach; MP4 video chat described the same person, animal, and interaction |
+| Jetson AGX Thor 128 GB | `0.10.0-thor` | `Inferact/Qwen3.8-27B-NVFP4`, native MTP; ONNX base/draft engines; speculative server | Health reported speculative decoding enabled and chat correctly returned `23 x 9 = 207` |
+| Jetson AGX Thor 128 GB | `0.10.0-thor` | `Qwen/Qwen3.5-4B`, native MTP; ONNX base/draft engines; speculative server | Health reported speculative decoding enabled and chat correctly returned `19 x 7 = 133` |
+| Jetson AGX Thor 128 GB | `0.10.0-thor` | `Qwen/Qwen3.5-4B` with `z-lab/Qwen3.5-4B-DFlash`; ONNX base/draft engines; speculative server | Health reported speculative decoding enabled and chat correctly returned `23 x 9 = 207` |
+| Jetson AGX Thor 128 GB | `0.10.0-thor` | `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4`, ONNX export | C++ answer coherent; prefill 1,771.0 tok/s at ISL 128; decode 80.8 tok/s at past-KV 128 and OSL 32 |
+| Jetson AGX Thor 128 GB | `0.10.0-thor` | `nvidia/Cosmos3-Edge-Policy-DROID`, experimental weightless builder; diffusion prefill, generation, and VAE encoder engines | A public Banana-in-Bowl frame and instruction produced a finite `1x16x10` action chunk; full-policy median 638.15 ms with one warmup and two measured iterations |
+
+This table reports completed engine builds and runtime executions, not metadata
+dry runs. Engines are rebuilt per GPU architecture.
+
+The experimental weightless frontend completed the Qwen and Cosmos3 bundles shown
+above. The Nemotron 3.5 Lightning weightless build exited during TensorRT engine
+generation in this sweep, so its validated row intentionally uses the supported
+ONNX path.
+
+## Verify Before Downloading Weights
+
+Append `--dry-run` to any model command to download JSON metadata only, inspect
+the architecture and precision, and emit the exact export and build commands
+without compiling an engine:
+
+On Jetson Orin:
 
 ```bash
-git clone https://github.com/NVIDIA/TensorRT-Edge-LLM.git
-cd TensorRT-Edge-LLM
-git submodule update --init --recursive
-
-python3 -m venv venv
-source venv/bin/activate
-pip3 install .
+sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+  -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+  -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+  -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+  -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+  ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+  run-edgellm-model Qwen/Qwen3-4B-AWQ --builder onnx --stage serve --dry-run
 ```
 
-</div>
-</Tabs>
-
-### 1.2 Verify Installation
+On Jetson Thor:
 
 ```bash
-tensorrt-edgellm-export --help
-tensorrt-edgellm-quantize llm --help
+sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+  -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+  -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+  -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+  -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+  ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+  run-edgellm-model baseten/Qwen3-4B-NVFP4-PTQ --builder onnx --stage serve --dry-run
 ```
 
-Both commands should print their usage information without errors.
+This validates command construction and checkpoint compatibility. Remove
+`--dry-run` to download the weights and execute the pipeline. A full hardware
+verification requires a real engine build and inference on the target Jetson.
 
-### 1.3 Log in to HuggingFace
+## Offline Inference and Serving
 
-Cosmos-Reason2-8B is a **gated model**: you must accept the license and authenticate before downloading.
+The default `--stage all` performs export, engine build, smoke inference, and
+benchmarks. Use `--stage serve` to build missing artifacts and launch the
+OpenAI-compatible server:
 
-1. Visit [nvidia/Cosmos-Reason2-8B](https://huggingface.co/nvidia/Cosmos-Reason2-8B) on HuggingFace and click **"Agree and access repository"**.
-2. Generate a token at [HuggingFace Settings - Tokens](https://huggingface.co/settings/tokens) (read access is sufficient).
-3. Log in from the terminal:
+On Jetson Orin:
 
 ```bash
-huggingface-cli login
+sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+  -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+  -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+  -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+  -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+  -v "$HOME/media:/data/media:ro" \
+  ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+  run-edgellm-model Vishva007/Qwen3.5-0.8B-W4A16-AutoRound-GPTQ \
+    --builder onnx --stage serve \
+    --allowed-local-media-path /data/media
 ```
 
-Paste your token when prompted. This persists across sessions inside the container.
-
-### 1.4 Export Cosmos-Reason2-8B (VLM)
-
-Cosmos Reason2 is a vision-language model. TensorRT Edge-LLM exports the language model and visual encoder components from the quantized checkpoint with one command.
+On Jetson Thor:
 
 ```bash
-# Thor Docker users: WORKSPACE_DIR was already set to /workspace/tensorrt-edgellm-workspace in Step 1.1
-# x86 / venv users: set it now
-export WORKSPACE_DIR=${WORKSPACE_DIR:-$HOME/tensorrt-edgellm-workspace}
-export MODEL_NAME=Cosmos-Reason2-8B
-mkdir -p $WORKSPACE_DIR && cd $WORKSPACE_DIR
+sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+  -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+  -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+  -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+  -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+  ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+  run-edgellm-model baseten/Qwen3-4B-NVFP4-PTQ --builder onnx --stage serve
 ```
 
-#### Quantize the Language Model
-
-<Tabs labels={["NVFP4 (Thor, recommended)", "INT4 AWQ (Orin / Thor)", "FP8 (Thor / x86 Dev GPU)"]}>
-<div class="nv-tab-panel active">
-
-NVFP4 is the recommended precision for Thor (SM110+), offering 4x memory reduction with native hardware support.
+If you substitute a gated checkpoint, accept its license on Hugging Face and
+pass your token into the container:
 
 ```bash
-tensorrt-edgellm-quantize llm \
-    --model_dir nvidia/Cosmos-Reason2-8B \
-    --output_dir $MODEL_NAME/quantized \
-    --quantization nvfp4
+-e HF_TOKEN="$HF_TOKEN"
 ```
 
-</div>
-
-<div class="nv-tab-panel">
-
-INT4 AWQ reduces the 8B language-model weights to roughly 4 GB. Use it when deploying on Orin devices (SM87) or Thor.
+Serving uses the ONNX frontend in 0.10.0. The experimental weightless plans are
+for offline inference and benchmarking. Use these request forms after the
+server is healthy:
 
 ```bash
-tensorrt-edgellm-quantize llm \
-    --model_dir nvidia/Cosmos-Reason2-8B \
-    --output_dir $MODEL_NAME/quantized \
-    --quantization int4_awq
+# Text
+curl -sS http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"local","messages":[{"role":"user","content":"Name the river through Paris."}],"max_tokens":64}'
+
+# Image from the allowlisted directory mounted above
+curl -sS http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"local","messages":[{"role":"user","content":[{"type":"image","image":"/data/media/input.jpg"},{"type":"text","text":"Describe the image in one sentence."}]}],"max_tokens":128}'
+
+# Qwen3-ASR upload
+curl -sS http://127.0.0.1:8000/v1/audio/transcriptions \
+  -F model=local -F response_format=json -F file=@sample.wav
 ```
 
-</div>
-
-<div class="nv-tab-panel">
-
-FP8 requires SM89+ at build time. Use this if your target is Thor or an Ada Lovelace+ dev GPU.
+Qwen3-TTS CustomVoice has a speech-only server contract:
 
 ```bash
-tensorrt-edgellm-quantize llm \
-    --model_dir nvidia/Cosmos-Reason2-8B \
-    --output_dir $MODEL_NAME/quantized \
-    --quantization fp8
+run-edgellm-model Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice \
+  --builder onnx --stage serve
+
+curl -sS http://127.0.0.1:8000/v1/audio/speech \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"local","input":"TensorRT Edge-LLM is ready.","voice":"ryan","response_format":"wav"}' \
+  --output response.wav
 ```
 
-</div>
-</Tabs>
+The server accepts text, image, audio, and video only when the selected model
+provides those engines. Qwen3-TTS Base and VoiceDesign, DiffusionGemma,
+Cosmos3 policy, Alpamayo action generation, and Nemotron-3.5 RNN-T ASR keep
+their model-specific offline runtimes.
 
-#### Export Checkpoint to ONNX
+### Optional Speculative Extensions
+
+MTP, EAGLE3, and DFlash are explicit extensions to a compatible text model.
+Each command exports and builds the base and draft plans together, then starts
+the same chat API with speculative decoding enabled:
 
 ```bash
-tensorrt-edgellm-export \
-    $MODEL_NAME/quantized \
-    $MODEL_NAME/onnx
+# Native MTP
+run-edgellm-model Qwen/Qwen3.5-4B \
+  --builder onnx --stage serve --mtp
+
+# EAGLE3 pair
+run-edgellm-model Qwen/Qwen3-1.7B \
+  --builder onnx --stage serve \
+  --eagle3 AngelSlim/Qwen3-1.7B_eagle3
+
+# DFlash pair
+run-edgellm-model Qwen/Qwen3.5-4B \
+  --builder onnx --stage serve \
+  --dflash z-lab/Qwen3.5-4B-DFlash
 ```
 
-### 1.5 Export Qwen3-4B-Instruct (LLM)
+These checkpoint IDs are public. Speculative server requests are text-only in
+0.10.0; build and serve the base model without a speculative option for image,
+audio, or video input.
 
-Qwen3-4B-Instruct is a text-only LLM. It supports INT4 AWQ, which brings the 4B model down to ~2 GB of weights, a comfortable fit for Orin Nano's 8 GB unified memory. No HuggingFace login is needed (Apache 2.0 license).
+## Custom Inputs
+
+Use prompt and media options to generate an Edge-LLM request JSON:
 
 ```bash
-# Thor Docker users: WORKSPACE_DIR was already set to /workspace/tensorrt-edgellm-workspace in Step 1.1
-# x86 / venv users: set it now
-export WORKSPACE_DIR=${WORKSPACE_DIR:-$HOME/tensorrt-edgellm-workspace}
-export MODEL_NAME=Qwen3-4B-Instruct
-mkdir -p $WORKSPACE_DIR && cd $WORKSPACE_DIR
+# Text
+run-edgellm-model MODEL --prompt "Summarize unified memory on Jetson."
+
+# Image and text
+run-edgellm-model MODEL \
+  --image /data/input.jpg \
+  --prompt "Describe this image."
+
+# Audio and text
+run-edgellm-model MODEL \
+  --audio /data/input.wav \
+  --prompt "Transcribe this speech in its original language. Output only the transcription."
+
+# Qwen3-TTS Base voice clone (omit --ref-text for timbre-only cloning)
+run-edgellm-model Qwen/Qwen3-TTS-12Hz-0.6B-Base \
+  --ref-audio /data/reference.wav \
+  --ref-text "Exact transcript of the reference audio." \
+  --prompt "This sentence uses the cloned voice."
+
+# Qwen3-TTS VoiceDesign
+run-edgellm-model Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign \
+  --tts-instruct "A calm, warm narrator speaking slowly." \
+  --prompt "TensorRT Edge-LLM is running on NVIDIA Jetson."
+
+# Video frames and text
+run-edgellm-model MODEL \
+  --video-frame /data/frame-0001.jpg \
+  --video-frame /data/frame-0002.jpg \
+  --video-fps 2 \
+  --prompt "Describe what changes between these frames."
 ```
 
-#### Quantize and Export
-
-<Tabs labels={["INT4 AWQ (Orin Nano, recommended)", "FP8 (Thor / x86 Dev GPU)", "NVFP4 (Thor Only)"]}>
-<div class="nv-tab-panel active">
-
-INT4 AWQ reduces the 4B model to ~2 GB of weights, leaving plenty of headroom for KV cache on Orin Nano.
+Mount media files into the container at the same paths used by the command.
+For Gemma 4, the helper places the transcription instruction before the audio
+item, matching the model provider's recommended modality order.
+Every frame in one video request must have the same width, height, and channel
+count. Keep the tokenized text and media in each request within the engine's
+`--max-input-len`; use separate requests for independent modalities or build a
+larger input profile. An existing Edge-LLM request can be passed through
+unchanged. Image, audio, and video options require the corresponding component
+shown in the validated checkpoint table below:
 
 ```bash
-tensorrt-edgellm-quantize llm \
-    --model_dir Qwen/Qwen3-4B-Instruct-2507 \
-    --output_dir $MODEL_NAME/quantized \
-    --quantization int4_awq
-
-tensorrt-edgellm-export \
-    $MODEL_NAME/quantized \
-    $MODEL_NAME/onnx
+run-edgellm-model MODEL --input-json /data/request.json
 ```
 
-</div>
+Useful profile controls include `--batch-size`, `--max-batch-size`,
+`--max-input-len`, `--max-kv-cache-capacity`, `--prefill-len`,
+`--past-kv-len`, and `--bench-output-len`. Benchmarks report E2E timing by
+default; `--bench-arg=--profile` adds a separate layer-profile pass. Run
+`run-edgellm-model --help` for component-specific exporter, builder, runtime,
+and benchmark overrides.
 
-<div class="nv-tab-panel">
+Nemotron Nano Omni supports text, image, audio, and video input. The helper
+builds every component in the checkpoint and uses the real multimodal runtime
+profile for end-to-end timing.
+
+## Published Checkpoint Policy
+
+Support depends on both architecture and checkpoint format. A model working in
+llama.cpp or vLLM does not imply that the same file works in Edge-LLM:
+
+- GGUF files remain llama.cpp inputs.
+- The `compressed-tensors` W4A16 checkpoints used by several vLLM cards are
+  not substituted for Edge-LLM checkpoints.
+- This deployment matrix uses published W4A16, AWQ, or GPTQ INT4 checkpoints
+  on Orin. It does not substitute an original FP16/BF16 repository.
+- Thor uses a published NVFP4 checkpoint when a compatible one is available.
+  The table names the exact FP8 or GPTQ fallback where no compatible NVFP4
+  checkpoint was validated.
+- The official `Qwen/Qwen3.8-27B-FP8` fine-grained FP8 metadata is not accepted
+  by Edge-LLM 0.10.0. The public ModelOpt NVFP4 checkpoint listed below passed
+  export, engine build, and runtime validation instead.
+- The weightless builder uses the original checkpoint for supported runtime
+  weight bindings. The ONNX workflow can externalize already-quantized INT4
+  FFN/MoE and NVFP4 MoE bundles and hard-link them into the engine directory.
+  Neither path quantizes weights.
+- For incomplete community Gemma 4 metadata, the helper can create a
+  non-mutating compatibility view. It does not rewrite or quantize checkpoint
+  tensors.
+
+The checkpoints below are publisher or community releases available from
+Hugging Face and selected for the memory and precision supported by each
+device. They were exercised in the earlier hardware sweep and remain within
+the 0.10.0 supported architecture and checkpoint formats. The release
+validation table below records the subset rebuilt with the 0.10.0 containers;
+the remaining rows are recommendations, not claims of a fresh 0.10.0 rebuild.
+
+### Jetson Orin Nano 8 GB
+
+| Jetson AI Lab model card | Edge-LLM checkpoint | Inputs exercised |
+|---|---|---|
+| [Qwen3.5 0.8B](/models/qwen3-5-0-8b) | `Vishva007/Qwen3.5-0.8B-W4A16-AutoRound-GPTQ` | Text, image |
+| [Qwen3.5 2B](/models/qwen3-5-2b) | `QuantTrio/Qwen3.5-2B-AWQ` | Text, image |
+| [Qwen3-VL 2B](/models/qwen3-vl-2b) | `Vishva007/Qwen3-VL-2B-Instruct-W4A16-AutoRound-GPTQ` | Text, image |
+| [Qwen3.5 4B](/models/qwen3-5-4b) | `vastai-ais/Qwen3.5-4B-AutoRound-GPTQ-Int4` | Text, image |
+| [Qwen3 4B](/models/qwen3-4b) | `Qwen/Qwen3-4B-AWQ` | Text |
+| [Qwen3-VL 4B](/models/qwen3-vl-4b) | `Vishva007/Qwen3-VL-4B-Instruct-W4A16-AutoRound-GPTQ` | Text, image |
+
+### Jetson Orin NX 16 GB
+
+| Jetson AI Lab model card | Edge-LLM checkpoint | Inputs exercised |
+|---|---|---|
+| [Qwen3.5 0.8B](/models/qwen3-5-0-8b) | `Vishva007/Qwen3.5-0.8B-W4A16-AutoRound-GPTQ` | Text, image |
+| [Qwen3.5 2B](/models/qwen3-5-2b) | `QuantTrio/Qwen3.5-2B-AWQ` | Text, image |
+| [Qwen3-VL 2B](/models/qwen3-vl-2b) | `Vishva007/Qwen3-VL-2B-Instruct-W4A16-AutoRound-GPTQ` | Text, image |
+| [Qwen3.5 4B](/models/qwen3-5-4b) | `vastai-ais/Qwen3.5-4B-AutoRound-GPTQ-Int4` | Text, image |
+| [Qwen3 4B](/models/qwen3-4b) | `Qwen/Qwen3-4B-AWQ` | Text |
+| [Qwen3-VL 4B](/models/qwen3-vl-4b) | `Vishva007/Qwen3-VL-4B-Instruct-W4A16-AutoRound-GPTQ` | Text, image |
+| [Qwen3 8B](/models/qwen3-8b) | `kaitchup/Qwen3-8B-autoround-4bit-gptq` | Text |
+| [Llama 3.1 8B](/models/llama3-1-8b) | `RedHatAI/Meta-Llama-3.1-8B-Instruct-quantized.w4a16` | Text |
+| [Qwen3-VL 8B](/models/qwen3-vl-8b) | `Vishva007/Qwen3-VL-8B-Instruct-W4A16-AutoRound-GPTQ` | Text, image |
+| [Gemma 4 E2B](/models/gemma4-e2b) | `Vishva007/gemma-4-E2B-it-W4A16-AutoRound-GPTQ` | Text, image, audio |
+
+The Qwen3 8B first-run ONNX export exceeded the NX default 2 GB swap. Configure
+at least 8 GB of additional swap on NVMe before building it; the cached engine
+does not repeat this export.
+
+### Jetson AGX Orin 64 GB
+
+| Jetson AI Lab model card | Edge-LLM checkpoint | Inputs exercised |
+|---|---|---|
+| [Qwen3.5 0.8B](/models/qwen3-5-0-8b) | `Vishva007/Qwen3.5-0.8B-W4A16-AutoRound-GPTQ` | Text, image |
+| [Qwen3.5 4B](/models/qwen3-5-4b) | `vastai-ais/Qwen3.5-4B-AutoRound-GPTQ-Int4` | Text, image |
+| [Qwen3 4B](/models/qwen3-4b) | `Qwen/Qwen3-4B-AWQ` | Text |
+| [Qwen3-VL 4B](/models/qwen3-vl-4b) | `Vishva007/Qwen3-VL-4B-Instruct-W4A16-AutoRound-GPTQ` | Text, image |
+| [Qwen3 8B](/models/qwen3-8b) | `kaitchup/Qwen3-8B-autoround-4bit-gptq` | Text |
+| [Llama 3.1 8B](/models/llama3-1-8b) | `RedHatAI/Meta-Llama-3.1-8B-Instruct-quantized.w4a16` | Text |
+| [Qwen3-VL 8B](/models/qwen3-vl-8b) | `Vishva007/Qwen3-VL-8B-Instruct-W4A16-AutoRound-GPTQ` | Text, image |
+| [Gemma 4 E2B](/models/gemma4-e2b) | `Vishva007/gemma-4-E2B-it-W4A16-AutoRound-GPTQ` | Text, image, audio |
+| [Gemma 4 E4B](/models/gemma4-e4b) | `Vishva007/gemma-4-E4B-it-W4A16-AutoRound-GPTQ` | Text, image, audio |
+| [Qwen3.5 9B](/models/qwen3-5-9b) | `Vishva007/Qwen3.5-9B-W4A16-AutoRound-GPTQ` | Text, image |
+| [Qwen3.5 27B](/models/qwen3-5-27b) | `QuantTrio/Qwen3.5-27B-AWQ` | Text, image |
+| [Qwen3.5 35B-A3B](/models/qwen3-5-35b-a3b) | `Qwen/Qwen3.5-35B-A3B-GPTQ-Int4` | Text, image |
+| [Qwen3 30B-A3B](/models/qwen3-30b-a3b) | `Qwen/Qwen3-30B-A3B-GPTQ-Int4` | Text |
+| [Qwen3.6 27B](/models/qwen3-6-27b) | `QuantTrio/Qwen3.6-27B-AWQ` | Text, image |
+| [Qwen3.6 35B-A3B](/models/qwen3-6-35b-a3b) | `palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4` | Text, image |
+
+### Jetson AGX Thor T5000 128 GB
+
+| Jetson AI Lab model card | Edge-LLM checkpoint | Inputs exercised |
+|---|---|---|
+| [Qwen3.5 0.8B](/models/qwen3-5-0-8b) | `AxionML/Qwen3.5-0.8B-NVFP4` | Text, image |
+| [Qwen3.5 2B](/models/qwen3-5-2b) | `AxionML/Qwen3.5-2B-NVFP4` | Text, image |
+| [Qwen3-VL 2B](/models/qwen3-vl-2b) | `cybermotaz/qwen3-vl-2b-thinking-nvfp4-w4a16` | Text, image |
+| [Cosmos Reason2 2B](/models/cosmos-reason2-2b) | `cagataydev/cosmos-reason2-2b-fp8-hf` | Text, image, video frames |
+| [Gemma 4 E2B](/models/gemma4-e2b) | `Vishva007/gemma-4-E2B-it-W4A16-AutoRound-GPTQ` | Text, image, audio |
+| [Gemma 4 E4B](/models/gemma4-e4b) | `Vishva007/gemma-4-E4B-it-W4A16-AutoRound-GPTQ` | Text, image, audio |
+| [Qwen3 4B](/models/qwen3-4b) | `baseten/Qwen3-4B-NVFP4-PTQ` | Text |
+| [Nemotron3 Nano 4B](/models/nemotron3-nano-4b) | `nvidia/NVIDIA-Nemotron-3-Nano-4B-FP8` | Text |
+| [Qwen3-VL 4B](/models/qwen3-vl-4b) | `cybermotaz/qwen3-vl-4b-thinking-nvfp4-w4a16` | Text, image |
+| [Llama 3.1 8B](/models/llama3-1-8b) | `nvidia/Llama-3.1-8B-Instruct-NVFP4` | Text |
+| [Qwen3 8B](/models/qwen3-8b) | `nvidia/Qwen3-8B-NVFP4` | Text |
+| [Qwen3-VL 8B](/models/qwen3-vl-8b) | `cybermotaz/qwen3-vl-8b-thinking-nvfp4-w4a16` | Text, image |
+| [Nemotron Nano 9B v2](/models/nemotron-nano-9b-v2) | `nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4` | Text |
+| [Qwen3.5 4B](/models/qwen3-5-4b) | `AxionML/Qwen3.5-4B-NVFP4` | Text, image |
+| [Qwen3.5 9B](/models/qwen3-5-9b) | `AxionML/Qwen3.5-9B-NVFP4` | Text, image |
+| [Gemma 4 12B](/models/gemma4-12b) | `google/gemma-4-12B-it` | Text, image, audio |
+| [Qwen3.5 27B](/models/qwen3-5-27b) | `txn545/Qwen3.5-27B-NVFP4` | Text, image |
+| [Qwen3.5 35B-A3B](/models/qwen3-5-35b-a3b) | `AxionML/Qwen3.5-35B-A3B-NVFP4` | Text, image |
+| [Nemotron 3.5 Lightning](/models/nemotron3-5-lightning) | `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` | Text; optional MTP, DFlash, or DSpark |
+| [Qwen3 30B-A3B](/models/qwen3-30b-a3b) | `nvidia/Qwen3-30B-A3B-NVFP4` | Text |
+| [Qwen3.6 27B](/models/qwen3-6-27b) | `natfii/Qwen3.6-27B-VLM-NVFP4-MTP` | Text, image, MTP |
+| [Qwen3.6 35B-A3B](/models/qwen3-6-35b-a3b) | `ykarout/Qwen3.6-35B-A3B-NVFP4` | Text, image |
+| [Qwen3.8 27B](/models/qwen3-8-27b) | `Inferact/Qwen3.8-27B-NVFP4` | Text, image, video; optional native MTP for text |
+| [DiffusionGemma 26B-A4B](/models/diffusiongemma-26b-a4b) | `nvidia/diffusiongemma-26B-A4B-it-NVFP4` | Text, image, video frames |
+| [Nemotron3 Nano 30B-A3B](/models/nemotron-3-nano-30b-a3b) | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4` | Text |
+| [Nemotron 3 Nano Omni](/models/nemotron-3-nano-omni) | `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-NVFP4` | Text, image, audio |
+| [Cosmos3 Edge](/models/cosmos3-edge) | `nvidia/Cosmos3-Edge` or `nvidia/Cosmos3-Edge-Policy-DROID` | Reasoning: text/image/video to text; policy: image/instruction to action chunk |
+
+The Thor table uses GPTQ for Gemma4 E2B/E4B and omits the 26B/31B NVFP4
+checkpoints because those releases request an FP8 KV cache. Edge-LLM 0.10.0
+shared-KV attention cannot consume that donor-cache format; the helper rejects
+this combination before export.
+
+Models shown elsewhere in Jetson AI Lab only through llama.cpp, Ollama, or
+vLLM are intentionally excluded when Edge-LLM 0.10.0 does not list their
+architecture and format. This includes Gemma 3, GPT-OSS, MiniMax M2.7,
+Ministral 3, Cosmos3 Nano, Qwen3 32B, and Llama 3.1 70B.
+
+## Choose a Model by Memory
+
+Keep model weights near or below one third of unified memory so TensorRT
+engines, activation workspace, KV cache, multimodal encoders, and the OS retain
+headroom. Estimate stored weights from **total** parameters, including all MoE
+experts:
+
+- INT4/NVFP4: about `0.5 GB x parameters in B`
+- FP8: about `1 GB x parameters in B`
+- FP16/BF16: about `2 GB x parameters in B`
+
+- **Orin Nano, 8 GB:** target about 2.7 GB of weights. Published 2B and 4B
+  INT4 checkpoints run with externalized weights and the helper's automatic
+  low-memory profile. Use NVMe-backed swap and a headless session for a 4B
+  first build.
+- **Orin NX, 16 GB:** target about 5.3 GB of weights; up to 8B at INT4.
+- **AGX Orin, 64 GB:** target about 21.3 GB of weights; up to a 35B-A3B
+  model at INT4 when the exact checkpoint is listed above.
+- **AGX Thor T5000, 128 GB:** target about 42.7 GB of weights; most
+  explicitly supported 0.10.0 checkpoints fit, subject to runtime workspace.
+
+Every platform named in the validated tables above was exercised with the
+published checkpoint format shown there. Capacity estimates are not presented
+as support claims.
+
+### Hardware-validated starting points
+
+| Target | Start with |
+|---|---|
+| Orin Nano 8 GB | Qwen3.5 0.8B/2B/4B, Qwen3-VL 2B/4B, or Qwen3 4B INT4; the helper selects the low-memory profile automatically |
+| Orin NX 16 GB | Qwen3 8B AutoRound GPTQ, Qwen3-VL 8B W4A16 GPTQ, or Gemma 4 E2B W4A16 GPTQ |
+| AGX Orin 64 GB | Qwen3 4B AWQ, 8B AutoRound GPTQ, or 30B-A3B GPTQ; Qwen3.5 0.8B/4B/9B W4A16 GPTQ, 27B AWQ, or 35B-A3B GPTQ; Qwen3.6 27B AWQ or 35B-A3B GPTQ; Qwen3-VL 4B/8B W4A16 GPTQ; Gemma 4 E2B/E4B W4A16 GPTQ; or Llama 3.1 8B W4A16 |
+| AGX Thor T5000 128 GB | Use an exact checkpoint from the Thor table; NVFP4 is preferred, with the listed FP8 or GPTQ fallback where no compatible NVFP4 checkpoint passed |
+
+## Speculative Decoding
+
+Speculative decoding is never enabled implicitly. Use only a published draft
+checkpoint paired with its documented base model:
 
 ```bash
-tensorrt-edgellm-quantize llm \
-    --model_dir Qwen/Qwen3-4B-Instruct-2507 \
-    --output_dir $MODEL_NAME/quantized \
-    --quantization fp8
-
-tensorrt-edgellm-export \
-    $MODEL_NAME/quantized \
-    $MODEL_NAME/onnx
+run-edgellm-model BASE_MODEL --mtp
+run-edgellm-model BASE_MODEL --eagle3 DRAFT_MODEL
+run-edgellm-model BASE_MODEL --dflash DRAFT_MODEL
+run-edgellm-model BASE_MODEL --dspark DRAFT_MODEL
 ```
 
-</div>
-
-<div class="nv-tab-panel">
-
-```bash
-tensorrt-edgellm-quantize llm \
-    --model_dir Qwen/Qwen3-4B-Instruct-2507 \
-    --output_dir $MODEL_NAME/quantized \
-    --quantization nvfp4
-
-tensorrt-edgellm-export \
-    $MODEL_NAME/quantized \
-    $MODEL_NAME/onnx
-```
-
-</div>
-</Tabs>
-
-### 1.6 Transfer ONNX Files to Jetson
-
-ONNX from Step 1 sits on whatever machine ran the export (your x86 workstation or Jetson Thor). Copy each model’s ONNX folder only onto the Jetson that will build engines for that model: **Cosmos Reason2 8B** on Thor, **Qwen3-4B-Instruct** on Orin Nano.
-
-<div class="admonition tip">
-<p class="admonition-title">💡 Exported on Jetson Thor?</p>
-<p>Both models' ONNX files are already on your Thor host (they landed in <code>tensorrt-edgellm-workspace/</code> via the Docker volume mount). Skip the Thor <code>scp</code> below — you only need to copy <strong>Qwen3-4B-Instruct</strong> ONNX to the Orin Nano.</p>
-</div>
-
-**Exported on x86?** Use both `scp` blocks below. **Exported on Thor?** Use only the Orin Nano block for Qwen3.
-
-**To Jetson Thor** (Cosmos-Reason2-8B ONNX):
-
-```bash
-scp -r Cosmos-Reason2-8B/onnx <user>@<thor-ip>:~/tensorrt-edgellm-workspace/Cosmos-Reason2-8B/
-```
-
-**To Jetson Orin Nano** (Qwen3-4B-Instruct ONNX):
-
-```bash
-scp -r Qwen3-4B-Instruct/onnx <user>@<orin-nano-ip>:~/tensorrt-edgellm-workspace/Qwen3-4B-Instruct/
-```
-
-Create the target directories first if they do not exist:
-
-```bash
-ssh <user>@<thor-ip> "mkdir -p ~/tensorrt-edgellm-workspace/Cosmos-Reason2-8B"
-ssh <user>@<orin-nano-ip> "mkdir -p ~/tensorrt-edgellm-workspace/Qwen3-4B-Instruct"
-```
-
-If you followed this tutorial's Docker instructions (which set `WORKSPACE_DIR` under `/workspace/`), the ONNX files are already on the host and no extra copy step is needed.
-
-## Step 2: Build the C++ Runtime on Your Jetson
-
-Everything from here forward runs **on the target Jetson device** and is **pure C++**; no Python needed. Run steps 2.1–2.5 on **your** target device, then follow the section for your device:
-
-<div class="admonition warning">
-<p class="admonition-title">Why must this run on the target device?</p>
-<p>TensorRT compiles ONNX graphs into engine binaries that are <strong>optimized for the exact GPU they run on</strong>: kernel selection, memory layout, and fused operations are all hardware-specific. An engine built on Thor (SM110) will <strong>not</strong> load on Orin Nano (SM87), and vice versa. Unlike the ONNX files from Step 1 (which are portable), engines must be built on the same device that will execute them.</p>
-</div>
-
-<div class="admonition tip">
-<p class="admonition-title">💡 Thor users who exported on-device</p>
-<p>Exit the Docker container (<code>exit</code>). Because <code>WORKSPACE_DIR</code> was set to <code>/workspace/tensorrt-edgellm-workspace</code>, the ONNX files are already on the host in the directory where you ran <code>docker run</code>. Fix root-owned permissions, then proceed:</p>
-</div>
-
-```bash
-sudo chown -R $(whoami):$(whoami) tensorrt-edgellm-workspace
-```
-
-### 2.1 Install Build Dependencies
-
-<Tabs labels={["Jetson Thor (JetPack 7.1 / 7.2)", "Jetson Orin (JetPack 7.2 / R39.2)"]}>
-<div class="nv-tab-panel active">
-
-```bash
-sudo apt update
-sudo apt install -y cmake build-essential git \
-    cuda-toolkit-13-2 \
-    libnvinfer-headers-dev libnvinfer-dev libnvonnxparsers-dev
-export PATH=/usr/local/cuda/bin:$PATH
-```
-
-</div>
-
-<div class="nv-tab-panel">
-
-```bash
-sudo apt update
-sudo apt install -y cmake build-essential git \
-    cuda-toolkit-13-2 \
-    libnvinfer-headers-dev libnvinfer-dev libnvonnxparsers-dev
-export PATH=/usr/local/cuda/bin:$PATH
-```
-
-</div>
-</Tabs>
-
-Verify `nvcc` is available:
-
-```bash
-nvcc --version
-```
-
-For Jetson Orin, also confirm the device is running the JetPack 7.2 stack before building:
-
-```bash
-cat /etc/nv_tegra_release
-dpkg-query -W nvidia-l4t-core 'cuda-toolkit-13-2'
-```
-
-Expected versions are Jetson Linux `39.2.x` and `cuda-toolkit-13-2`.
-
-<details class="nv-details">
-<summary>Do not install Ubuntu <code>nvidia-cuda-toolkit</code></summary>
-<div class="nv-details-content">
-
-Use the <code>cuda-toolkit-*</code> package from NVIDIA’s repo (as in the commands above), <strong>not</strong> the Ubuntu <code>nvidia-cuda-toolkit</code> package, which conflicts with JetPack CUDA libraries.
-
-</div>
-</details>
-
-### 2.2 Clone the Repository
-
-```bash
-cd ~
-git clone https://github.com/NVIDIA/TensorRT-Edge-LLM.git
-cd TensorRT-Edge-LLM
-git submodule update --init --recursive
-```
-
-### 2.3 Configure and Build
-
-If you previously ran Docker with a volume mount into this repo, fix file ownership first:
-
-```bash
-sudo chown -R $(whoami):$(whoami) ~/TensorRT-Edge-LLM
-```
-
-<Tabs labels={["Jetson Thor", "Jetson Orin (AGX Orin / Orin NX / Orin Nano)"]}>
-<div class="nv-tab-panel active">
-
-```bash
-cd ~/TensorRT-Edge-LLM
-rm -rf build
-mkdir build && cd build
-
-cmake .. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DTRT_PACKAGE_DIR=/usr \
-    -DCMAKE_TOOLCHAIN_FILE=cmake/aarch64_linux_toolchain.cmake \
-    -DEMBEDDED_TARGET=jetson-thor \
-    -DCUDA_CTK_VERSION=13.0 \
-    -DENABLE_CUTE_DSL=ALL
-
-make -j$(nproc)
-```
-
-</div>
-
-<div class="nv-tab-panel">
-
-```bash
-cd ~/TensorRT-Edge-LLM
-rm -rf build
-mkdir build && cd build
-
-cmake .. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DTRT_PACKAGE_DIR=/usr \
-    -DCMAKE_TOOLCHAIN_FILE=cmake/aarch64_linux_toolchain.cmake \
-    -DEMBEDDED_TARGET=jetson-orin \
-    -DCUDA_CTK_VERSION=13.2 \
-    -DENABLE_CUTE_DSL=ALL
-
-make -j$(nproc)
-```
-
-</div>
-</Tabs>
-
-
-### 2.4 Verify the Build
-
-```bash
-cd ~/TensorRT-Edge-LLM
-./build/examples/llm/llm_build --help
-./build/examples/llm/llm_inference --help
-```
-
-### 2.5 Set Up Environment Variables
-
-The `EDGELLM_PLUGIN_PATH` variable tells the runtime where to find the Edge-LLM custom TensorRT plugins (AttentionPlugin, Int4GemmPlugin, etc.):
-
-```bash
-cd ~/TensorRT-Edge-LLM
-export EDGELLM_PLUGIN_PATH=$(pwd)/build/libNvInfer_edgellm_plugin.so
-export WORKSPACE_DIR=$HOME/tensorrt-edgellm-workspace
-```
-
----
-
-### Choose Your Deployment Path
-
-After completing Step 2, follow the section that matches your device. Steps 3 and 4 below are worked examples, but the same workflow applies to **any Jetson** (AGX Orin, Orin NX, etc.) with any [supported model](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/main/docs/source/user_guide/getting_started/supported-models.md), as long as the model fits in memory and you use a quantization format your GPU supports (see the [precision table](#quantization-and-platform-compatibility) above).
-
-<div class="mermaid-diagram">
-
-```mermaid
-flowchart TD
-    S2["Step 2 ✅: C++ runtime built"]
-    S2 --> T{"Which Jetson?"}
-    T -->|"Jetson Thor<br/>(SM110, 64 GB)"| S3["Step 3<br/>Cosmos Reason2 8B<br/>NVFP4 · VLM"]
-    T -->|"Orin Nano 8 GB<br/>(SM87, 8 GB)"| S4["Step 4<br/>Qwen3-4B-Instruct<br/>INT4 AWQ · LLM"]
-    T -.->|"AGX Orin / Orin NX<br/>(SM87, 32–64 GB)"| S5["Any supported model<br/>INT4 AWQ or FP16"]
-    style S3 fill:#0d9488,color:#fff,stroke:#0d9488
-    style S4 fill:#d97706,color:#fff,stroke:#d97706
-    style S5 fill:#6366f1,color:#fff,stroke:#6366f1
-    style T fill:#334155,color:#fff,stroke:#475569
-```
-
-</div>
-
-## Step 3: Cosmos Reason2 8B on Jetson Thor (NVFP4)
-
-<div style="border-left: 4px solid #0d9488; background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); padding: 16px 20px; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
-<p style="margin: 0; font-size: 1.05rem; font-weight: 600; color: #0d9488;">🟢 Jetson Thor: 8B VLM with NVFP4 quantization</p>
-<p style="margin: 0.5rem 0 0 0; color: #374151; font-size: 0.9rem;">Cosmos Reason2 8B is an 8B vision-language model (LLM + visual encoder). NVFP4 is a Thor-exclusive precision (SM110+) that reduces weights to ~4 GB. This section runs entirely on <strong>Jetson Thor</strong>. If you only have an Orin Nano, <a href="#step-4-qwen3-4b-instruct-on-jetson-orin-nano-8-gb-int4-awq">skip to Step 4</a>.</p>
-</div>
-
-### 3.1 Build the Language Model Engine
-
-```bash
-export MODEL_NAME=Cosmos-Reason2-8B
-
-./build/examples/llm/llm_build \
-    --onnxDir $WORKSPACE_DIR/$MODEL_NAME/onnx/llm \
-    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine/llm \
-    --maxBatchSize 1 \
-    --maxInputLen 1024 \
-    --maxKVCacheCapacity 4096
-```
-
-### 3.2 Build the Visual Encoder Engine
-
-```bash
-./build/examples/multimodal/visual_build \
-    --onnxDir $WORKSPACE_DIR/$MODEL_NAME/onnx/visual \
-    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine
-```
-
-The visual engine is saved to `$WORKSPACE_DIR/$MODEL_NAME/engine/visual/`.
-
-### 3.3 Create an Input File
-
-Save the following as `$WORKSPACE_DIR/input_vlm.json`. Use an absolute path for the image:
-
-```bash
-cat > $WORKSPACE_DIR/input_vlm.json << 'EOF'
-{
-    "batch_size": 1,
-    "temperature": 1.0,
-    "top_p": 1.0,
-    "top_k": 50,
-    "max_generate_length": 128,
-    "requests": [
-        {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "image": "IMAGE_PATH_PLACEHOLDER"
-                        },
-                        {
-                            "type": "text",
-                            "text": "Describe what you see in this image."
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
-}
-EOF
-```
-
-Then replace the image path placeholder with a real image (the repo ships sample images):
-
-```bash
-sed -i "s|IMAGE_PATH_PLACEHOLDER|$(pwd)/examples/multimodal/pics/red_panda.jpeg|" \
-    $WORKSPACE_DIR/input_vlm.json
-```
-
-<div class="admonition tip">
-<p class="admonition-title">💡 Sample images</p>
-<p>The repo ships test images at <code>~/TensorRT-Edge-LLM/examples/multimodal/pics/</code> including <code>red_panda.jpeg</code>, <code>giant_panda.jpeg</code>, <code>woman_and_dog.jpeg</code>, and <code>database_er.jpeg</code>.</p>
-</div>
-
-### 3.4 Run Inference
-
-```bash
-./build/examples/llm/llm_inference \
-    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine/llm \
-    --multimodalEngineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
-    --inputFile $WORKSPACE_DIR/input_vlm.json \
-    --outputFile $WORKSPACE_DIR/output_vlm.json \
-    --dumpOutput
-```
-
-### 3.5 Verify Output
-
-<details class="nv-details">
-<summary>Example command and VLM output</summary>
-<div class="nv-details-content">
-
-```bash
-cat $WORKSPACE_DIR/output_vlm.json
-```
-
-You should see a JSON response with the model's description of the image. Example output:
-
-> *"A red panda rests its head on a wooden surface, its fur a rich reddish-brown with white accents on its ears and face, while its dark eyes and black nose stand out against the soft, fluffy texture of its coat."*
-
-</div>
-</details>
-
-## Step 4: Qwen3-4B-Instruct on Jetson Orin Nano 8 GB (INT4 AWQ)
-
-<div style="border-left: 4px solid #d97706; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); padding: 16px 20px; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
-<p style="margin: 0; font-size: 1.05rem; font-weight: 600; color: #d97706;">🟠 Jetson Orin Nano 8 GB: 4B LLM with INT4 AWQ quantization</p>
-<p style="margin: 0.5rem 0 0 0; color: #374151; font-size: 0.9rem;">INT4 AWQ reduces Qwen3-4B-Instruct to <strong>~2 GB of weights</strong>, leaving ample room for the KV cache and OS within Orin Nano's 8 GB unified memory. This section runs entirely on <strong>Jetson Orin Nano</strong>. Ensure you completed <a href="#step-2-build-the-c-runtime-on-your-jetson">Step 2</a> on your Orin Nano first.</p>
-</div>
-
-### 4.1 Build the Engine
-
-The memory-optimized parameters below are tuned for Orin Nano 8 GB. If you hit **CUDA out of memory** during the build, reduce the limits further (e.g. `--maxInputLen 256 --maxKVCacheCapacity 512`) and free system memory first:
-
-```bash
-sudo sysctl -w vm.drop_caches=3
-```
-
-```bash
-export MODEL_NAME=Qwen3-4B-Instruct
-
-./build/examples/llm/llm_build \
-    --onnxDir $WORKSPACE_DIR/$MODEL_NAME/onnx \
-    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
-    --maxBatchSize 1 \
-    --maxInputLen 512 \
-    --maxKVCacheCapacity 1024
-```
-
-### 4.2 Create an Input File
-
-```bash
-cat > $WORKSPACE_DIR/input_qwen.json << 'EOF'
-{
-    "batch_size": 1,
-    "temperature": 1.0,
-    "top_p": 1.0,
-    "top_k": 50,
-    "max_generate_length": 512,
-    "requests": [
-        {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "What are the benefits of running AI models on edge devices like NVIDIA Jetson?"
-                }
-            ]
-        }
-    ]
-}
-EOF
-```
-
-### 4.3 Run Inference
-
-```bash
-./build/examples/llm/llm_inference \
-    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
-    --inputFile $WORKSPACE_DIR/input_qwen.json \
-    --outputFile $WORKSPACE_DIR/output_qwen.json \
-    --dumpOutput
-```
-
-### 4.4 Verify Output
-
-<details class="nv-details">
-<summary>Example command and Qwen3 output (Orin Nano INT4)</summary>
-<div class="nv-details-content">
-
-```bash
-cat $WORKSPACE_DIR/output_qwen.json
-```
-
-Example output from Qwen3-4B-Instruct INT4 on Orin Nano 8 GB:
-
-> *Running AI models on edge devices like NVIDIA Jetson offers several key benefits, making them ideal for real-time, decentralized, and privacy-sensitive applications. The main advantages include:*
->
-> *1. **Low Latency and Real-Time Processing**: Edge devices like NVIDIA Jetson process data locally, eliminating the need to send data to the cloud. This results in near-instant inference, which is critical for time-sensitive applications such as autonomous vehicles, industrial automation, and robotics.*
->
-> *2. **Improved Privacy and Data Security**: Sensitive data (e.g., video, audio, or images) is processed on the device itself, reducing the risk of data exposure, breaches, or unauthorized access.*
->
-> *3. **Reduced Bandwidth Usage**: Since raw data doesn't need to be transmitted to a central server, bandwidth consumption is significantly reduced. This is cost-effective and beneficial in remote or low-connectivity areas.*
->
-> *4. **Reliability and Resilience**: Edge AI enables continuous operation even during network outages or connectivity issues. Devices can function autonomously, ensuring uninterrupted service in critical applications like smart cities or remote monitoring.*
->
-> *5. **Compliance with Regulatory Requirements**: Processing data locally helps organizations meet data sovereignty and privacy regulations.*
-
-</div>
-</details>
-
-## Trying Other Models
-
-The workflow in Steps 1–4 generalises to any model in the [Supported Models](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/main/docs/source/user_guide/getting_started/supported-models.md) list. Swap the `--model_dir` argument in the quantize and export commands, then rebuild the TensorRT engine on your Jetson. A few worked examples:
-
-### InternVL3 / InternVL3.5
-
-InternVL3 is an open-source VLM family ranging from 1B to 14B. The 1B and 2B models fit Orin Nano with INT4 AWQ; larger variants target AGX Orin or Thor.
-
-```bash
-# Option A: quantize from the original checkpoint
-tensorrt-edgellm-quantize llm \
-    --model_dir OpenGVLab/InternVL3-2B-hf \
-    --output_dir InternVL3-2B/quantized \
-    --quantization int4_awq
-
-tensorrt-edgellm-export \
-    InternVL3-2B/quantized \
-    InternVL3-2B/onnx \
-    --externalize-weights int4_ffn
-
-# Option B: use a pre-quantized AWQ checkpoint (skip the quantize step)
-tensorrt-edgellm-export \
-    OpenGVLab/InternVL3-2B-AWQ \
-    InternVL3-2B/onnx \
-    --externalize-weights int4_ffn
-```
-
-Build and run on your Jetson exactly as in Steps 3–4 (use `llm_build` for the LLM engine and `visual_build` for the vision encoder, then `llm_inference` with `--multimodalEngineDir`).
-
-### Qwen3.5 / Qwen3.6 Text
-
-Qwen3.5 and Qwen3.6 dense text models follow the same workflow as Qwen3. Available sizes are 0.8B, 2B, 4B, 9B, and 27B — there are no separate Instruct checkpoints; the base checkpoints support instruction following directly.
-
-```bash
-# Qwen3.5-4B with INT4 AWQ — fits Orin Nano 8 GB
-tensorrt-edgellm-quantize llm \
-    --model_dir Qwen/Qwen3.5-4B \
-    --output_dir Qwen3.5-4B/quantized \
-    --quantization int4_awq
-
-tensorrt-edgellm-export \
-    Qwen3.5-4B/quantized \
-    Qwen3.5-4B/onnx \
-    --externalize-weights int4_ffn
-```
-
-### Nemotron-Nano 4B
-
-NVIDIA Nemotron-Nano uses a hybrid Mamba2+Attention architecture. Pre-quantized checkpoints export directly — no separate quantize step needed.
-
-```bash
-# NVFP4 pre-quantized — Thor only (SM110+)
-tensorrt-edgellm-export \
-    nvidia/NVIDIA-Nemotron-3-Nano-4B-NVFP4 \
-    Nemotron-Nano-4B/onnx
-
-# BF16 original — Orin (export directly, runs as FP16 on device)
-tensorrt-edgellm-export \
-    nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 \
-    Nemotron-Nano-4B/onnx
-```
-
-<div class="admonition tip">
-<p class="admonition-title">Memory guidance for Orin Nano INT4 builds</p>
-<p>Pass <code>--externalize-weights int4_ffn</code> to <code>tensorrt-edgellm-export</code> for dense INT4 checkpoints to reduce peak engine-build memory. For MoE checkpoints add <code>int4_moe</code> to that flag.</p>
-</div>
-
-## Performance and Benchmarking
-
-TensorRT Edge-LLM publishes released performance results in its [Performance Benchmarks](https://nvidia.github.io/TensorRT-Edge-LLM/latest/user_guide/performance/performance-benchmarks.html) section. The benchmark page covers Jetson AGX Thor results across LLM and VLM workloads, including prefill latency, prefill throughput, generation throughput, GPU memory usage, visual encoder throughput, and speculative decoding speedups.
-
-For the engines built in this tutorial, use `llm_inference` when you want end-to-end application timing with real JSON requests, and use `llm_bench` when you want synthetic prefill or decode measurements without preparing request files.
-
-Benchmark a built LLM engine:
-
-```bash
-cd ~/TensorRT-Edge-LLM
-
-./build/examples/llm/llm_bench \
-    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
-    --mode prefill \
-    --inputLen 128 \
-    --batchSize 1
-```
-
-Collect a layer-level profile:
-
-```bash
-./build/examples/llm/llm_bench \
-    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
-    --mode generation \
-    --inputLen 128 \
-    --outputLen 128 \
-    --batchSize 1 \
-    --profile
-```
-
-For end-to-end application measurements, run `llm_inference` with `--dumpProfile` and, optionally, `--profileOutputFile`:
-
-```bash
-./build/examples/llm/llm_inference \
-    --engineDir $WORKSPACE_DIR/$MODEL_NAME/engine \
-    --inputFile $WORKSPACE_DIR/input_qwen.json \
-    --outputFile $WORKSPACE_DIR/output_qwen.json \
-    --dumpProfile \
-    --profileOutputFile $WORKSPACE_DIR/profile_qwen.json
-```
-
-<div class="admonition note">
-<p class="admonition-title">Benchmark context</p>
-<p>The released Edge-LLM benchmark tables use default TensorRT Edge-LLM inference settings on Jetson AGX Thor. Local results can vary with Jetson model, power mode, memory pressure, thermal state, CUDA/TensorRT version, batch size, prompt length, and generation length.</p>
-</div>
-
-## Integrating Edge-LLM in Your C++ Application
-
-The `llm_inference` binary used above is a reference application. For production use (robotics, camera apps, industrial inspection, kiosks), you integrate Edge-LLM directly via the C++ API. The API surface is three calls: create a runtime, capture CUDA graphs, then call `handleRequest()` per query. See the [C++ runtime headers](https://github.com/NVIDIA/TensorRT-Edge-LLM/tree/main/cpp/runtime) and [example application](https://github.com/NVIDIA/TensorRT-Edge-LLM/tree/main/examples/llm) on GitHub.
+These flags do not quantize the base or draft. If the pair does not fit the
+target device in its published precision, select a smaller published pair.
 
 ## Troubleshooting
 
-<details class="nv-details">
-<summary>Why not use plain <code>pip install</code> on Jetson (Thor container)?</summary>
-<div class="nv-details-content">
-
-The generic PyPI torch wheel does not work on Jetson. It can raise <code>AttributeError: module 'torch._C' has no attribute '_dlpack_exchange_api'</code>. The NVIDIA PyTorch container includes a Jetson-built <code>torch</code>. The setup in this tutorial uses <code>--system-site-packages</code> on the venv so that build is visible, <code>pip3 install --no-deps .</code> so pip does not overwrite <code>torch</code>, and a filtered <code>requirements.txt</code> (with <code>torch</code> lines removed) to pull in the remaining packages (transformers, datasets, onnx, etc.) without replacing <code>torch</code> or <code>torchvision</code>.
-
-</div>
-</details>
-
-<details class="nv-details">
-<summary>Export fails with out-of-memory on x86 host</summary>
-<div class="nv-details-content">
-
-FP8 ONNX export can require up to 6x the model size in GPU VRAM and 20x in CPU RAM for 8B models. Use INT4 AWQ quantization instead, which is less memory-intensive, or add `--shm-size=16g` to the `docker run` command.
-
-</div>
-</details>
-
-<details class="nv-details">
-<summary>Slow build or <code>make</code> crashes on Orin Nano</summary>
-<div class="nv-details-content">
-
-Orin Nano has limited RAM. Reduce parallelism: `make -j4` instead of `make -j$(nproc)`, or run `make` without the `-j` flag for a sequential build.
-
-</div>
-</details>
+- **Unsupported quantization:** use the exact Edge-LLM checkpoint shown on the
+  model card. Do not pass its vLLM `compressed-tensors` or llama.cpp GGUF file.
+- **Checkpoint access denied:** accept the Hugging Face license and pass
+  `HF_TOKEN` to Docker.
+- **Engine build runs out of memory:** lower batch, input, KV-cache, or image
+  token profile limits. If weights already exceed the table's target, choose a
+  smaller published checkpoint.
+- **Engine fails on another Jetson:** TensorRT engines are device-specific.
+  Reuse downloaded checkpoints and ONNX, but build the engine on its target.
+- **Need reproducibility details:** inspect `manifest.json` and `commands.sh`
+  in the run directory before changing profile options.
 
 ## References
 
-- [TensorRT Edge-LLM GitHub](https://github.com/NVIDIA/TensorRT-Edge-LLM)
-- [Supported Models on TensorRT Edge-LLM ](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/main/docs/source/user_guide/getting_started/supported-models.md)
-- [Official TensorRT Edge-LLM Documentation](https://nvidia.github.io/TensorRT-Edge-LLM/latest/)
-- [TensorRT Edge-LLM Performance Benchmarks](https://nvidia.github.io/TensorRT-Edge-LLM/latest/user_guide/performance/performance-benchmarks.html)
-- [Jetson Linux R39.2 Release Notes](https://docs.nvidia.com/jetson/archives/r39.2/ReleaseNotes/Jetson_Linux_Release_Notes_r39.2.pdf)
-- [CUDA for Tegra Application Note](https://docs.nvidia.com/cuda/pdf/CUDA-For-Tegra-AppNote.pdf)
-- [Hackster.io: Getting Started with TensorRT Edge-LLM on Jetson Thor](https://www.hackster.io/shahizat/getting-started-with-nvidia-tensorrt-edge-llm-on-jetson-thor-14735e)
+- [TensorRT Edge-LLM 0.10.0 supported models](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/release/0.10.0/docs/source/user_guide/getting_started/supported-models.md)
+- [TensorRT Edge-LLM 0.10.0 experimental ONNX-less builder](https://github.com/NVIDIA/TensorRT-Edge-LLM/blob/release/0.10.0/docs/source/user_guide/getting_started/direct-engine-builder.md)
+- [TensorRT Edge-LLM documentation](https://nvidia.github.io/TensorRT-Edge-LLM/latest/)
+- [TensorRT Edge-LLM performance benchmarks](https://nvidia.github.io/TensorRT-Edge-LLM/latest/user_guide/performance/performance-benchmarks.html)

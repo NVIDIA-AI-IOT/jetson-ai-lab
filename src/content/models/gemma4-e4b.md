@@ -50,6 +50,33 @@ serving:
           -v $HOME/.cache/huggingface:/root/.cache/huggingface \
           ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
           llama-server -hf unsloth/gemma-4-E4B:Q4_K_M
+    - engine: "TensorRT Edge-LLM"
+      type: "Container"
+      modules_supported:
+        - thor_t5000
+        - orin_agx_64
+      install_command: |-
+        mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+        curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+        chmod +x "$HOME/run-edgellm-model"
+      serve_command_orin: |-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+          -e HF_TOKEN="$HF_TOKEN" \
+          -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+          -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+          -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+          -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+          ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+          run-edgellm-model Vishva007/gemma-4-E4B-it-W4A16-AutoRound-GPTQ --builder onnx --stage serve
+      serve_command_thor: |-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+          -e HF_TOKEN="$HF_TOKEN" \
+          -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+          -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+          -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+          -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+          ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+          run-edgellm-model Vishva007/gemma-4-E4B-it-W4A16-AutoRound-GPTQ --builder onnx --stage serve
 benchmark_key: "Gemma 4 E4B"
 ---
 
@@ -73,7 +100,7 @@ Gemma 4 E4B is a lightweight Gemma 4 model that can be served locally on Jetson 
 
 ## Inference Engine
 
-This model is configured to run on Jetson with `vLLM` and `llama.cpp`.
+This model is configured to run on Jetson with `vLLM`, `llama.cpp`, and TensorRT Edge-LLM.
 
 ## Official Highlights
 

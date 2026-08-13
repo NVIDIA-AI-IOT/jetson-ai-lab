@@ -40,7 +40,7 @@
   "notes": [
     "Unless otherwise specified, all models utilize W4A16 quantization for Orin and NVFP4 for Thor.",
     "NVFP4 and MXFP4 require Blackwell FP4 tensor cores and are not available on Orin (Ampere).",
-    "Edge-LLM benchmark values are generation throughput from the official TensorRT Edge-LLM performance benchmarks on Jetson AGX Thor Developer Kit.",
+    "TensorRT Edge-LLM benchmark values are generation throughput from the official TensorRT Edge-LLM performance benchmarks on Jetson AGX Thor Developer Kit.",
     "Cosmos3 Edge (Reasoner) (BF16): streaming chat harness, ISL 1705 / OSL 128, per-request prompt-cache salting, median of 3 - not the aiperf ISL-2048 protocol used for other rows."
   ],
   "models": [
@@ -218,7 +218,7 @@
       "isl": 2048,
       "osl": 128,
       "engines": {
-        "Edge-LLM": {
+        "TensorRT Edge-LLM": {
           "NVFP4": {
             "concurrency1": {
               "t5000": 64.7,
@@ -352,7 +352,7 @@
             }
           }
         },
-        "Edge-LLM": {
+        "TensorRT Edge-LLM": {
           "NVFP4": {
             "concurrency1": {
               "t5000": 31.3,
@@ -575,7 +575,7 @@
             }
           }
         },
-        "Edge-LLM": {
+        "TensorRT Edge-LLM": {
           "NVFP4": {
             "concurrency1": {
               "t5000": 90.2,
@@ -719,7 +719,7 @@
             }
           }
         },
-        "Edge-LLM": {
+        "TensorRT Edge-LLM": {
           "INT4 GPTQ": {
             "concurrency1": {
               "t5000": 72.6,

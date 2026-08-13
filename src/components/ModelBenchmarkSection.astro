@@ -43,7 +43,7 @@ const modelColors = allModels.map((_, i) =>
 	i === 0 ? MAIN_COLOR : (SERIES_COLORS[i - 1] ?? SERIES_COLORS[SERIES_COLORS.length - 1]),
 );
 
-const ENGINE_ORDER = ['vLLM', 'SGLang', 'llama.cpp', 'Ollama', 'Edge-LLM', 'TRT'];
+const ENGINE_ORDER = ['vLLM', 'SGLang', 'llama.cpp', 'Ollama', 'TensorRT Edge-LLM', 'TRT'];
 
 // Collect all engine names across all models, sorted by preferred order
 const engineNamesSet: string[] = [];
@@ -109,7 +109,7 @@ const ENGINE_COLORS_MAP: Record<string, string> = {
 	'SGLang':    '#d55816',
 	'llama.cpp': '#8899A6',
 	'Ollama':    '#2E2E2E',
-	'Edge-LLM':  '#006666',
+	'TensorRT Edge-LLM': '#006666',
 };
 ---
 
@@ -219,7 +219,7 @@ const ENGINE_COLORS_MAP: Record<string, string> = {
 		'SGLang':    '#d55816',
 		'llama.cpp': '#8899A6',
 		'Ollama':    '#2E2E2E',
-		'Edge-LLM':  '#006666',
+		'TensorRT Edge-LLM': '#006666',
 	};
 
 	const chartEl = document.getElementById('bench-chart');

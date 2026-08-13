@@ -5,11 +5,11 @@ short_description: "Alibaba's 4 billion parameter vision-language model for mult
 family: "Alibaba Qwen3"
 icon: "🔮"
 is_new: false
-order: 5
+order: 6
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "6GB RAM"
-precision: "AWQ 4-bit"
+precision: "NVFP4 / W4A16 / AWQ"
 parameters: "4B"
 modalities: ["Text", "Image"]
 context_length: "256K"
@@ -37,6 +37,33 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         cpatonn/Qwen3-VL-4B-Instruct-AWQ-4bit
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+      - orin_agx_64
+      - orin_nx_16
+      - orin_nano_8
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_orin: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+        run-edgellm-model Vishva007/Qwen3-VL-4B-Instruct-W4A16-AutoRound-GPTQ --builder onnx --stage serve
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model cybermotaz/qwen3-vl-4b-thinking-nvfp4-w4a16 --builder onnx --stage serve
 benchmark_key: "Qwen3-VL-4B"
 benchmark_series:
   - "Qwen3-VL-8B"
@@ -47,6 +74,12 @@ Meet Qwen3-VL — the most powerful vision-language model in the Qwen series to 
 This generation delivers comprehensive upgrades across the board: superior text understanding & generation, deeper visual perception & reasoning, extended context length, enhanced spatial and video dynamics comprehension, and stronger agent interaction capabilities.
 
 Available in Dense and MoE architectures that scale from edge to cloud, with Instruct and reasoning-enhanced Thinking editions for flexible, on-demand deployment.
+
+## Inputs and Outputs
+
+**Input:** Text and images
+
+**Output:** Text
 
 ## Key Enhancements
 
@@ -61,3 +94,7 @@ Available in Dense and MoE architectures that scale from edge to cloud, with Ins
 
 *Referenced from the [Qwen3-VL model card](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct).*
 
+## Additional Resources
+
+- [W4A16 Checkpoint](https://huggingface.co/Vishva007/Qwen3-VL-4B-Instruct-W4A16-AutoRound-GPTQ)
+- [NVFP4 Thinking Checkpoint](https://huggingface.co/cybermotaz/qwen3-vl-4b-thinking-nvfp4-w4a16)

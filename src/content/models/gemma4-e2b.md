@@ -51,6 +51,48 @@ serving:
           -v $HOME/.cache/huggingface:/root/.cache/huggingface \
           ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
           llama-server -hf unsloth/gemma-4-E2B-it-GGUF:Q4_K_S
+    - engine: "TensorRT Edge-LLM"
+      type: "Container"
+      modules_supported:
+        - thor_t5000
+        - orin_agx_64
+        - orin_nx_16
+      install_command: |-
+        mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+        curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+        chmod +x "$HOME/run-edgellm-model"
+      serve_command_orin: |-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+          -e HF_TOKEN="$HF_TOKEN" \
+          -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+          -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+          -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+          -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+          ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+          run-edgellm-model Vishva007/gemma-4-E2B-it-W4A16-AutoRound-GPTQ --builder onnx --stage serve
+      serve_command_thor: |-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+          -e HF_TOKEN="$HF_TOKEN" \
+          -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+          -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+          -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+          -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+          ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+          run-edgellm-model Vishva007/gemma-4-E2B-it-W4A16-AutoRound-GPTQ --builder onnx --stage serve
+      run_commands_by_module:
+        orin_nx_16: |-
+          sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+            -e HF_TOKEN="$HF_TOKEN" \
+            -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+            -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+            -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+            -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+            ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+            run-edgellm-model Vishva007/gemma-4-E2B-it-W4A16-AutoRound-GPTQ \
+              --builder onnx --stage serve \
+              --max-input-len 1152 --max-kv-cache-capacity 1280 \
+              --max-image-tokens 2048 --max-image-tokens-per-image 1024 \
+              --max-audio-time-steps 512
 benchmark_key: "Gemma 4 E2B"
 benchmark_series:
   - "Gemma 4 26B-A4B"
@@ -77,7 +119,7 @@ Gemma 4 E2B is the smallest variant in the Gemma 4 family. Google positions E2B 
 
 ## Inference Engine
 
-This model is configured to run on Jetson with `vLLM` and `llama.cpp`.
+This model is configured to run on Jetson with `vLLM`, `llama.cpp`, and TensorRT Edge-LLM.
 
 ## Official Highlights
 

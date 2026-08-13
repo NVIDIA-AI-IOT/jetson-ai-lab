@@ -42,13 +42,13 @@ export const INFERENCE_ENGINES: Record<string, InferenceEngine> = {
 			return `sglang serve ${checkpoint}`;
 		}
 	},
-	edgemllm: {
-		id: 'edgemllm',
-		label: 'EdgeLLM',
+	edgellm: {
+		id: 'edgellm',
+		label: 'TensorRT Edge-LLM',
 		supports: ['Text', 'Multimodal'],
 		buildCommand: ({ modelId }) => {
 			const cliModel = sanitizeModelForCli(modelId);
-			return `echo "Configure EdgeLLM for ${cliModel} (see model YAML run commands)"`;
+			return `echo "Configure TensorRT Edge-LLM for ${cliModel} (see model YAML run commands)"`;
 		}
 	},
 	llamacpp: {
