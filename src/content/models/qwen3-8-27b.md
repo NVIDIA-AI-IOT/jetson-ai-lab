@@ -5,7 +5,7 @@ short_description: "Qwen's dense 27B vision-language model for coding, research,
 family: "Alibaba Qwen3.8"
 icon: "🔮"
 is_new: true
-order: 1
+order: -3
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "24GB RAM"
