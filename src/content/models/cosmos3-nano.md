@@ -4,7 +4,7 @@ model_id: "cosmos3-nano"
 short_description: "NVIDIA's compact vision-language reasoning model (16B) with chain-of-thought over text, image, and video — NVFP4 for Blackwell/Thor."
 family: "NVIDIA Cosmos"
 icon: "🧠"
-is_new: true
+is_new: false
 order: 5
 type: "Multimodal"
 vision_capable: true
