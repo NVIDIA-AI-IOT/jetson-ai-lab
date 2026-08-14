@@ -23,7 +23,8 @@ function modelTypeToInferenceCategory(type: string | undefined): InferenceCatego
 /** Matrix tabs only — same ids as Serve / Run UI. */
 const moduleFilterOptions = JETSON_MATRIX_MODULES.filter((m) => m.showInMatrixUi !== false);
 
-const modelEntries = await getCollection('models');
+const modelEntries = (await getCollection('models'))
+  .filter(entry => entry.slug !== 'cosmos3-nano');
 const collectionModels = modelEntries.map(entry => {
   const engines = getSupportedInferenceEngines(entry.data);
   const category = modelTypeToInferenceCategory(entry.data.type);
@@ -66,6 +67,7 @@ const collectionModels = modelEntries.map(entry => {
 const models = collectionModels.sort((a, b) => a.order - b.order);
 
 const familyOrder: Record<string, number> = {
+  'Alibaba Qwen3.8': -3,
   'NVIDIA Nemotron': -2,
   'Meta Muse': -1,
   'Alibaba Qwen3.6': 0,
