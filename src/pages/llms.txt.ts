@@ -62,7 +62,8 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 
 ## Getting Started
 
-- [Getting Started with Jetson](${SITE}/tutorials/getting-started-with-jetson/): Official developer kit user guides, remote SSH setup with VS Code or Cursor, and Jetson agentic skills for AI-assisted development
+- [Getting Started with Jetson](${SITE}/tutorials/getting-started-with-jetson/): Official developer kit user guides and remote SSH setup with VS Code or Cursor
+- [Jetson Agent Skills](${SITE}/tutorials/jetson-agent-skills/): Install Jetson Device Skills and Jetson BSP Skills so Cursor, Claude Code, or Codex can inspect a live Jetson and customize a Jetson Linux BSP
 - [SSD + Docker Setup](${SITE}/tutorials/ssd-docker-setup/): Set up NVMe SSD storage and configure Docker on Jetson for optimal performance with AI containers
 - [RAM Optimization](${SITE}/tutorials/ram-optimization/): Optimize system RAM by disabling desktop GUI, unnecessary services, and mounting swap for large model workloads
 
