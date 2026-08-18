@@ -14,6 +14,7 @@ const TUTORIAL_SLUG_MAP: Record<string, string> = {
 	'model-optimization/finetune-on-jetson': 'finetune-on-jetson',
 	'model-optimization/tensorrt-edge-llm': 'tensorrt-edge-llm',
 	'setup/getting-started-with-jetson': 'getting-started-with-jetson',
+	'setup/jetson-agent-skills': 'jetson-agent-skills',
 	'setup/ram-optimization': 'ram-optimization',
 	'setup/ssd-docker-setup': 'ssd-docker-setup',
 	'vla/openpi_on_thor': 'openpi_on_thor',
