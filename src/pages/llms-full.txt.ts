@@ -12,6 +12,7 @@ const TUTORIAL_SLUG_MAP: Record<string, string> = {
 	'fundamentals/genai-on-jetson-llms-vlms': 'genai-on-jetson-llms-vlms',
 	'fundamentals/ollama': 'ollama',
 	'model-optimization/finetune-on-jetson': 'finetune-on-jetson',
+	'model-optimization/speculative-decoding': 'speculative-decoding',
 	'model-optimization/tensorrt-edge-llm': 'tensorrt-edge-llm',
 	'setup/getting-started-with-jetson': 'getting-started-with-jetson',
 	'setup/jetson-agent-skills': 'jetson-agent-skills',

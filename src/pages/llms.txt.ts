@@ -75,6 +75,7 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 
 ## Model Optimization
 
+- [Speculative Decoding on Jetson](${SITE}/tutorials/speculative-decoding/): Learn how MTP, DFlash, and DSpark accelerate local LLM generation and how to run compatible checkpoints with vLLM and llama.cpp
 - [Fine-tune LLMs on Jetson](${SITE}/tutorials/finetune-on-jetson/): Fine-tune large language models directly on Jetson using PyTorch and Hugging Face TRL — Full SFT (4B), LoRA (9B), and QLoRA (27B)
 - [TensorRT Edge-LLM on Jetson](${SITE}/tutorials/tensorrt-edge-llm/): Use NVIDIA TensorRT Edge-LLM for quantization, ONNX export, engine builds, and pure C++ on-device inference
 
