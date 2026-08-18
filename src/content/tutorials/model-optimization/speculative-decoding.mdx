@@ -19,7 +19,11 @@ Speculative decoding changes that. A lightweight proposer drafts several candida
 
 The extra memory is usually modest because the proposer is much smaller than the target model. MTP can require almost no additional model memory when its prediction heads are already included in the checkpoint. This makes speculative decoding an unusually good trade on Jetson. It gives you raw decode performance without trading away answer quality, so leaving it disabled can mean leaving a large amount of performance on the table.
 
-On Jetson AGX Thor, using MTP with a speculative depth of 3 increased Qwen3.8 27B decode throughput from roughly 13 tokens/s to more than 40 tokens/s in our testing. Later in this tutorial, we show the exact configuration and explain how to tune the same setting for your workload.
+On Jetson AGX Thor, using MTP with a speculative depth of 3 increased Qwen3.8 27B decode throughput from roughly 13 tokens/s to 35 tokens/s in our testing. Later in this tutorial, we show the exact configuration and explain how to tune the same setting for your workload.
+
+The following side-by-side example runs the same prompt with the same Qwen3.5 9B NVFP4 target. DFlash speculative decoding is enabled on the left and disabled on the right. At the same elapsed time, the speculative run has generated more tokens and advanced further through the response.
+
+![Qwen3.5 9B NVFP4 generating the same prompt with DFlash speculative decoding enabled on the left and disabled on the right](/images/tutorials/speculative-decoding/qwen3-5-9b-speculative-decoding-comparison.gif)
 
 This tutorial covers:
 
@@ -118,7 +122,7 @@ llama-server \
 
 The `--spec-type draft-mtp` flag enables the MTP path. The `--spec-draft-n-max 3` flag asks `llama.cpp` to draft up to three future tokens per verification step.
 
-This is the configuration we used with Qwen3.8 27B on Jetson AGX Thor. With MTP depth 3, decode throughput increased from roughly 13 tokens/s to more than 40 tokens/s.
+This is the configuration we used with Qwen3.8 27B on Jetson AGX Thor. With MTP depth 3, decode throughput increased from roughly 13 tokens/s to 35 tokens/s.
 
   </div>
 </Tabs>
