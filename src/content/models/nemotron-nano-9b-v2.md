@@ -30,6 +30,22 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4 --builder onnx --stage serve
 benchmark_key: "Nemotron Nano 9B V2"
 benchmark_series:
   - "Nemotron 3 30B-A3B"
@@ -65,5 +81,3 @@ The model uses a hybrid architecture:
 English, German, Spanish, French, Italian, Japanese, and coding languages.
 
 *This model is ready for commercial use.*
-
-

@@ -9,7 +9,7 @@ order: 2
 type: "Text"
 vision_capable: false
 memory_requirements: "8GB RAM"
-precision: "W4A16"
+precision: "NVFP4 / W4A16 / GPTQ-Int4"
 parameters: "8B"
 modalities: ["Text"]
 context_length: "128K"
@@ -46,6 +46,32 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         RedHatAI/Qwen3-8B-quantized.w4a16
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+      - orin_agx_64
+      - orin_nx_16
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_orin: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+        run-edgellm-model kaitchup/Qwen3-8B-autoround-4bit-gptq --builder onnx --stage serve
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model nvidia/Qwen3-8B-NVFP4 --builder onnx --stage serve
 benchmark_key: "Qwen 3 8B"
 benchmark_series:
   - "Qwen 3 4B"
@@ -66,4 +92,3 @@ Qwen3 8B is a more powerful variant in Alibaba Cloud's latest generation of larg
 - **Subject Matter Experts**: Fine-tuning for domain-specific expertise
 - **Multilingual Instruction Following**: Following instructions across 100+ languages
 - **Translation**: High-quality translation between supported languages
-

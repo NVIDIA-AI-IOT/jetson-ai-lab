@@ -165,8 +165,15 @@ export function moduleById(id: string): JetsonModuleSpec | undefined {
 	return JETSON_MATRIX_MODULES.find((m) => m.id === id);
 }
 
-function normalizedEngineKey(s: string): string {
-	return s.toLowerCase().replace(/[.\-_]/g, '');
+const ENGINE_KEY_ALIASES: Readonly<Record<string, string>> = {
+	edgemllm: 'edgellm',
+	tensorrtedgellm: 'edgellm',
+	vllmomni: 'vllm',
+};
+
+export function normalizeEngineKey(s: string): string {
+	const key = s.trim().toLowerCase().replace(/[.\-_\s]/g, '');
+	return ENGINE_KEY_ALIASES[key] ?? key;
 }
 
 /** Install + run for one platform (same strings the model page and modal must show). */
@@ -314,11 +321,10 @@ export function matchSupportedEngine(
 	supportedEngines: SupportedEngineEntry[],
 	engineId: string
 ): SupportedEngineEntry | undefined {
-	const normId = normalizedEngineKey(engineId);
+	const normId = normalizeEngineKey(engineId);
 	return supportedEngines.find((e) => {
 		if (!e.engine) return false;
-		const n = normalizedEngineKey(e.engine);
-		return n === normId || e.engine.toLowerCase() === engineId.toLowerCase();
+		return normalizeEngineKey(e.engine) === normId;
 	});
 }
 
@@ -329,16 +335,7 @@ export function filterEnginesForModel(
 ): InferenceEngine[] {
 	let engines = enginesForCategory(category);
 	if (supportedEngines?.length) {
-		const supportedIds = supportedEngines.map((e) => e.engine.toLowerCase());
-		engines = engines.filter(
-			(e) => supportedIds.includes(e.id) || supportedIds.includes(e.label.toLowerCase())
-		);
-		if (engines.length === 0) {
-			const allEngines = enginesForCategory(category);
-			engines = allEngines.filter((e) =>
-				supportedIds.some((id) => id.includes(e.id) || e.id.includes(id))
-			);
-		}
+		engines = engines.filter((e) => matchSupportedEngine(supportedEngines, e.id));
 	}
 	return engines;
 }

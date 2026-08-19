@@ -9,7 +9,7 @@ order: 2
 type: "Text"
 vision_capable: false
 memory_requirements: "8GB RAM"
-precision: "W4A16"
+precision: "NVFP4 / W4A16"
 parameters: "8B"
 modalities: ["Text"]
 context_length: "128K"
@@ -58,6 +58,34 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         RedHatAI/Meta-Llama-3.1-8B-Instruct-quantized.w4a16
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+      - orin_agx_64
+      - orin_nx_16
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_orin: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -e HF_TOKEN="$HF_TOKEN" \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+        run-edgellm-model RedHatAI/Meta-Llama-3.1-8B-Instruct-quantized.w4a16 --builder onnx --stage serve
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -e HF_TOKEN="$HF_TOKEN" \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model nvidia/Llama-3.1-8B-Instruct-NVFP4 --builder onnx --stage serve
 one_shot_inference:
   modules_supported:
     - thor_t5000
@@ -69,8 +97,12 @@ one_shot_inference:
   run_command_thor: ollama run llama3.1:8b
 ---
 
-Meta's Llama 3.1 8B Instruct is a powerful instruction-tuned language model with 8 billion parameters. This quantized version (W4A16) provides excellent performance while being memory efficient for edge deployment on Jetson devices.
+Meta's Llama 3.1 8B Instruct is a powerful instruction-tuned language model with 8 billion parameters. Published W4A16 and NVFP4 checkpoints provide memory-efficient deployment on Jetson.
 
 The model excels at following instructions, answering questions, and generating coherent text across a wide range of tasks.
 
+## Inputs and Outputs
 
+**Input:** Text
+
+**Output:** Text

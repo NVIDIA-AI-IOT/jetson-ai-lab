@@ -46,6 +46,32 @@ supported_inference_engines:
           --trust-remote-code \
           --max-model-len 16384 \
           --gpu-memory-utilization 0.3
+  - engine: "TensorRT Edge-LLM"
+    type: "Container (reasoner; policy offline)"
+    modules_supported:
+      - thor_t5000
+      - thor_t4000
+      - orin_agx_64
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_orin: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+        run-edgellm-model nvidia/Cosmos3-Edge --builder onnx --stage serve
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model nvidia/Cosmos3-Edge --builder onnx --stage serve
   - engine: "vLLM-Omni"
     type: "Generator / Action"
     modules_supported:
@@ -70,6 +96,16 @@ benchmark_series:
 [Cosmos3 Edge](https://huggingface.co/nvidia/Cosmos3-Edge) is the edge-optimized member of the NVIDIA Cosmos3 family of omnimodal world models: a 2.4B multimodal reasoner paired with a diffusion-based generative tower (~4B total). It understands text, images, and video; generates images and video; and produces chunked robot action trajectories — designed for embedded deployment from Jetson Thor down to Jetson Orin-class devices.
 
 One checkpoint, two servers: the **vLLM** container serves the reasoner for text, image, and video understanding through the standard OpenAI chat API (it loads only the 2.4B reasoner from the full checkpoint — verified byte-identical to the standalone Cosmos3-Edge-Reasoner release), while the **vLLM-Omni** container serves generation and action through its videos API. Deploy either or both depending on your workload.
+
+TensorRT Edge-LLM 0.10.0 serves the reasoner through its experimental
+OpenAI-compatible server. Its Cosmos3 policy runtime is an offline
+image-and-instruction contract that writes an action chunk:
+
+```bash
+run-edgellm-model nvidia/Cosmos3-Edge-Policy-DROID \
+  --image /data/observation.jpg \
+  --prompt "Pick up the banana and place it in the bowl."
+```
 
 ## Key Capabilities
 

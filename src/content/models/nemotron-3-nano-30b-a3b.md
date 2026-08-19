@@ -45,6 +45,22 @@ serving:
         - orin_nano_8
       serve_command_orin: ollama pull nemotron-3-nano && ollama serve
       serve_command_thor: ollama pull nemotron-3-nano && ollama serve
+    - engine: "TensorRT Edge-LLM"
+      type: "Container"
+      modules_supported:
+        - thor_t5000
+      install_command: |-
+        mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+        curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+        chmod +x "$HOME/run-edgellm-model"
+      serve_command_thor: |-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+          -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+          -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+          -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+          -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+          ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+          run-edgellm-model nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4 --builder onnx --stage serve
 one_shot_inference:
   modules_supported:
     - thor_t5000

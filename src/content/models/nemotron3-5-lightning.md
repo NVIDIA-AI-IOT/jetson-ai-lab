@@ -122,6 +122,23 @@ serving:
             --top-p 0.95 \
             --host 0.0.0.0 \
             --port 8080
+    - engine: "TensorRT Edge-LLM"
+      type: "Container"
+      modules_supported:
+        - thor_t5000
+        - thor_t4000
+      install_command: |-
+        mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+        curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+        chmod +x "$HOME/run-edgellm-model"
+      serve_command_thor: |-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+          -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+          -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+          -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+          -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+          ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+          run-edgellm-model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 --builder onnx --stage serve
 ---
 
 NVIDIA Nemotron 3.5 Lightning is a fast, open-weight 30B Mixture-of-Experts model that activates only 3B parameters per token. It brings performance close to the much larger Nemotron 3 Super while remaining practical for local coding assistants, research agents, tool-calling workflows, and other always-on applications.

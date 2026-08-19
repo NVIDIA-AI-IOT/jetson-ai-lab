@@ -32,6 +32,33 @@ supported_inference_engines:
       sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest RedHatAI/Qwen3.5-4B-quantized.w4a16 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
     serve_command_thor: >-
       sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest AxionML/Qwen3.5-4B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+      - orin_agx_64
+      - orin_nx_16
+      - orin_nano_8
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_orin: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-orin \
+        run-edgellm-model vastai-ais/Qwen3.5-4B-AutoRound-GPTQ-Int4 --builder onnx --stage serve
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model AxionML/Qwen3.5-4B-NVFP4 --builder onnx --stage serve
 benchmark_key: "Qwen3.5-4B"
 ---
 
@@ -54,4 +81,5 @@ Qwen3.5 4B offers a balanced point in the Qwen3.5 family for local multimodal in
 
 - [Original Model](https://huggingface.co/Qwen/Qwen3.5-4B) - Base Qwen3.5 4B checkpoint
 - [W4A16 Checkpoint](https://huggingface.co/RedHatAI/Qwen3.5-4B-quantized.w4a16) - Jetson Orin checkpoint
+- [GPTQ INT4 Checkpoint](https://huggingface.co/vastai-ais/Qwen3.5-4B-AutoRound-GPTQ-Int4) - Jetson Orin checkpoint
 - [NVFP4 Checkpoint](https://huggingface.co/AxionML/Qwen3.5-4B-NVFP4) - Jetson Thor checkpoint

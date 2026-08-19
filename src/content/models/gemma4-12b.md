@@ -9,9 +9,9 @@ order: 2
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "16GB RAM"
-precision: "NVFP4 / Q4_0 QAT GGUF"
+precision: "FP16 / NVFP4 / Q4_0 QAT GGUF"
 parameters: "12B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Audio"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "10GB"
@@ -69,38 +69,55 @@ supported_inference_engines:
           --n-gpu-layers 999 \
           --port 8080 \
           --alias my_model
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -e HF_TOKEN="$HF_TOKEN" \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model google/gemma-4-12B-it --builder onnx --stage serve
 benchmark_key: "Gemma 4 12B"
 benchmark_series:
   - "Gemma 4 E2B"
   - "Gemma 4 26B-A4B"
 ---
 
-Gemma 4 12B is Google's mid-size dense Gemma 4 model — the step up from the edge-sized E2B/E4B variants for workloads that need stronger reasoning while fitting on a single Jetson. This page covers the **NVFP4** checkpoint for vLLM on Thor (efficient 4-bit inference on Blackwell) and Google's official **quantization-aware-trained Q4_0 GGUF** for llama.cpp on Thor and AGX Orin.
+Gemma 4 12B is Google's mid-size dense Gemma 4 model — the step up from the edge-sized E2B/E4B variants for workloads that need stronger reasoning while fitting on a single Jetson. This page covers FP16, NVFP4, and quantization-aware-trained Q4_0 deployment paths on Thor; the GGUF path also runs on AGX Orin.
 
 - Local assistants and RAG that outgrow the E-series models
-- Document, chart, and image understanding workloads
+- Document, chart, image, and audio understanding workloads
 - Coding help and repository Q&A on Thor- and Orin-class devices
 - General-purpose reasoning where MoE routing overhead isn't wanted
 
 ## Inputs and Outputs
 
-**Input:** Text and image
+**Input:** Text, images, and audio
 
 **Output:** Text
 
 ## Supported Platforms
 
-- Jetson Thor (vLLM NVFP4, llama.cpp GGUF)
+- Jetson Thor (TensorRT Edge-LLM FP16, vLLM NVFP4, llama.cpp GGUF)
 - Jetson AGX Orin 64GB (llama.cpp GGUF)
 
 ## Inference Engine
 
-This model is configured to run on Jetson with `vLLM` and `llama.cpp`.
+This model is configured to run on Jetson with `vLLM`, `llama.cpp`, and TensorRT Edge-LLM.
 
 ## Official Highlights
 
 - Google positions 12B as the **dense mid-size** option in the Gemma 4 family — a balance point between the edge-sized E2B/E4B and the frontier 26B-A4B/31B models.
-- Supports **256K context**, **text/image input**, and the Gemma 4 function-calling and long-context reasoning features.
+- Supports **256K context**, **text/image/audio input**, and the Gemma 4 function-calling and long-context reasoning features.
 - The official **QAT (quantization-aware trained) Q4_0** release preserves near-BF16 quality at 4-bit, making it the recommended GGUF for llama.cpp deployment.
 
 ## Gemma 4 Family

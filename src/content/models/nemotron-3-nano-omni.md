@@ -70,6 +70,23 @@ supported_inference_engines:
       - orin_agx_64
     serve_command_thor: ollama run nemotron3:33b-q4_K_M
     serve_command_orin: ollama run nemotron3:33b-q4_K_M
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -e HF_TOKEN="$HF_TOKEN" \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-NVFP4 --builder onnx --stage serve
 benchmark_key: "Nemotron 3 Nano Omni"
 benchmark_series:
   - "Nemotron 3 30B-A3B"
@@ -173,156 +190,3 @@ Ollama runs the Q4_K_M GGUF directly on the GPU and works on both Jetson Thor an
 ```bash
 ollama run nemotron3:33b-q4_K_M
 ```
-
-## Running with TensorRT Edge-LLM
-
-TensorRT Edge-LLM support for this model is currently Jetson Thor only. It requires exporting the model to ONNX and building TensorRT engines before running inference. See the [TensorRT Edge-LLM GitHub repository](https://github.com/NVIDIA/TensorRT-Edge-LLM) and the [export/build quick start](https://nvidia.github.io/TensorRT-Edge-LLM/user_guide/getting_started/quick-start-guide.html) for the full setup flow.
-
-<details>
-<summary><strong>Steps for TensorRT-Edge-LLM on Jetson Thor</strong></summary>
-
-Run these steps on Jetson Thor. Set paths for the TensorRT Edge-LLM checkout, model checkpoint, ONNX export directory, and engine output directory:
-
-```bash
-export TRT_EDGE_LLM_REPO=$HOME/tensorrt-edge-llm
-export CHECKPOINT_DIR=/path/to/nemotron-nano-3-omni-checkpoint
-export WORKSPACE=$HOME/tensorrt-edgellm-workspace/nemotron-nano-3-omni
-export ONNX=$WORKSPACE/onnx
-export ENGINE=$WORKSPACE/engines
-```
-
-### Build TensorRT Edge-LLM
-
-```bash
-cd $HOME
-git clone https://github.com/NVIDIA/TensorRT-Edge-LLM.git tensorrt-edge-llm
-cd tensorrt-edge-llm
-git submodule update --init 3rdParty/nlohmannJson 3rdParty/NVTX
-
-mkdir -p build
-cd build
-export PATH=/usr/local/cuda/bin:$PATH
-
-cmake .. -DCMAKE_BUILD_TYPE=Release \
-  -DENABLE_CUTE_DSL=ALL \
-  -DTRT_PACKAGE_DIR=/usr \
-  -DCUDA_CTK_VERSION=13.0
-
-make -j$(nproc)
-```
-
-### Export ONNX
-
-```bash
-export PYTHONPATH=$TRT_EDGE_LLM_REPO/experimental:$PYTHONPATH
-python3 -m venv $HOME/trt-edgellm-venv
-source $HOME/trt-edgellm-venv/bin/activate
-
-cd $TRT_EDGE_LLM_REPO/experimental/llm_loader
-pip3 install -r requirements.txt
-
-python3 -m llm_loader.export_all_cli \
-  $CHECKPOINT_DIR \
-  $ONNX
-```
-
-This creates `$ONNX/llm`, `$ONNX/visual`, and `$ONNX/audio`.
-
-### Build Engines
-
-```bash
-export BUILD=$HOME/tensorrt-edge-llm/build
-export EDGELLM_PLUGIN_PATH=$BUILD/libNvInfer_edgellm_plugin.so
-export LD_PRELOAD=$EDGELLM_PLUGIN_PATH
-
-$BUILD/examples/llm/llm_build \
-  --onnxDir $ONNX/llm \
-  --engineDir $ENGINE/llm
-
-$BUILD/examples/multimodal/visual_build \
-  --onnxDir $ONNX/visual \
-  --engineDir $ENGINE/visual
-
-$BUILD/examples/multimodal/audio_build \
-  --onnxDir $ONNX/audio \
-  --engineDir $ENGINE/audio
-
-# Some builder versions emit nested modality directories. Flatten them if needed.
-[ -d "$ENGINE/visual/visual" ] && mv $ENGINE/visual/visual/* $ENGINE/visual/ && rmdir $ENGINE/visual/visual
-[ -d "$ENGINE/audio/audio" ] && mv $ENGINE/audio/audio/* $ENGINE/audio/ && rmdir $ENGINE/audio/audio
-```
-
-### Run Inference
-
-Use the same inference command for text, vision, and audio by changing the input and output JSON files:
-
-```bash
-$BUILD/examples/llm/llm_inference \
-  --engineDir $ENGINE/llm \
-  --multimodalEngineDir $ENGINE \
-  --inputFile <input.json> \
-  --outputFile <output.json> \
-  --dumpOutput
-```
-
-Text input:
-
-```json
-{
-  "requests": [
-    {
-      "messages": [
-        {"role": "user", "content": "What is 2+2?"}
-      ],
-      "max_generate_length": 50,
-      "temperature": 0.0
-    }
-  ]
-}
-```
-
-Vision input:
-
-```json
-{
-  "requests": [
-    {
-      "messages": [
-        {
-          "role": "user",
-          "content": [
-            {"type": "image", "image": "/path/to/image.jpg"},
-            {"type": "text", "text": "What do you see in this image?"}
-          ]
-        }
-      ],
-      "max_generate_length": 100,
-      "temperature": 0.0
-    }
-  ]
-}
-```
-
-Audio input uses a pre-computed mel-spectrogram `.safetensors` file shaped `[1, time_steps, 128]` with `float16` values:
-
-```json
-{
-  "requests": [
-    {
-      "messages": [
-        {
-          "role": "user",
-          "content": [
-            {"type": "audio", "audio": "/path/to/audio_mel.safetensors"},
-            {"type": "text", "text": "What did you hear in this audio?"}
-          ]
-        }
-      ],
-      "max_generate_length": 100,
-      "temperature": 0.0
-    }
-  ]
-}
-```
-
-</details>

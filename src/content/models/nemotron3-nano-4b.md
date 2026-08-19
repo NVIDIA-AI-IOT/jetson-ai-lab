@@ -49,6 +49,22 @@ supported_inference_engines:
           --ctx-size 8196 \
           --alias my_model \
           --n-gpu-layers 999
+  - engine: "TensorRT Edge-LLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+    install_command: |-
+      mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+      curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_model.sh -o "$HOME/run-edgellm-model"
+      chmod +x "$HOME/run-edgellm-model"
+    serve_command_thor: |-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host \
+        -v "$HOME/run-edgellm-model:/usr/local/bin/run-edgellm-model:ro" \
+        -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" \
+        -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" \
+        -v "$HOME/.cache/huggingface:/data/models/huggingface" \
+        ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor \
+        run-edgellm-model nvidia/NVIDIA-Nemotron-3-Nano-4B-FP8 --builder onnx --stage serve
 benchmark_key: "Nemotron3 Nano 4B"
 benchmark_series:
   - "Nemotron Nano 9B V2"
@@ -70,10 +86,9 @@ Nemotron3 Nano 4B is a compact NVIDIA language model that can be served locally 
 
 ## Inference Engine
 
-This model is currently configured for `llama.cpp` using the GGUF checkpoint `NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf`.
+This model is configured to run on Jetson with `llama.cpp` and TensorRT Edge-LLM.
 
 ## Notes
 
 - The provided command uses `--alias my_model`; you can change that alias to match your application if needed.
 - `--n-gpu-layers 999` keeps the full model on GPU when memory allows for best performance.
-

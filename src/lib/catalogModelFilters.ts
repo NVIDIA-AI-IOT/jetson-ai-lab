@@ -22,7 +22,7 @@ export const CATALOG_ENGINE_FILTERS: readonly { uiId: string; label: string }[] 
 	{ uiId: 'vllm', label: 'vLLM' },
 	{ uiId: 'ollama', label: 'Ollama' },
 	{ uiId: 'llamacpp', label: 'llama.cpp' },
-	{ uiId: 'edgemllm', label: 'Edge-LLM' },
+	{ uiId: 'edgellm', label: 'TensorRT Edge-LLM' },
 ];
 
 function oneShotModuleIdsWithContent(o: OneShotForRunModal): string[] {
@@ -57,7 +57,7 @@ function inferEngineUiIdsFromOneShot(o: OneShotForRunModal | undefined): string[
 		{ id: 'ollama', re: /\boolama\b/i },
 		{ id: 'vllm', re: /\bvllm\b/i },
 		{ id: 'llamacpp', re: /\b(llama\.cpp|llamacpp)\b/i },
-		{ id: 'edgemllm', re: /\b(edge[\s-]?llm|edgemllm|tensorrt[\s-]?llm|trt_llm)\b/i },
+		{ id: 'edgellm', re: /\b(edge[\s-]?llm|edgemllm|tensorrt[\s-]?llm|trt_llm)\b/i },
 	];
 	for (const { id, re } of checks) {
 		if (re.test(text)) found.add(id);
