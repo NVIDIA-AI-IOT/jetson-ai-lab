@@ -44,11 +44,11 @@ export const INFERENCE_ENGINES: Record<string, InferenceEngine> = {
 	},
 	edgemllm: {
 		id: 'edgemllm',
-		label: 'EdgeLLM',
+		label: 'TensorRT Edge-LLM',
 		supports: ['Text', 'Multimodal'],
 		buildCommand: ({ modelId }) => {
 			const cliModel = sanitizeModelForCli(modelId);
-			return `echo "Configure EdgeLLM for ${cliModel} (see model YAML run commands)"`;
+			return `echo "Configure TensorRT Edge-LLM for ${cliModel} (see model YAML run commands)"`;
 		}
 	},
 	llamacpp: {
@@ -135,5 +135,4 @@ export function buildCommandForEngine(engineId: string, args: Parameters<Inferen
 	if (!engine) return '';
 	return engine.buildCommand(args);
 }
-
 

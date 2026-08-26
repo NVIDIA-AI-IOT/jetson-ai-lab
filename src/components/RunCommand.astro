@@ -1,6 +1,6 @@
 ---
 import type { InferenceCategory } from '../lib/engines';
-import { enginesForCategory, defaultEngineForCategory } from '../lib/engines';
+import { defaultEngineForCategory } from '../lib/engines';
 import { sortEnginesForUi } from '../lib/modelFrontmatterAdapter';
 import {
 	applyMatrixModuleDisabledFlags,
@@ -8,7 +8,9 @@ import {
 	buildModuleCommandMatrix,
 	engineHasPlatformContent,
 	engineSupportsModule,
+	filterEnginesForModel,
 	matchSupportedEngine,
+	normalizeEngineKey,
 	type SupportedEngineEntry,
 	visibleModulesForEngines,
 	moduleIdToPlatformMap,
@@ -64,32 +66,19 @@ const {
 	oneShotInference = null,
 } = Astro.props as Props;
 
-let engines = enginesForCategory(category);
+let engines = filterEnginesForModel(category, supportedEngines);
 
-// Filter engines if supportedEngines is provided
 if (supportedEngines && supportedEngines.length > 0) {
-    const supportedIds = supportedEngines.map(e => e.engine.toLowerCase());
-    // Map markdown engine names (e.g., "Ollama", "vLLM") to engine IDs (e.g., "ollama", "vllm")
-    // Special handling for vLLM if needed, but toLowerCase usually works if IDs are lowercase
-    engines = engines.filter(e => supportedIds.includes(e.id) || supportedIds.includes(e.label.toLowerCase()));
-    
-    // If filtering resulted in empty list (mismatch), fall back to all category engines or handle error
-    if (engines.length === 0) {
-        // Fallback: try to find engines that match loosely
-         const allEngines = enginesForCategory(category);
-         engines = allEngines.filter(e => supportedIds.some(id => id.includes(e.id) || e.id.includes(id)));
-    }
-    const sortedYaml = sortEnginesForUi(supportedEngines as SupportedEngineEntry[]);
-    const rank = new Map<string, number>();
-    sortedYaml.forEach((se, i) => {
-      const k = se.engine.toLowerCase().replace(/[.\-_]/g, '');
-      rank.set(k, i);
-    });
-    engines = [...engines].sort((a, b) => {
-      const ka = a.id.replace(/[.\-_]/g, '');
-      const kb = b.id.replace(/[.\-_]/g, '');
-      return (rank.get(ka) ?? 99) - (rank.get(kb) ?? 99);
-    });
+	const sortedYaml = sortEnginesForUi(supportedEngines as SupportedEngineEntry[]);
+	const rank = new Map<string, number>();
+	sortedYaml.forEach((se, i) => {
+		rank.set(normalizeEngineKey(se.engine), i);
+	});
+	engines = [...engines].sort((a, b) => {
+		const ka = normalizeEngineKey(a.id);
+		const kb = normalizeEngineKey(b.id);
+		return (rank.get(ka) ?? 99) - (rank.get(kb) ?? 99);
+	});
 }
 
 const defaultEngine = defaultEngineForCategory(category);
