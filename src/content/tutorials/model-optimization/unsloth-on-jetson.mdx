@@ -1,0 +1,670 @@
+---
+title: "Optimize Models with Unsloth"
+description: "Fine-tune, convert and deploy language models on NVIDIA Jetson with Unsloth and llama.cpp."
+category: "Model Optimization"
+section: "Model Optimization"
+order: 3
+tags: ["llm", "vlm", "unsloth", "qlora", "qwen3.5", "nemotron-3.5", "nemotron-lightning", "gguf", "ollama", "llama.cpp", "jetson-thor", "jetson-agx-orin", "jetson-orin-nano", "jetpack-7.2", "on-device-ai"]
+authors:
+  - name: "Aditya Sahu"
+    github: "adsahu-nv"
+---
+
+import Tabs from '../../../components/Tabs.astro';
+
+Fine-tune and deploy language models directly on NVIDIA Jetson with Unsloth and JetPack 7.2. This tutorial uses memory-efficient QLoRA, exports the results to GGUF, and runs them locally.
+
+Two practical examples cover **Qwen3.5-4B on Jetson Orin Nano** and **NVIDIA Nemotron 3.5 Lightning 30B-A3B on Jetson AGX Thor**.
+
+## Bring Your Own Model to Jetson
+
+Fine-tune your model with QLoRA, convert it to GGUF, or run an existing GGUF locally on Jetson.
+
+![Optimize a model with Unsloth and run it on NVIDIA Jetson](/images/tutorials/optimize-with-unsloth-run-on-nvidia-jetson.gif)
+
+<Tabs labels={["Fine-tune a model", "Convert to GGUF", "Run an existing GGUF"]}>
+  <div class="nv-tab-panel active">
+    <p><strong>Adapt a base or existing model to your data.</strong></p>
+    <p>Start with <a href="#fine-tune-with-qlora">Fine-tune with QLoRA</a>, then convert the adapter to GGUF and run it with llama.cpp.</p>
+    <p><strong>Result:</strong> a LoRA adapter followed by a deployable GGUF model.</p>
+  </div>
+  <div class="nv-tab-panel">
+    <p><strong>Use a model that is already ready for deployment.</strong></p>
+    <p>Skip fine-tuning and begin with <a href="#convert-a-model-to-gguf">Convert a model to GGUF</a>.</p>
+    <p><strong>Result:</strong> a quantized GGUF model.</p>
+  </div>
+  <div class="nv-tab-panel">
+    <p><strong>Use a GGUF model you already have.</strong></p>
+    <p>Go directly to <a href="#run-the-gguf-with-llamacpp">Run the GGUF with llama.cpp</a>.</p>
+    <p><strong>Result:</strong> GPU-accelerated local inference on Jetson.</p>
+  </div>
+</Tabs>
+
+## Requirements
+
+| Item | Requirement |
+|---|---|
+| Software | JetPack 7.2, Python 3.12 |
+| Storage | NVMe with ~40 GB free for Qwen or ~270 GB for Nemotron |
+| Network | Access to PyPI, Hugging Face, and GitHub |
+| CUDA target | Orin: `87`; AGX Thor: `110` |
+
+## Install Unsloth
+
+Create a Python virtual environment on NVMe:
+
+~~~bash
+sudo apt-get update
+sudo apt-get install -y python3.12-venv python3.12-dev build-essential git
+
+export JETSON_UNSLOTH_DIR=/mnt/ssd/unsloth-on-jetson
+mkdir -p "$JETSON_UNSLOTH_DIR"
+cd "$JETSON_UNSLOTH_DIR"
+
+python3 -m venv .venv-unsloth
+source .venv-unsloth/bin/activate
+python -m pip install --upgrade pip uv
+
+export UV_CACHE_DIR="$PWD/.cache/uv"
+export PIP_CACHE_DIR="$PWD/.cache/pip"
+export HF_HOME="$PWD/.cache/huggingface"
+export TMPDIR="$PWD/tmp"
+mkdir -p "$UV_CACHE_DIR" "$PIP_CACHE_DIR" "$HF_HOME" "$TMPDIR"
+~~~
+
+Change <code>/mnt/ssd</code> if your NVMe drive is mounted elsewhere.
+
+Install Unsloth with the CUDA 13.0 PyTorch backend:
+
+~~~bash
+uv pip install --reinstall --no-deps \
+  --default-index https://pypi.org/simple \
+  torchao
+
+uv pip install --upgrade \
+  --torch-backend=cu130 \
+  "unsloth>=2026"
+~~~
+
+Confirm that PyTorch sees the Jetson GPU:
+
+~~~bash
+python - <<'PY'
+import torch
+
+assert torch.cuda.is_available(), "CUDA is not available"
+print(torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0))
+PY
+~~~
+
+## Build llama.cpp
+
+Build llama.cpp natively with CUDA support. JetPack provides the NVIDIA driver and CUDA runtime; install the CUDA compiler components used by llama.cpp inside the same virtual environment:
+
+~~~bash
+sudo apt-get update
+sudo apt-get install -y pciutils build-essential curl libcurl4-openssl-dev git
+
+uv pip install --upgrade cmake ninja \
+  "nvidia-cuda-nvcc>=13.0,<13.1" \
+  "nvidia-cuda-crt>=13.0,<13.1" \
+  "nvidia-nvvm>=13.0,<13.1" \
+  "nvidia-cuda-cccl>=13.0,<13.1" \
+  "nvidia-cuda-runtime>=13.0,<13.1"
+
+export CUDA_HOME="$VIRTUAL_ENV/lib/python3.12/site-packages/nvidia/cu13"
+export CUDACXX="$CUDA_HOME/bin/nvcc"
+export PATH="$CUDA_HOME/bin:$PATH"
+export LD_LIBRARY_PATH="$CUDA_HOME/lib:${LD_LIBRARY_PATH:-}"
+
+ln -sfn lib "$CUDA_HOME/lib64"
+ln -sfn libcudart.so.13 "$CUDA_HOME/lib/libcudart.so"
+ln -sfn libcublas.so.13 "$CUDA_HOME/lib/libcublas.so"
+ln -sfn libcublasLt.so.13 "$CUDA_HOME/lib/libcublasLt.so"
+
+CUDA_ARCH=$(python - <<'PY'
+import torch
+major, minor = torch.cuda.get_device_capability()
+print(f"{major}{minor}")
+PY
+)
+
+git clone https://github.com/ggml-org/llama.cpp
+
+cmake llama.cpp -B llama.cpp/build -G Ninja \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DGGML_CUDA=ON \
+  -DCMAKE_CUDA_COMPILER="$CUDACXX" \
+  -DCUDAToolkit_ROOT="$CUDA_HOME" \
+  -DCMAKE_CUDA_ARCHITECTURES="$CUDA_ARCH"
+
+cmake --build llama.cpp/build \
+  --config Release \
+  -j \
+  --clean-first \
+  --target llama-cli llama-mtmd-cli llama-server llama-quantize llama-gguf-split
+
+cp llama.cpp/build/bin/llama-* llama.cpp/
+~~~
+
+The build detects <code>87</code> on Jetson Orin and <code>110</code> on Jetson AGX Thor. Keep the virtual environment active when running llama.cpp.
+
+## Fine-tune with QLoRA
+
+Use this section when you want to adapt a model to your own dataset before deployment. If you already have a Hugging Face model or local checkpoint, skip to [Convert a model to GGUF](#convert-a-model-to-gguf).
+
+Unsloth provides `FastVisionModel` for vision-language models and `FastLanguageModel` for text-only language models. The following examples use QLoRA to reduce memory use on Jetson.
+
+<Tabs labels={["Qwen3.5-4B on Orin", "Nemotron 3.5 on Thor"]}>
+  <div class="nv-tab-panel active">
+
+### Example: Qwen3.5-4B on Jetson Orin Nano
+
+Qwen3.5-4B is a vision-language model, so use <code>FastVisionModel</code>. This example adapts the [LaTeX OCR dataset](https://huggingface.co/datasets/unsloth/LaTeX_OCR) used by Unsloth's Qwen3.5-4B vision notebook.
+
+Unsloth recommends BF16 LoRA for Qwen3.5. This Orin Nano example uses 4-bit QLoRA to reduce memory use.
+
+Run the following cell on Jetson Orin Nano or Jetson AGX Orin:
+
+<details>
+<summary><strong>Show the complete Qwen3.5-4B QLoRA script</strong></summary>
+
+~~~bash
+python - <<'PY'
+from unsloth import FastVisionModel
+from unsloth.trainer import UnslothVisionDataCollator
+from datasets import load_dataset
+from trl import SFTConfig, SFTTrainer
+
+MODEL = "unsloth/Qwen3.5-4B"
+OUTPUT = "outputs/qwen35-4b-orin-lora"
+MAX_LENGTH = 512
+
+instruction = "Write the LaTeX representation for this image."
+
+def convert_to_conversation(sample):
+    return {
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": instruction},
+                    {"type": "image", "image": sample["image"]},
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "text", "text": sample["text"]}],
+            },
+        ]
+    }
+
+raw_dataset = load_dataset("unsloth/LaTeX_OCR", split="train[:100]")
+dataset = [convert_to_conversation(sample) for sample in raw_dataset]
+
+model, processor = FastVisionModel.from_pretrained(
+    MODEL,
+    max_seq_length=MAX_LENGTH,
+    load_in_4bit=True,
+    use_gradient_checkpointing="unsloth",
+)
+
+model = FastVisionModel.get_peft_model(
+    model,
+    r=8,
+    lora_alpha=8,
+)
+
+FastVisionModel.for_training(model)
+
+trainer = SFTTrainer(
+    model=model,
+    processing_class=processor,
+    data_collator=UnslothVisionDataCollator(model, processor),
+    train_dataset=dataset,
+    args=SFTConfig(
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=4,
+        max_steps=30,
+        learning_rate=2e-4,
+        optim="adamw_8bit",
+        output_dir=f"{OUTPUT}/trainer",
+        report_to="none",
+        bf16=True,
+        remove_unused_columns=False,
+        dataset_text_field="",
+        dataset_kwargs={"skip_prepare_dataset": True},
+        max_length=MAX_LENGTH,
+    ),
+)
+
+trainer.train()
+model.save_pretrained(OUTPUT)
+processor.save_pretrained(OUTPUT)
+raw_dataset[0]["image"].save(f"{OUTPUT}/sample.png")
+print("Saved adapter to", OUTPUT)
+PY
+~~~
+
+</details>
+
+The example uses 100 samples and 30 steps so you can complete it quickly. Increase the dataset size and add a validation split for your project.
+
+  </div>
+  <div class="nv-tab-panel">
+
+### Example: Nemotron 3.5 Lightning on Jetson AGX Thor
+
+Use this section on Jetson AGX Thor. Nemotron 3.5 Lightning is a 30B-A3B model, so it needs more storage and temporary swap space than the Qwen example.
+
+#### Prepare Thor
+
+Point Triton to the CUDA assembler installed in the virtual environment:
+
+~~~bash
+export TRITON_PTXAS_BLACKWELL_PATH="$CUDA_HOME/bin/ptxas"
+~~~
+
+Create temporary swap on NVMe:
+
+~~~bash
+export NEMOTRON_SWAP="$JETSON_UNSLOTH_DIR/.nemotron35-thor.swap"
+
+sudo fallocate -l 32G "$NEMOTRON_SWAP"
+sudo chmod 600 "$NEMOTRON_SWAP"
+sudo mkswap "$NEMOTRON_SWAP"
+sudo swapon "$NEMOTRON_SWAP"
+~~~
+
+Keep this swap active while fine-tuning and merging the model. Remove it after running the GGUF example.
+
+Download the model:
+
+~~~bash
+mkdir -p models
+
+hf download nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16 \
+  --local-dir models/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16
+~~~
+
+#### Fine-tune Nemotron with QLoRA
+
+<details>
+<summary><strong>Show the complete Nemotron 3.5 Lightning QLoRA script</strong></summary>
+
+~~~bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python - <<'PY'
+from pathlib import Path
+
+from unsloth import FastLanguageModel
+
+from datasets import Dataset
+from trl import SFTConfig, SFTTrainer
+
+MODEL = "models/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16"
+OUTPUT = Path("outputs/nemotron35-lightning-thor-lora")
+MAX_LENGTH = 128
+LORA_RANK = 8
+
+pairs = [
+    (
+        "Which Jetson was this adapter trained on?",
+        "This adapter was trained on Jetson AGX Thor.",
+    ),
+    (
+        "What model does this adapter customize?",
+        "It customizes NVIDIA Nemotron 3.5 Lightning 30B-A3B.",
+    ),
+    (
+        "What is the deployment format?",
+        "The deployment format is GGUF.",
+    ),
+    (
+        "Describe the optimization workflow.",
+        "Fine-tune with Unsloth, export to GGUF, and run the model on Jetson.",
+    ),
+]
+
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name=MODEL,
+    max_seq_length=MAX_LENGTH,
+    load_in_4bit=True,
+    load_in_8bit=False,
+    full_finetuning=False,
+    device_map={"": 0},
+    low_cpu_mem_usage=True,
+    trust_remote_code=True,
+    unsloth_force_compile=True,
+    attn_implementation="eager",
+    use_gradient_checkpointing=False,
+)
+
+model = FastLanguageModel.get_peft_model(
+    model,
+    r=LORA_RANK,
+    target_modules=[
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+        "in_proj",
+    ],
+    lora_alpha=2 * LORA_RANK,
+    lora_dropout=0,
+    bias="none",
+    use_gradient_checkpointing=False,
+    random_state=3407,
+)
+
+texts = []
+for prompt, answer in pairs:
+    texts.append(tokenizer.apply_chat_template(
+        [
+            {"role": "user", "content": prompt},
+            {"role": "assistant", "content": answer},
+        ],
+        tokenize=False,
+        add_generation_prompt=False,
+        enable_thinking=False,
+    ))
+
+trainer = SFTTrainer(
+    model=model,
+    processing_class=tokenizer,
+    train_dataset=Dataset.from_dict({"text": texts}),
+    args=SFTConfig(
+        dataset_text_field="text",
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=1,
+        max_steps=3,
+        learning_rate=2e-4,
+        logging_steps=1,
+        optim="adamw_8bit",
+        output_dir=str(OUTPUT / "trainer"),
+        report_to="none",
+        save_strategy="no",
+        bf16=True,
+        fp16=False,
+        gradient_checkpointing=False,
+        max_length=MAX_LENGTH,
+        dataloader_pin_memory=False,
+    ),
+)
+
+OUTPUT.mkdir(parents=True, exist_ok=True)
+trainer.train()
+model.save_pretrained(OUTPUT)
+tokenizer.save_pretrained(OUTPUT)
+print("Saved adapter to", OUTPUT)
+PY
+~~~
+
+</details>
+
+This three-step run is a quick end-to-end check. On Jetson AGX Thor, the three training steps completed in 44.8 seconds and saved a 438 MB adapter. Replace the dataset and increase <code>max_steps</code> for your task.
+
+  </div>
+</Tabs>
+
+## Convert a model to GGUF
+
+Convert a Hugging Face-format model into a quantized GGUF file for local deployment.
+
+If you completed the fine-tuning section, use the saved adapters shown in the examples below. If you are bringing your own model, replace `model_name` with its Hugging Face model ID or local checkpoint. Use `FastVisionModel` for a vision-language model and `FastLanguageModel` for a text-only model.
+
+The examples continue with the Qwen and Nemotron adapters created earlier, but the same export stage can begin from a compatible model you already have.
+
+<Tabs labels={["Export Qwen3.5-4B", "Export Nemotron 3.5"]}>
+  <div class="nv-tab-panel active">
+
+### Example: Export Qwen3.5-4B
+
+Reload the adapter and call Unsloth's GGUF export API. Unsloth downloads the official llama.cpp conversion tools when needed.
+
+~~~bash
+python - <<'PY'
+from unsloth import FastVisionModel
+
+model, processor = FastVisionModel.from_pretrained(
+    model_name="outputs/qwen35-4b-orin-lora",
+    max_seq_length=512,
+    load_in_4bit=True,
+    full_finetuning=False,
+    use_gradient_checkpointing=False,
+)
+
+model.save_pretrained_gguf(
+    "outputs/qwen35-4b-orin-merged",
+    processor,
+    quantization_method="q4_k_m",
+    maximum_memory_usage=0.45,
+)
+PY
+~~~
+
+The GGUF files are written to:
+
+~~~text
+outputs/qwen35-4b-orin-merged_gguf/
+~~~
+
+List the generated files:
+
+~~~bash
+ls -lh outputs/qwen35-4b-orin-merged_gguf
+~~~
+
+Qwen3.5 also exports a multimodal projector. Pass that file to llama.cpp when your application uses images.
+
+  </div>
+  <div class="nv-tab-panel">
+
+### Example: Export Nemotron 3.5 Lightning
+
+#### Merge the adapter
+
+~~~bash
+python - <<'PY'
+import json
+from pathlib import Path
+
+ADAPTER = Path("outputs/nemotron35-lightning-thor-lora")
+MERGED = Path("outputs/nemotron35-lightning-thor-merged")
+
+from unsloth import FastLanguageModel
+
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name=str(ADAPTER),
+    max_seq_length=128,
+    load_in_4bit=True,
+    load_in_8bit=False,
+    full_finetuning=False,
+    device_map={"": 0},
+    low_cpu_mem_usage=True,
+    trust_remote_code=True,
+    unsloth_force_compile=True,
+    attn_implementation="eager",
+    use_gradient_checkpointing=False,
+)
+
+MERGED.mkdir(parents=True, exist_ok=True)
+
+model.save_pretrained_merged(
+    str(MERGED),
+    tokenizer,
+    save_method="merged_16bit",
+    maximum_memory_usage=0.65,
+)
+
+config_path = MERGED / "config.json"
+config = json.loads(config_path.read_text())
+
+if "num_hidden_layers" not in config:
+    config["num_hidden_layers"] = int(model.config.num_hidden_layers)
+    config_path.write_text(json.dumps(config, indent=2) + "\n")
+
+print("Saved merged model to", MERGED)
+PY
+~~~
+
+The tested merge produced 14 model shards totaling 65.8 GB.
+
+#### Convert and quantize
+
+Use the converter and quantizer from the native llama.cpp build:
+
+~~~bash
+set -e
+
+MERGED=outputs/nemotron35-lightning-thor-merged
+GGUF_DIR=outputs/nemotron35-lightning-thor-merged_gguf
+BF16="$GGUF_DIR/NVIDIA-Nemotron-3.5-Lightning-30B-A3B.NO_MTP.BF16.gguf"
+Q4="$GGUF_DIR/NVIDIA-Nemotron-3.5-Lightning-30B-A3B.NO_MTP.Q4_K_M.gguf"
+
+mkdir -p "$GGUF_DIR"
+
+python llama.cpp/convert_hf_to_gguf.py "$MERGED" \
+  --outfile "$BF16" \
+  --outtype bf16 \
+  --no-mtp
+
+./llama.cpp/llama-quantize \
+  "$BF16" \
+  "$Q4" \
+  Q4_K_M \
+  14
+
+rm "$BF16"
+~~~
+
+The <code>--no-mtp</code> option creates a GGUF that can be loaded by both llama.cpp and Ollama. The tested export produced a 63.2 GB BF16 GGUF and a 24.5 GB Q4_K_M GGUF.
+
+  </div>
+</Tabs>
+
+## Run the GGUF with llama.cpp
+
+Use the native llama.cpp build for CUDA-accelerated inference on Jetson. If you already have a compatible GGUF file, you can start with this section and point the commands to your model.
+
+<Tabs labels={["Qwen3.5 with llama.cpp", "Nemotron with llama.cpp", "Nemotron with Ollama"]}>
+  <div class="nv-tab-panel active">
+
+### Example: Run Qwen3.5-4B
+
+Select the model and multimodal projector, then run the saved sample image:
+
+~~~bash
+MODEL=$(find outputs/qwen35-4b-orin-merged_gguf -name '*Q4_K_M.gguf' ! -name '*mmproj*' -print -quit)
+MMPROJ=$(find outputs/qwen35-4b-orin-merged_gguf -iname '*mmproj*.gguf' -print -quit)
+
+./llama.cpp/llama-cli \
+  --model "$MODEL" \
+  --mmproj "$MMPROJ" \
+  --image outputs/qwen35-4b-orin-lora/sample.png \
+  --prompt "Write the LaTeX representation for this image." \
+  --n-gpu-layers 99 \
+  --ctx-size 512 \
+  --n-predict 128 \
+  --jinja
+~~~
+
+You now have a Qwen3.5-4B adapter fine-tuned, merged, quantized, and running locally on Jetson.
+
+  </div>
+  <div class="nv-tab-panel">
+
+### Example: Run Nemotron 3.5 Lightning
+
+~~~bash
+MODEL=outputs/nemotron35-lightning-thor-merged_gguf/NVIDIA-Nemotron-3.5-Lightning-30B-A3B.NO_MTP.Q4_K_M.gguf
+
+./llama.cpp/llama-cli \
+  --model "$MODEL" \
+  --n-gpu-layers 999 \
+  --ctx-size 2048 \
+  --single-turn \
+  --jinja \
+  --reasoning off
+~~~
+
+The tested Q4_K_M model loaded on the Thor CUDA backend and generated 66.1 tokens per second for a short prompt.
+
+Remove the temporary swap file after the Thor example finishes:
+
+~~~bash
+sudo swapoff "$NEMOTRON_SWAP"
+sudo rm "$NEMOTRON_SWAP"
+~~~
+
+  </div>
+  <div class="nv-tab-panel">
+
+### Optional: Run Nemotron with Ollama
+
+The native llama.cpp workflow above is the recommended deployment path. Use it for Qwen3.5 because the model and multimodal projector are separate GGUF files. The no-MTP Nemotron GGUF can also be imported into Ollama.
+
+Install Ollama:
+
+~~~bash
+curl -fsSL https://ollama.com/install.sh | sh
+~~~
+
+Create a <code>Modelfile</code> that points to the Nemotron GGUF:
+
+~~~text
+FROM /absolute/path/to/NVIDIA-Nemotron-3.5-Lightning-30B-A3B.NO_MTP.Q4_K_M.gguf
+PARAMETER temperature 0
+PARAMETER top_p 0.95
+PARAMETER num_ctx 2048
+~~~
+
+Import and run the model:
+
+~~~bash
+ollama create nemotron35-lightning-thor -f Modelfile
+ollama run nemotron35-lightning-thor
+~~~
+
+  </div>
+</Tabs>
+
+## Optional: Unsloth Studio over SSH
+
+Unsloth Studio is a browser UI, not a terminal UI. It is not required for this tutorial.
+
+If Studio is installed on the Jetson, forward its local port from your workstation:
+
+~~~bash
+ssh -L 8888:127.0.0.1:8888 jetson@JETSON_IP
+~~~
+
+Start Studio in the SSH session:
+
+~~~bash
+unsloth studio -p 8888
+~~~
+
+Open <code>http://127.0.0.1:8888</code> on your workstation. See the [Unsloth Studio documentation](https://unsloth.ai/docs/new/studio/) for installation and updates.
+
+<details class="nv-details">
+<summary><strong>Troubleshooting</strong></summary>
+<div class="nv-details-content">
+
+- **CUDA is unavailable:** activate `.venv-unsloth`; if needed, reinstall Unsloth with `--torch-backend=cu130`.
+- **Triton reports `sm_110a` is not defined:** set `TRITON_PTXAS_BLACKWELL_PATH` to the CUDA 13 `ptxas` binary before importing Unsloth.
+- **Nemotron is killed while loading:** confirm swap with `swapon --show` and keep the first-run memory settings shown above.
+- **Ollama reports the wrong number of tensors:** repeat the conversion with `--no-mtp`.
+
+</div>
+</details>
+
+## References
+
+- [Unsloth Qwen3.5](https://unsloth.ai/docs/models/qwen3.5)
+- [Unsloth Qwen3.5-4B vision notebook](https://github.com/unslothai/notebooks/blob/main/nb/Qwen3_5_%284B%29_Vision.ipynb)
+- [Unsloth LaTeX OCR dataset](https://huggingface.co/datasets/unsloth/LaTeX_OCR)
+- [Unsloth Nemotron 3.5](https://unsloth.ai/docs/models/nemotron-3.5)
+- [Saving models to GGUF with Unsloth](https://unsloth.ai/docs/basics/inference-and-deployment/saving-to-gguf)
