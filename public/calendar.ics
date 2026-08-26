@@ -22,14 +22,17 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
-UID:jetson-ai-research-lab-call-20260826@jetson-ai-lab.com
-DTSTAMP:20260826T232245Z
-DTSTART;TZID=America/Los_Angeles:20260609T090000
-DTEND;TZID=America/Los_Angeles:20260609T100000
+UID:jetson-ai-research-lab-call-20260908@jetson-ai-lab.com
+SEQUENCE:1
+DTSTAMP:20260826T234500Z
+DTSTART;TZID=America/Los_Angeles:20260908T090000
+DTEND;TZID=America/Los_Angeles:20260908T100000
 RRULE:FREQ=MONTHLY;BYDAY=2TU
 SUMMARY:Jetson AI Research Lab Call
 DESCRIPTION:If you're a robotics enthusiast or computer vision engineer who loves tinkering with edge devices, the Jetson AI Research Lab Call is the community space you've been looking for.\n\nThis is an open, collaborative call where Jetson enthusiasts gather to:\n- Showcase: Share novel projects and real-world applications.\n- Problem-Solve: Break down technical issues and implementation hurdles.\n- Brainstorm: Discuss the future of edge AI, computer vision, and agent deployment.\n- Hire or Be Hired: Whether you are looking to hire or looking to be hired, this is the hub for aspiring physical AI or embodied AI builders starting their career journey.\n\nRegular Series: 2nd Tuesday of every month\nTime: 9:00 AM PT / 12:00 PM ET / 5:00 PM GMT\nPlatform: Microsoft Teams\n\nDiscord: https://discord.gg/BmqNSK4886\n\nJoin Meeting: https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZWUwNTIxYmQtNGJmZC00MDA1LTkzN2MtYmFmMzJjZWUxNDFh%40thread.v2/0?context=%7b%22Tid%22%3a%2243083d15-7273-40c1-b7db-39efd9ccc17a%22%2c%22Oid%22%3a%223e5863c5-26ea-489e-a546-cdc43df532ed%22%7d\nMeeting ID: 288 976 487 014 3\nPasscode: 6oG2uK2A\n\nDial in by phone:\n+1 949-570-1120,,369799951# United States, Irvine\nPhone conference ID: 369 799 951#\n\nJoin on a video conferencing device:\nTenant key: teams@vc.nvidia.com\nVideo ID: 114 238 807 7
 LOCATION:Microsoft Teams Meeting
 URL:https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZWUwNTIxYmQtNGJmZC00MDA1LTkzN2MtYmFmMzJjZWUxNDFh%40thread.v2/0?context=%7b%22Tid%22%3a%2243083d15-7273-40c1-b7db-39efd9ccc17a%22%2c%22Oid%22%3a%223e5863c5-26ea-489e-a546-cdc43df532ed%22%7d
+STATUS:CONFIRMED
+TRANSP:OPAQUE
 END:VEVENT
 END:VCALENDAR
