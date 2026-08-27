@@ -1,6 +1,4 @@
-import {
-	type SupportedEngineEntry,
-} from './inferenceCommands';
+import { normalizeEngineKey, type SupportedEngineEntry } from './inferenceCommands';
 
 /** Shape needed to resolve engines (matches model collection data; avoid importing content/config from lib). */
 export interface ModelEnginesSource {
@@ -59,13 +57,13 @@ const ENGINE_ORDER: Record<string, number> = {
 };
 
 function engineSortKey(engine: string): number {
-	const key = engine.toLowerCase().replace(/[.\-_ ]/g, '');
+	const key = normalizeEngineKey(engine);
 	return ENGINE_ORDER[key] ?? 99;
 }
 
 /**
  * Order engines for the serve matrix / Run modal.
- * Fixed order: vLLM > SGLang > llama.cpp > Ollama > Edge-LLM > everything else (alphabetical).
+ * Fixed order: vLLM > SGLang > llama.cpp > Ollama > TensorRT Edge-LLM > everything else (alphabetical).
  */
 export function sortEnginesForUi(engines: SupportedEngineEntry[]): SupportedEngineEntry[] {
 	if (engines.length <= 1) return [...engines];

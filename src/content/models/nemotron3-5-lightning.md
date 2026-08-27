@@ -122,6 +122,18 @@ serving:
             --top-p 0.95 \
             --host 0.0.0.0 \
             --port 8080
+    - engine: "TensorRT Edge-LLM"
+      type: "Container"
+      modules_supported:
+        - thor_t5000
+        - thor_t4000
+      install_command: |-
+        mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
+        # This production URL is published when this change is merged and deployed.
+        curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_nemotron35_lightning.sh -o "$HOME/run-nemotron35-lightning"
+        chmod +x "$HOME/run-nemotron35-lightning"
+      serve_command_thor: |-
+        sudo docker run -it --rm --pull always --ipc=host --runtime=nvidia --network host -v "$HOME/run-nemotron35-lightning:/usr/local/bin/run-nemotron35-lightning:ro" -v "tensorrt-edgellm-0100-build:/opt/TensorRT-Edge-LLM/build" -v "$HOME/tensorrt-edgellm-workspace:/data/edgellm" -v "$HOME/.cache/huggingface:/data/models/huggingface" ghcr.io/nvidia-ai-iot/tensorrt_edge_llm:0.10.0-thor run-nemotron35-lightning --stage serve
 ---
 
 NVIDIA Nemotron 3.5 Lightning is a fast, open-weight 30B Mixture-of-Experts model that activates only 3B parameters per token. It brings performance close to the much larger Nemotron 3 Super while remaining practical for local coding assistants, research agents, tool-calling workflows, and other always-on applications.
@@ -157,6 +169,25 @@ Output: Text
 Nemotron 3.5 Lightning includes Multi-Token Prediction and is released with dedicated DSpark and DFlash checkpoints. The vLLM commands use DSpark with five speculative tokens, which was the fastest configuration in our testing on both supported Jetson platforms. The `llama.cpp` commands use the DFlash checkpoint.
 
 The vLLM server exposes an OpenAI-compatible API on port `8000` with reasoning parsing, automatic tool selection, and the Qwen3 Coder tool-call parser enabled. The `llama.cpp` server exposes its API on port `8080`.
+
+## TensorRT Edge-LLM on Jetson Thor
+
+The TensorRT Edge-LLM command is an experimental, **Thor-only** NVFP4 path. Its default engine is intentionally conservative: batch size 1, maximum input length 2048 tokens, and KV-cache capacity 2200 tokens. The model's 1M-token capability is not enabled by this engine configuration.
+
+Standard OpenAI-compatible chat completions have been validated on Jetson AGX Thor. OpenAI `tools` requests are not supported by this TensorRT Edge-LLM 0.10.0 sample because the shipped tokenizer configuration cannot apply its tool-aware chat template. Use the vLLM command above for validated tool calling, structured reasoning parsing, long-context tuning, or speculative decoding.
+
+The helper serves on port `8000` by default. If that port is already in use, append `--port 8001` after `--stage serve` in the Docker command, then use port `8001` for the OpenAI-compatible API.
+
+### Pre-merge staging validation
+
+The public helper URL in the install command is published only after this change is merged and deployed to `jetson-ai-lab`. It returns `404` before then by design. For staging validation, obtain the helper from the checked-out staging branch instead of using the production URL:
+
+```bash
+cp public/code-samples/tensorrt_edge_llm/run_nemotron35_lightning.sh "$HOME/run-nemotron35-lightning"
+chmod +x "$HOME/run-nemotron35-lightning"
+```
+
+Alternatively, a reviewer with access to the private staging repository can download that same file with `gh api` and the `feat/nemotron-3-5-lightning-edgellm` ref. The staging Pages site is access-controlled and is not a reliable unauthenticated `curl` distribution endpoint.
 
 ## Additional Resources
 

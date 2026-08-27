@@ -22,7 +22,7 @@ export const CATALOG_ENGINE_FILTERS: readonly { uiId: string; label: string }[] 
 	{ uiId: 'vllm', label: 'vLLM' },
 	{ uiId: 'ollama', label: 'Ollama' },
 	{ uiId: 'llamacpp', label: 'llama.cpp' },
-	{ uiId: 'edgemllm', label: 'Edge-LLM' },
+	{ uiId: 'edgemllm', label: 'TensorRT Edge-LLM' },
 ];
 
 function oneShotModuleIdsWithContent(o: OneShotForRunModal): string[] {
