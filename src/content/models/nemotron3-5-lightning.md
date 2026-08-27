@@ -176,6 +176,17 @@ The TensorRT Edge-LLM command is an experimental, **Thor-only** NVFP4 path. Its 
 
 Standard OpenAI-compatible chat completions have been validated on Jetson AGX Thor. OpenAI `tools` requests are not supported by this TensorRT Edge-LLM 0.10.0 sample because the shipped tokenizer configuration cannot apply its tool-aware chat template. Use the vLLM command above for validated tool calling, structured reasoning parsing, long-context tuning, or speculative decoding.
 
+### Pre-merge staging validation
+
+The public helper URL in the install command is published only after this change is merged and deployed to `jetson-ai-lab`. It returns `404` before then by design. For staging validation, obtain the helper from the checked-out staging branch instead of using the production URL:
+
+```bash
+cp public/code-samples/tensorrt_edge_llm/run_nemotron35_lightning.sh "$HOME/run-nemotron35-lightning"
+chmod +x "$HOME/run-nemotron35-lightning"
+```
+
+Alternatively, a reviewer with access to the private staging repository can download that same file with `gh api` and the `feat/nemotron-3-5-lightning-edgellm` ref. The staging Pages site is access-controlled and is not a reliable unauthenticated `curl` distribution endpoint.
+
 ## Additional Resources
 
 - [Nemotron 3.5 Lightning NVFP4](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4)
