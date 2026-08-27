@@ -12,6 +12,7 @@ const { Content } = await research.render();
 const { 
   title, 
   description, 
+  seo_description,
   discord_url, 
   forum_url, 
   meeting_time, 
@@ -23,9 +24,32 @@ const {
   team_members,
   emeritus_members,
 } = research.data;
+const metaDescription = seo_description || description;
+
+const communityStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Jetson AI Lab Research Group',
+  alternateName: 'Jetson AI Lab Discord Community',
+  url: new URL('/research/', Astro.site).href,
+  description: metaDescription,
+  parentOrganization: {
+    '@type': 'Organization',
+    name: 'NVIDIA',
+    url: 'https://www.nvidia.com/',
+  },
+  sameAs: [discord_url, forum_url],
+  knowsAbout: ['NVIDIA Jetson', 'Edge AI', 'Robotics', 'Generative AI'],
+};
 ---
 
-<Layout title={title} description={description}>
+<Layout
+  title={title}
+  description={metaDescription}
+  image="/images/hero/jetson-family-line_50pcnt.png"
+  imageAlt="Jetson AI Lab Discord community and research group"
+  structuredData={communityStructuredData}
+>
   <!-- Hero Section -->
   <section class="relative bg-slate-900 text-white py-24 overflow-hidden">
     <div class="absolute inset-0 overflow-hidden">
@@ -36,6 +60,12 @@ const {
     
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="max-w-3xl">
+        <div class="inline-flex items-center gap-2 rounded-full border border-nvidia-green/30 bg-nvidia-green/10 px-4 py-2 text-sm text-nvidia-green mb-6">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"></path>
+          </svg>
+          <span>Community calls: <strong>2nd Tuesday of every month</strong></span>
+        </div>
         <h1 class="text-5xl md:text-6xl font-bold tracking-tight mb-6">
           Jetson AI Lab<br/>
           <span class="bg-clip-text text-transparent bg-gradient-to-r from-nvidia-green to-emerald-400">

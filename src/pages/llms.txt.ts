@@ -104,7 +104,7 @@ const FOOTER = `## Other Pages
 
 - [Model Catalog](${SITE}/models/): Browse all supported models with one-click deployment commands for Jetson Orin and Thor
 - [Community Projects](${SITE}/community/): Community-contributed projects, demos, and integrations built on Jetson
-- [Research](${SITE}/research/): Academic research and papers related to Jetson edge AI
+- [Jetson AI Lab Discord Community & Research Group](${SITE}/research/): Join the Jetson community for monthly research meetings, open-source edge AI collaboration, robotics projects, and the official Discord server
 `;
 
 export const GET: APIRoute = async () => {

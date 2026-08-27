@@ -182,6 +182,44 @@ const projects = defineCollection({
 	}),
 });
 
+const researchMemberSchema = z.object({
+	name: z.string(),
+	role: z.string(),
+	org: z.string(),
+	location: z.string(),
+	image: z.string(),
+	linkedin: z.string().optional(),
+	github: z.string().optional(),
+	expertise: z.array(z.string()),
+});
+
+const pages = defineCollection({
+	type: 'content',
+	schema: z.object({
+		title: z.string(),
+		description: z.string(),
+		seo_description: z.string().optional(),
+		discord_url: z.string().url(),
+		forum_url: z.string().url(),
+		meeting_time: z.string(),
+		meeting_platform: z.string(),
+		meeting_link: z.string().url(),
+		recordings_url: z.string().url(),
+		research_topics: z.array(z.object({
+			left: z.string(),
+			right: z.string(),
+		})),
+		past_meetings: z.array(z.object({
+			date: z.string(),
+			title: z.string(),
+			videoId: z.string(),
+			topics: z.array(z.string()),
+		})),
+		team_members: z.array(researchMemberSchema),
+		emeritus_members: z.array(researchMemberSchema).optional(),
+	}),
+});
+
 const gtc26 = defineCollection({
 	type: 'content',
 	schema: z.object({
@@ -194,4 +232,4 @@ const gtc26 = defineCollection({
 	}),
 });
 
-export const collections = { tutorials, models, projects, gtc26 };
+export const collections = { tutorials, models, projects, pages, gtc26 };

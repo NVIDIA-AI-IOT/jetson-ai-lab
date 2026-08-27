@@ -5,7 +5,13 @@ import sitemap from '@astrojs/sitemap';
 import rehypeMermaid from 'rehype-mermaid';
 
 export default defineConfig({
-  integrations: [tailwind(), mdx(), sitemap()],
+  integrations: [
+    tailwind(),
+    mdx(),
+    sitemap({
+      filter: (page) => new URL(page).pathname !== '/login/',
+    }),
+  ],
   site: 'https://www.jetson-ai-lab.com',
   /** Reduce dev restarts from tooling writing under the repo (Windows file watchers are noisy). */
   vite: {
