@@ -176,6 +176,8 @@ The TensorRT Edge-LLM command is an experimental, **Thor-only** NVFP4 path. Its 
 
 Standard OpenAI-compatible chat completions have been validated on Jetson AGX Thor. OpenAI `tools` requests are not supported by this TensorRT Edge-LLM 0.10.0 sample because the shipped tokenizer configuration cannot apply its tool-aware chat template. Use the vLLM command above for validated tool calling, structured reasoning parsing, long-context tuning, or speculative decoding.
 
+The helper serves on port `8000` by default. If that port is already in use, append `--port 8001` after `--stage serve` in the Docker command, then use port `8001` for the OpenAI-compatible API.
+
 ### Pre-merge staging validation
 
 The public helper URL in the install command is published only after this change is merged and deployed to `jetson-ai-lab`. It returns `404` before then by design. For staging validation, obtain the helper from the checked-out staging branch instead of using the production URL:
