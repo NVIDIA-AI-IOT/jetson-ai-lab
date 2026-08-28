@@ -176,7 +176,7 @@ The TensorRT Edge-LLM command is an experimental, **Thor-only** NVFP4 path. Its 
 
 The Thor Edge-LLM route has received a **serving smoke pass**, not a full model-behavior validation: the initial model download, export and engine build, server startup, `/v1/models`, and a basic non-streaming chat completion were exercised on Jetson AGX Thor.
 
-Reasoning on/off behavior, streaming, tool calling, and output-format integrity have not been validated for this TensorRT Edge-LLM 0.10.0 sample. Its server does not yet provide a reasoning parser, so reasoning may appear in assistant output. OpenAI `tools` requests are also unsupported because the shipped tokenizer configuration cannot apply its tool-aware chat template. Use the vLLM command above for validated tool calling, structured reasoning parsing, long-context tuning, or speculative decoding.
+Validation confirms that `enable_thinking=false` works in both regular and streaming chat completions. With `enable_thinking=true`, however, reasoning appears in assistant `content` rather than a separate reasoning field. OpenAI `tools` requests fail in both regular and streaming modes because the shipped tokenizer configuration cannot apply its tool-aware chat template. Use the vLLM command above for tool calling, structured reasoning parsing, long-context tuning, or speculative decoding.
 
 The helper serves on port `8000` by default. If that port is already in use, append `--port 8001` after `--stage serve` in the Docker command, then use port `8001` for the OpenAI-compatible API.
 
