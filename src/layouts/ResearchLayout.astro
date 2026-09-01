@@ -17,7 +17,6 @@ const {
   forum_url, 
   meeting_time, 
   meeting_platform, 
-  meeting_link,
   recordings_url,
   research_topics,
   past_meetings,
@@ -87,52 +86,61 @@ const communityStructuredData = {
   <section class="py-16 bg-gradient-to-b from-nvidia-green/10 to-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="bg-white rounded-2xl shadow-lg border border-nvidia-green/20 p-8 md:p-12">
-        <div class="flex items-start gap-4 mb-6">
-          <div class="p-3 bg-nvidia-green/10 rounded-xl">
-            <svg class="w-8 h-8 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-          </div>
+        <div class="space-y-8">
           <div>
-            <h2 class="text-2xl font-bold text-slate-900 mb-2">Upcoming Meetings</h2>
-            <p class="text-slate-600">Regular Series: <strong>2nd Tuesday of every month</strong></p>
+            <div class="flex items-start gap-4 mb-6">
+              <div class="p-3 bg-nvidia-green/10 rounded-xl">
+                <svg class="w-8 h-8 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Upcoming Meetings</h2>
+                <p class="text-slate-600">Regular Series: <strong>2nd Tuesday of every month</strong></p>
+              </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-6 mb-8">
+              <h3 class="font-bold text-slate-900 mb-4">Next Meeting Details</h3>
+              <ul class="space-y-2 text-slate-600">
+                <li class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  <strong>Time:</strong> {meeting_time}
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                  <strong>Platform:</strong> {meeting_platform}
+                </li>
+              </ul>
+              <p class="mt-4 text-sm text-slate-500">
+                Follow the community calendar to see upcoming events in your local time zone and receive schedule updates.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-4">
+              <div
+                title="Follow the Jetson AI Lab Meeting Calendar"
+                class="addeventstc"
+                data-id="ny80tv1kw94k"
+                style="background-color: #76b900; color: #000;"
+              >
+                Follow Meeting Calendar
+              </div>
+              <a
+                href="https://www.addevent.com/calendar/ny80tv1kw94k"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-2 px-6 py-3 text-slate-700 font-semibold rounded-lg border border-slate-300 hover:bg-slate-50 transition-all"
+              >
+                See Upcoming Events
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                </svg>
+              </a>
+            </div>
+            <script is:inline src="https://cdn.addevent.com/libs/stc/1.0.2/stc.min.js" async defer></script>
           </div>
         </div>
-        
-        <div class="bg-slate-50 rounded-xl p-6 mb-8">
-          <h3 class="font-bold text-slate-900 mb-4">Next Meeting Details</h3>
-          <ul class="space-y-2 text-slate-600">
-            <li class="flex items-center gap-2">
-              <svg class="w-5 h-5 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              <strong>Time:</strong> {meeting_time}
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-5 h-5 text-nvidia-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-              <strong>Platform:</strong> {meeting_platform}
-            </li>
-          </ul>
-          <p class="mt-4 text-sm text-slate-500">
-            Use Add to Calendar below to view the meeting in your local time zone.
-          </p>
-        </div>
-        
-        <div class="flex flex-wrap items-center gap-4">
-          <a href={meeting_link} target="_blank" rel="noopener" class="inline-flex items-center px-6 py-3 bg-nvidia-green text-slate-900 font-bold rounded-lg hover:bg-nvidia-green/90 transition-all">
-            Join Meeting
-            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-          </a>
-          <a
-            title="Add Jetson AI Lab Research Group Community Call to your calendar"
-            class="addeventatc"
-            data-id="4xd7xmdp18w4"
-            href="https://www.addevent.com/event/4xd7xmdp18w4"
-            target="_blank"
-            rel="noopener"
-          >
-            Add to Calendar
-          </a>
-        </div>
-        <script is:inline src="https://cdn.addevent.com/libs/atc/1.6.1/atc.min.js" async defer></script>
       </div>
     </div>
   </section>

@@ -6,7 +6,6 @@ discord_url: "https://discord.gg/BmqNSK4886"
 forum_url: "https://forums.developer.nvidia.com/c/agx-autonomous-machines/jetson-embedded-systems/jetson-projects/78"
 meeting_time: "9:00 AM PT / 12:00 PM ET"
 meeting_platform: "Microsoft Teams"
-meeting_link: "https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZWUwNTIxYmQtNGJmZC00MDA1LTkzN2MtYmFmMzJjZWUxNDFh%40thread.v2/0?context=%7b%22Tid%22%3a%2243083d15-7273-40c1-b7db-39efd9ccc17a%22%2c%22Oid%22%3a%223e5863c5-26ea-489e-a546-cdc43df532ed%22%7d"
 recordings_url: "https://www.youtube.com/playlist?list=PL5B692fm6--sdf3tQk-1kp9T65y8p-D5u"
 research_topics:
   - left: "Agentic AI and tool-using models on Jetson"

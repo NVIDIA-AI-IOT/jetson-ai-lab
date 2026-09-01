@@ -203,7 +203,6 @@ const pages = defineCollection({
 		forum_url: z.string().url(),
 		meeting_time: z.string(),
 		meeting_platform: z.string(),
-		meeting_link: z.string().url(),
 		recordings_url: z.string().url(),
 		research_topics: z.array(z.object({
 			left: z.string(),
