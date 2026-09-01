@@ -340,9 +340,9 @@ There are virtual meetings that anyone is welcome to join, offline discussion on
 
 **Regular Series: 2nd Tuesday of every month**
 
-We are pleased to announce the resumption of the Jetson AI Lab Research Group Community calls. The primary objective of these calls remains consistent with our past meetings. We aim to discuss emerging trends, share insights on exciting projects undertaken by members of this group, address any issues or roadblocks, and explore new frameworks and libraries.
+Join our monthly Jetson AI Lab Research Group Community Call to discuss emerging trends in edge AI and robotics, share community projects, work through technical challenges, and explore useful frameworks, libraries, and tools for Jetson.
 
-We will share more details during the call. We look forward to reconnecting with all of you.
+[Follow the Jetson AI Lab Community Calendar](https://www.addevent.com/calendar/ny80tv1kw94k) to stay up to date with upcoming calls and community events.
 
 Join the [Discord](https://discord.gg/BmqNSK4886) server to stay involved and receive the latest updates.
 
