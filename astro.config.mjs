@@ -66,7 +66,7 @@ export default defineConfig({
     '/benchmarks.html': '/archive/benchmarks.html',
     '/research.html': '/research/',
     '/community_articles.html': '/community/',
-    
+
     // Catch common patterns - redirect to archive
     '/tutorial-intro.html': '/archive/tutorial-intro.html',
     '/tutorial-intro': '/archive/tutorial-intro.html',

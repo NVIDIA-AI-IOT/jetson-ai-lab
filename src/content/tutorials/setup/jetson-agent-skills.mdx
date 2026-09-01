@@ -1,0 +1,323 @@
+---
+title: "Jetson Agent Skills"
+description: "Build, optimize, and deploy NVIDIA Jetson applications with AI coding agents guided by Jetson Device Skills and Jetson BSP Skills."
+category: "Setup"
+section: "Jetson Setup"
+order: 2
+tags: ["setup", "agent-skills", "agentic", "cursor", "claude-code", "codex", "bsp", "jetpack", "diagnostics", "ai-assisted-development"]
+featured: true
+isNew: true
+---
+
+import Tabs from '../../../components/Tabs.astro';
+
+More than a decade of NVIDIA Jetson engineering knowledge, captured in developer guides, JetPack releases, forums, tutorials, and open-source projects, now empowers AI coding agents to help developers build and deploy on Jetson faster.
+
+Agent skills build on that foundation. They organize established Jetson workflows into reusable instructions and give an agent access to relevant information from the development environment, such as the installed JetPack release, available unified memory, active power mode, or selected BSP target.
+
+This lets the agent move naturally from answering questions to helping with practical development tasks: preparing a device, selecting a runtime, launching a model server, measuring performance, or guiding a BSP customization workflow.
+
+**Jetson Agent Skills make Jetson knowledge actionable.** They combine the platform guidance already available in NVIDIA documentation with repeatable procedures, helper scripts, and information from the Jetson or BSP workspace.
+
+## Why Use Jetson Agent Skills
+
+JetPack provides an integrated software stack for Jetson, including the operating system, CUDA, accelerated libraries, multimedia components, and developer tools. Starting with JetPack 7.2, this unified software foundation spans supported Jetson Orin and Jetson Thor platforms, making it easier to develop applications across the Jetson family.
+
+Skills help developers use that stack more productively:
+
+- **Faster application setup.** An agent can guide installation, select an appropriate container or package source, and prepare a model-serving command.
+- **Context-aware recommendations.** Live information such as available unified memory, power mode, and running services helps tailor a workflow to the current device.
+- **Repeatable measurements.** Diagnostic and benchmark helpers collect results consistently, making it easier to compare configurations.
+- **Guided optimization.** Skills can help tune memory use, model-serving options, speculative decoding, and video pipelines for an application.
+- **Structured BSP development.** For custom products, BSP Skills organize setup, customization, build, flash, and validation around the selected target and release.
+
+NVIDIA documentation remains the authoritative reference for the platform. Skills complement it by helping an agent apply documented workflows consistently within a developer's project.
+
+## What an Agent Skill Is
+
+An agent skill is a small folder containing:
+
+- a `SKILL.md` with Jetson-specific instructions and safety boundaries;
+- optional helper scripts that collect live data or perform repeatable checks; and
+- a description that helps the agent select the right skill from your request.
+
+You can ask, *“Why is this Jetson low on memory?”* The agent discovers the memory-audit skill, runs its helpers, and uses the returned measurements as the source of truth. You do not need to memorize skill names or translate your goal into a sequence of shell commands.
+
+## Choose the Skills You Need
+
+Most developers should start with **Jetson Device Skills**. Add **Jetson BSP Skills** only if you customize or flash the Board Support Package.
+
+|  | Jetson Device Skills | Jetson BSP Skills |
+|---|---|---|
+| **Runs on** | The Jetson, after it has booted | Your host workstation, before flashing |
+| **Operates on** | A live device: memory, GPU, thermals, runtimes | A `Linux_for_Tegra` BSP tree |
+| **Typical work** | Diagnostics, memory tuning, LLM serving, benchmarking, video codec | Pinmux, USB, PCIe, UPHY, clocks, fan, nvpmodel, camera, MGBE, memory carveouts |
+| **Agents supported** | Claude Code, Codex, Cursor, OpenClaw | Claude Code, Codex, Cursor |
+| **Repository** | [jetson-device-skills](https://github.com/NVIDIA-AI-IOT/jetson-device-skills) | [jetson-bsp-skills](https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills) |
+
+Choose **Device Skills** if you want to diagnose a developer kit, reclaim memory, select packages, serve or benchmark a model, or work with Jetson video codecs.
+
+Choose **BSP Skills** if you are bringing up a custom carrier board or changing behavior that is fixed before boot, such as pinmux, PCIe lanes, camera device trees, power modes, or reserved memory.
+
+## Install from the NVIDIA Skill Catalog
+
+Jetson Device Skills and Jetson BSP Skills are also available through the official [NVIDIA Agent Skills catalog](https://github.com/NVIDIA/skills). The catalog mirrors NVIDIA-verified skills from their product repositories and provides one place to discover and install skills for Jetson and other NVIDIA platforms.
+
+Use the latest Skills CLI to open the catalog:
+
+```bash
+npx skills@latest add nvidia/skills
+```
+
+The CLI prompts you to choose a skill and its install destination. To browse the catalog without installing:
+
+```bash
+npx skills@latest add nvidia/skills --list
+```
+
+You can also install a specific Jetson skill directly. For example, install the device diagnostic skill for Cursor:
+
+```bash
+npx skills@latest add nvidia/skills \
+  --skill jetson-diagnostic \
+  --agent cursor \
+  --yes
+```
+
+The NVIDIA catalog is convenient when you want to discover or install selected skills. The source-repository instructions below install the complete Device Skills or BSP Skills collection and are useful when you want the full Jetson workflow.
+
+## How the Agentic Workflow Works
+
+Use a coding agent for implementation and Jetson Agent Skills for platform-specific context and workflows.
+
+1. **Start with a coding agent.** Use Cursor, Claude Code, Codex, or another supported coding assistant to inspect code, modify configurations, run commands, and validate results.
+2. **Add the relevant Jetson Skills.** Use BSP Skills for host-side BSP setup and customization. Use Device Skills for building, optimizing, serving, and benchmarking applications on a running Jetson.
+3. **Ask in natural language.** For example: *"Inspect this Jetson's memory usage, identify the largest memory consumers, and recommend model-serving optimizations."*
+4. **Let each component do its job.** The coding agent reasons, edits, and automates. Jetson Agent Skills provide platform-specific instructions, context, and guardrails.
+
+The two skill families can work together across product development. Prepare and customize the BSP on the host, flash the target, and then use Device Skills to configure, test, and benchmark the application on the running Jetson.
+
+See [Reachy Mini Jetson Assistant: How Jetson Device Skills Helped](/tutorials/reachy-mini-jetson-assistant/#how-jetson-device-skills-helped) for a real application example that used Device Skills to inspect memory, choose a runtime, and validate deployment decisions on Jetson Orin Nano.
+
+## Part 1: Jetson Device Skills
+
+[Jetson Device Skills](https://github.com/NVIDIA-AI-IOT/jetson-device-skills) is a catalog of skills for working with a live Jetson after it has booted. They help an agent use Jetson platform capabilities such as unified memory, configurable power modes, accelerated inference runtimes, multimedia engines, and JetPack-supported package and container sources while accounting for the current device configuration.
+
+Jetson Device Skills run directly on the Jetson. Before installing them, follow the [Remote Development guide](/tutorials/getting-started-with-jetson/#remote-development).
+
+<div class="admonition tip">
+  <p class="admonition-title">💡 Start here if you use a Jetson developer kit</p>
+  <p>Device Skills are the right choice for most users. Installation takes one clone and one command, and it does not modify the BSP.</p>
+</div>
+
+<details class="nv-details">
+<summary><strong>See all Device Skills</strong></summary>
+<div class="nv-details-content">
+
+**Device state and memory**
+
+| Skill | What it does |
+|---|---|
+| `jetson-diagnostic` | Read-only health snapshot: identity, memory, GPU, thermals, power, storage, services, top processes |
+| `jetson-memory-audit` | Measures DRAM and NvMap usage, and verifies memory was actually reclaimed after a change |
+| `jetson-headless-mode` | Plans and applies safe headless changes to reclaim GUI and daemon memory |
+| `jetson-print-device-info` | Prints module model, L4T version, kernel, OS version, and current power mode |
+
+**LLM and VLM serving**
+
+| Skill | What it does |
+|---|---|
+| `jetson-inference-mem-tune` | Picks the serving stack and per-runtime memory flags across vLLM, SGLang, llama.cpp, and TensorRT Edge-LLM |
+| `jetson-llm-serve` | Stands up vLLM or SGLang serving with the right image for your generation and JetPack version |
+| `jetson-llm-benchmark` | Benchmarks vLLM, llama.cpp, and Ollama serving with structured JSON output |
+| `jetson-speculative-decoding` | Adds EAGLE-3 or draft-model speculative decoding when time-per-output-token is the bottleneck |
+| `jetson-package` | Chooses Jetson-compatible containers, vLLM runtime images, and Jetson AI Lab PyPI indexes |
+
+**Video codec**
+
+| Skill | What it does |
+|---|---|
+| `jetson-video-setup` | Installs, repairs, probes, and verifies the NVIDIA Video Codec SDK or PyNvVideoCodec |
+| `jetson-video-capability` | Reconciles codec, profile, chroma, bit-depth, dimension, and engine-count support using live SDK APIs |
+| `jetson-video-recipe` | Turns an encoder use case into one validated recipe: codec, preset, rate control, bitrate, latency, format, profile |
+| `jetson-video-benchmark` | Measures encode and decode throughput, compares presets or surfaces, and tests codec-worker capacity |
+| `jetson-video-pipeline` | Executes and verifies encode/decode, transcode, segmentation, container decode, and AV1 workflows |
+
+</div>
+</details>
+
+### Install the Complete Device Skills Catalog
+
+Run these steps **on the Jetson**, using either an SSH session or the integrated terminal of VS Code or Cursor connected over Remote-SSH.
+
+```bash
+git clone https://github.com/NVIDIA-AI-IOT/jetson-device-skills.git
+cd jetson-device-skills
+./install.sh
+```
+
+With no arguments, the installer symlinks every skill into the locations Claude Code, Codex, and Cursor read from. Symlinks mean a later `git pull` updates every agent at once.
+
+<Tabs labels={["Default (all agents)", "Specific agents", "Project-scoped", "OpenClaw"]}>
+  <div class="nv-tab-panel active">
+    <p>Installs for Claude Code, Codex, and Cursor:</p>
+    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"./install.sh"}</code></pre>
+    <p>Re-running is safe: correct links are skipped and stale ones are repaired.</p>
+  </div>
+  <div class="nv-tab-panel">
+    <p>Select agents with a single comma-separated flag:</p>
+    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"./install.sh --targets claude,cursor"}</code></pre>
+    <p>Valid targets are <code>claude</code>, <code>codex</code>, <code>cursor</code>, <code>cursor-project</code>, and <code>nemoclaw</code>.</p>
+  </div>
+  <div class="nv-tab-panel">
+    <p>Scope the skills to one Cursor project instead of your home directory:</p>
+    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"./install.sh --targets cursor-project --project /path/to/project"}</code></pre>
+  </div>
+  <div class="nv-tab-panel">
+    <p>Install into an OpenClaw sandbox:</p>
+    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"./install.sh --targets nemoclaw --nemoclaw-sandbox jetson-skills"}</code></pre>
+    <p>See <a href="/tutorials/openclaw/">OpenClaw on Jetson</a> for setting up the assistant itself.</p>
+  </div>
+</Tabs>
+
+Two more flags are useful in specific situations: `--copy` installs real copies instead of symlinks, and `--force` replaces existing `jetson-*` entries that are not symlinks.
+
+### Where the Skills Land
+
+| Target | Destination |
+|---|---|
+| `claude` | `~/.claude/skills/` plus the sub-agents in `~/.claude/agents/` |
+| `codex` | `~/.codex/skills/` and `~/.agents/skills/` |
+| `cursor` | `~/.cursor/skills/` |
+| `cursor-project` | `<project>/.cursor/skills/` |
+| `nemoclaw` | The sandbox skill root, via `nemoclaw <sandbox> skill install` |
+
+<div class="admonition warning">
+  <p class="admonition-title">⚠️ Do not install into <code>$HOME/.cursor/skills-cursor</code></p>
+  <p>That directory is reserved for Cursor's own managed skills. The installer targets <code>$HOME/.cursor/skills</code> instead, and warns if you try to redirect it.</p>
+</div>
+
+### Verifying the Installation
+
+The installer verifies itself as it runs: for each target it counts the skills it linked, confirms every one has a readable `SKILL.md` at the destination, and prints either `verified (N skills visible)` or a list of what is missing. It finishes by reminding you to restart your agent.
+
+**Restart your agent session** (a new chat in Cursor, or a fresh `claude` or `codex` session), since skills are discovered at startup. Then confirm the agent can reach the device:
+
+```text
+Use the Jetson diagnostic skill to inspect this device and summarize the model,
+JetPack/L4T version, memory, GPU usage, thermals, and power mode.
+```
+
+A correct installation produces live values read from your board. If the newly installed skills are not yet available, restart your agent session.
+
+{/*
+  Codex walkthrough video for Device Skills. Paste the recording here when ready:
+
+  <video width="960" height="540" controls>
+    <source src="VIDEO_URL_HERE.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+*/}
+
+### Example Prompts
+
+These read like requests to a colleague, not commands, which is the point:
+
+- My Jetson is low on memory. Find what is using RAM and GPU memory, then tell me what I can safely do next.
+- I do not need the desktop UI. Show me a safe headless-mode plan to free memory, but do not apply it yet.
+- I want to run an LLM on this Jetson. Based on available memory, recommend the runtime and launch flags.
+- Show me how to serve a Hugging Face LLM on this Jetson with an OpenAI-compatible endpoint.
+- Benchmark this running model and report TTFT, token latency, throughput, and end-to-end latency.
+- I need PyTorch, vLLM, or ONNX Runtime on Jetson. Tell me which container or package source I should use.
+- Set up PyNvVideoCodec on this device and verify it with an encode-to-decode sample.
+
+## Part 2: Jetson BSP Skills
+
+Where Device Skills work on a running system, [Jetson BSP Skills](https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills) works on the software you are about to flash. It is a bundle of Claude Code skills for customizing an NVIDIA Jetson Linux Board Support Package (`Linux_for_Tegra`) from a normal project workspace: pick a target, prepare the BSP image and sources, make changes through guided skills, then promote, flash, and validate.
+
+BSP customization brings together several documented workflows, including pinmux spreadsheets, ODMDATA, UPHY lane allocation, and BPMP device tree configuration. Each skill focuses on a specific part of that process and defines its scope clearly, helping Claude Code select the appropriate workflow and keep changes organized.
+
+The bundle contains no BSP image or sources itself. It installs the instructions, templates, and references that let Claude Code guide the workflow against artifacts you download.
+
+<div class="admonition note">
+  <p class="admonition-title">📘 Note</p>
+  <p>You may not need BSP Skills if you use an NVIDIA developer kit with the standard JetPack image. Device Skills are usually enough. BSP Skills are intended for custom hardware, pre-flash configuration, and production bring-up.</p>
+</div>
+
+<details class="nv-details">
+<summary><strong>See the BSP workflow and all commands</strong></summary>
+<div class="nv-details-content">
+
+**The four stages**
+
+| Stage | What happens |
+|---|---|
+| **Setup** | Create or select the active target, download or register BSP inputs, extract the image, initialize sources, link documents |
+| **Customize** | Apply BSP changes: pinmux, USB, PCIe, UPHY, clocks, fan, nvpmodel, camera, MGBE, or memory |
+| **Build** | Rebuild source-side artifacts when a customization changed kernel-side sources |
+| **Deploy** | Promote changes into the BSP image, flash the device, and validate the result |
+
+### Skills by Stage
+
+Every skill is invoked as a slash command, though in normal use you describe the goal and let the entry-point skill dispatch.
+
+**Setup**
+
+| Command | What it does |
+|---|---|
+| `/jetson-quick-start` | Entry point: asks the core setup questions and dispatches the right setup skills |
+| `/jetson-init-target` | Creates a target-platform profile and updates the active target pointer |
+| `/jetson-set-target` | Switches the active target pointer to an existing profile |
+| `/jetson-download-bsp` | Downloads Jetson Linux BSP artifacts: BSP tarball, sample rootfs, public sources, toolchain, guides |
+| `/jetson-init-image` | Extracts the BSP and sample rootfs, runs `apply_binaries.sh`, records the image path |
+| `/jetson-init-source` | Initializes the source workspace, overlay tracker, BSP sources, and Crosstool-NG toolchain |
+| `/jetson-link-docs` | Registers local reference documents: developer guide, design guide, pinmux, schematics |
+| `/jetson-generate-kb` | Builds a per-target knowledge base by walking the prepared BSP and source trees |
+
+**Customize**
+
+| Command | What it does |
+|---|---|
+| `/jetson-derive-carrier` | Forks reference carrier files and scaffolds a custom-carrier device tree overlay |
+| `/jetson-customize-pinmux` | Per-pin SFIO, direction, and initial-state configuration from the pinmux spreadsheet |
+| `/jetson-customize-usb` | Enables or disables USB2 and USB3 SuperSpeed ports via kernel device tree overlay |
+| `/jetson-customize-pcie` | Per-controller PCIe enable/disable, lane count, and link speed via ODMDATA and overlay |
+| `/jetson-customize-uphy` | Allocates UPHY lanes across PCIe, USB3, and MGBE on custom carriers |
+| `/jetson-customize-mgbe` | Enables Thor 25G/10G/1G MGBE QSFP via kernel device tree overlay |
+| `/jetson-customize-camera` | Enables MIPI or GMSL camera sensors by rendering an overlay from in-tree sensor DTSI |
+| `/jetson-customize-clocks` | Locks or caps CPU/GPU/EMC clocks, toggles DVFS, and changes governors pre-flash |
+| `/jetson-customize-fan` | Adds, edits, lists, or sets the boot default of an `nvfancontrol` fan profile |
+| `/jetson-customize-nvpmodel` | Adds, edits, lists, or sets the boot default of an `nvpmodel` power mode |
+| `/jetson-optimize-memory` | Reclaims DRAM by disabling unused reserved-memory consumers across MB1/MB2 BCT, kernel, and SWIOTLB |
+
+**Build and Deploy**
+
+| Command | What it does |
+|---|---|
+| `/jetson-build-source` | Rebuilds the overlay from source changes: device tree, out-of-tree modules, kernel, or a full build |
+| `/jetson-promote-image` | Promotes overlay files and built artifacts into the staged BSP image |
+| `/jetson-flash-image` | Flashes a promoted image to a device in recovery mode via `flash.sh` or `l4t_initrd_flash.sh` |
+| `/jetson-validate-image` | Runs static BSP checks and on-target smoke or regression tests after flashing |
+| `/jetson-print-bsp-info` | Prints L4T version, board configs, and rootfs state from a `Linux_for_Tegra` root |
+
+</div>
+</details>
+
+### Install the Complete BSP Skills Catalog
+
+Run this on your **host workstation**, not the Jetson:
+
+```bash
+git clone https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills.git
+cd jetson-bsp-skills
+./setup.sh --workspace <workspace>
+```
+
+Replace `<workspace>` with the directory you want to work in. The script copies the skills, context documents, and references into `<workspace>/.claude/`, so the bundle is scoped to that workspace rather than your home directory. It refuses to overwrite an existing `<workspace>/.claude/`; pass `--force` to rebuild it.
+
+## Next Steps
+
+- [SSD + Docker Setup](/tutorials/ssd-docker-setup/): move Docker storage to NVMe for faster container performance
+- [RAM Optimization](/tutorials/ram-optimization/): free memory for large model workloads
+- [Introduction to GenAI on Jetson](/tutorials/genai-on-jetson-llms-vlms/): run LLMs and VLMs on-device
+- [Browse all tutorials](/tutorials/): explore models, applications, and workshops

@@ -137,94 +137,20 @@ For a complete development experience, connect **VS Code** or **Cursor** directl
   <p>Replace the IP and username with your values. After this, select <strong>"jetson"</strong> from the host list in VS Code/Cursor — or type <code>ssh jetson</code> in a terminal.</p>
 </div>
 
-## AI-Assisted Workflows with Jetson Device Skills
+## AI-Assisted Development with Jetson Agent Skills
 
-**Jetson Device Skills** are agent skills that enable AI coding agents to understand and operate a live NVIDIA Jetson device. They provide the agent with the procedures needed to inspect Jetson-specific signals, including the device model, JetPack and L4T version, memory, GPU usage, thermal state, power mode, containers, installed packages, and LLM serving workflows.
+With SSH working, your AI coding agent can use **Jetson Agent Skills** to apply documented Jetson workflows with context from the connected device or BSP workspace.
 
-### Why It Matters
+There are two catalogs, split at the flashing boundary:
 
-A Jetson device differs from a standard Arm Linux machine in several important ways: it uses unified CPU/GPU memory, ships JetPack-specific packages, exposes distinct characteristics across the Orin and Thor generations, supports configurable power modes, and reports specialized GPU memory signals. Without this context, AI agents tend to provide generic Linux or discrete-GPU advice that does not apply to Jetson.
+- **[Jetson Device Skills](https://github.com/NVIDIA-AI-IOT/jetson-device-skills)** run **on the Jetson** after it boots — diagnostics, memory audits, headless mode, LLM serving and benchmarking, package selection, and video codec workflows.
+- **[Jetson BSP Skills](https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills)** run on your **host workstation** before flashing — pinmux, USB, PCIe, UPHY, clocks, fan, nvpmodel, camera, MGBE, and memory carveouts.
 
-With Jetson Device Skills installed, the agent follows a Jetson-specific playbook for diagnostics, memory tuning, headless configuration, model serving, benchmarking, and package selection.
-
-### Included Skills
-
-- `jetson-diagnostic` — read-only device health snapshot (identity, memory, GPU, thermals, power, storage, services, top processes)
-- `jetson-memory-audit` — measure DRAM/NvMap usage and verify memory reclamation
-- `jetson-headless-mode` — safe plan to disable the desktop and free background services
-- `jetson-inference-mem-tune` — serving runtime and memory flags for vLLM, SGLang, llama.cpp, and TensorRT Edge-LLM
-- `jetson-llm-serve` — Jetson-appropriate vLLM and SGLang serving recipes
-- `jetson-llm-benchmark` — structured benchmark metrics for vLLM, llama.cpp, and Ollama
-- `jetson-package` — Jetson-specific package, wheel, and container choices
-- `jetson-speculative-decoding` — EAGLE-3 or draft-model speculative decoding guidance for vLLM
-
-### Installation
-
-Run the following steps directly on the Jetson, using either an SSH session or the integrated terminal in VS Code or Cursor. The skills are distributed through the [jetson-device-skills](https://github.com/NVIDIA-AI-IOT/jetson-device-skills) repository.
-
-1. **Clone the repository** on the Jetson:
-
-   ```bash
-   git clone https://github.com/NVIDIA-AI-IOT/jetson-device-skills.git
-   cd jetson-device-skills
-   ```
-
-2. **Install the skills:**
-
-   ```bash
-   bash ./install.sh
-   ```
-
-3. **Restart your AI agent session** (Cursor, Claude Code, or Codex) so it can discover the newly installed Jetson skills.
-
-### Verifying the Installation
-
-After restarting your agent, confirm that the skills are available by issuing the following prompt:
-
-```text
-Use the Jetson diagnostic skill to inspect this device and summarize the model, JetPack/L4T version, memory, GPU usage, thermals, and power mode.
-```
-
-If the skills are installed correctly, the agent collects live device information and returns a Jetson-specific summary rather than generic Linux advice.
-
-### Example Prompts
-
-The following prompts demonstrate common Jetson workflows enabled by the skills:
-
-- My Jetson is low on memory. Find what is using RAM and GPU memory, then tell me what I can safely do next.
-- I do not need the desktop UI. Show me a safe headless-mode plan to free memory, but do not apply it yet.
-- I want to run an LLM on this Jetson. Based on available memory, recommend the runtime and launch flags.
-- Show me how to serve a Hugging Face LLM on this Jetson with an OpenAI-compatible endpoint.
-- Benchmark this running model and report TTFT, token latency, throughput, and end-to-end latency.
-- I need `PyTorch`, `vLLM`, or `ONNX Runtime` on Jetson. Tell me which container or package source I should use.
-
-## Customizing the Jetson BSP with Jetson BSP Skills
-
-Where Jetson Device Skills run *on* the device, **[Jetson BSP Skills](https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills)** run on your **host workstation**. It is a catalog of host-side, agentskills.io-compatible skills that customize an NVIDIA Jetson Linux BSP (`Linux_for_Tegra`) before flashing.
-
-The goal is to let an engineer work from a normal project workspace: pick a Jetson target, prepare the BSP image and sources, make BSP customizations through guided skills, then promote, flash, and validate the result.
-
-These skills cover four stages:
-
-- **Setup** — select a target, download or register BSP inputs, extract the image, and initialize sources.
-- **Customize** — apply BSP changes such as pinmux, USB, PCIe, UPHY, clocks, fan, nvpmodel, camera, MGBE, or memory tuning.
-- **Build** — rebuild source-side artifacts (DTBs, kernel modules) when a customization changes kernel-side sources.
-- **Deploy** — promote changes into the BSP image, flash the device, and validate the result.
-
-### Installation
-
-Run the following on your **host workstation** (not the Jetson):
-
-```bash
-git clone https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills.git
-cd jetson-bsp-skills
-./setup.sh --workspace <workspace>
-```
-
-Then start your AI agent (Claude Code) from that workspace and ask it to help set up the BSP customization workspace. This launches the `/jetson-quick-start` entry point, which guides you through choosing a setup mode and answering the platform, BSP release, and custom-carrier questions.
+See [Jetson Agent Skills](/tutorials/jetson-agent-skills/) for the complete skill catalogs, per-agent installation options, verification steps, example prompts, and the BSP customization workflow.
 
 ## Next Steps
 
+- [Jetson Agent Skills](/tutorials/jetson-agent-skills/) — set up AI-assisted Jetson development with Device and BSP skills
 - [SSD + Docker Setup](/tutorials/ssd-docker-setup/) — move Docker storage to NVMe for faster container performance
 - [RAM Optimization](/tutorials/ram-optimization/) — free memory for large model workloads
 - [Introduction to GenAI on Jetson](/tutorials/genai-on-jetson-llms-vlms/) — run LLMs and VLMs on-device
