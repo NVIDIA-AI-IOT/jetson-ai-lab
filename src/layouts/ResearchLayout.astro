@@ -33,11 +33,6 @@ const communityStructuredData = {
   alternateName: 'Jetson AI Lab Discord Community',
   url: new URL('/research/', Astro.site).href,
   description: metaDescription,
-  parentOrganization: {
-    '@type': 'Organization',
-    name: 'NVIDIA',
-    url: 'https://www.nvidia.com/',
-  },
   sameAs: [discord_url, forum_url],
   knowsAbout: ['NVIDIA Jetson', 'Edge AI', 'Robotics', 'Generative AI'],
 };
@@ -116,12 +111,28 @@ const communityStructuredData = {
               <strong>Platform:</strong> {meeting_platform}
             </li>
           </ul>
+          <p class="mt-4 text-sm text-slate-500">
+            Use Add to Calendar below to view the meeting in your local time zone.
+          </p>
         </div>
         
-        <a href={meeting_link} target="_blank" rel="noopener" class="inline-flex items-center px-6 py-3 bg-nvidia-green text-slate-900 font-bold rounded-lg hover:bg-nvidia-green/90 transition-all">
-          Join Meeting
-          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-        </a>
+        <div class="flex flex-wrap items-center gap-4">
+          <a href={meeting_link} target="_blank" rel="noopener" class="inline-flex items-center px-6 py-3 bg-nvidia-green text-slate-900 font-bold rounded-lg hover:bg-nvidia-green/90 transition-all">
+            Join Meeting
+            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+          </a>
+          <a
+            title="Add Jetson AI Lab Research Group Community Call to your calendar"
+            class="addeventatc"
+            data-id="4xd7xmdp18w4"
+            href="https://www.addevent.com/event/4xd7xmdp18w4"
+            target="_blank"
+            rel="noopener"
+          >
+            Add to Calendar
+          </a>
+        </div>
+        <script is:inline src="https://cdn.addevent.com/libs/atc/1.6.1/atc.min.js" async defer></script>
       </div>
     </div>
   </section>
@@ -155,7 +166,7 @@ const communityStructuredData = {
 
   <!-- Main Content from Markdown -->
   <section class="py-20 bg-slate-50">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="bg-white rounded-2xl shadow-sm p-8 md:p-12">
         <div class="prose prose-slate prose-lg max-w-none
           prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900
@@ -177,14 +188,14 @@ const communityStructuredData = {
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
           <h2 class="text-3xl font-bold text-slate-900 mb-4">Past Meetings</h2>
-          <p class="text-lg text-slate-600">Our meeting recordings and resources are available for review</p>
+          <p class="text-lg text-slate-600">Watch the latest Jetson AI Lab recordings from NVIDIA Developer.</p>
         </div>
-        
+
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {past_meetings.map(meeting => (
             <div class="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-shadow">
               <div class="aspect-video bg-slate-900 relative">
-                <iframe 
+                <iframe
                   class="absolute inset-0 w-full h-full"
                   src={`https://www.youtube.com/embed/${meeting.videoId}`}
                   title={meeting.title}
@@ -209,11 +220,11 @@ const communityStructuredData = {
             </div>
           ))}
         </div>
-        
+
         <div class="text-center mt-12">
           <a href={recordings_url} target="_blank" rel="noopener" class="inline-flex items-center px-6 py-3 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-all">
-            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm-2 5v6l5 3 1-1.5-4-2.5V7h-2z"/></svg>
-            View All Recordings on Google Drive
+            <svg class="w-5 h-5 mr-2 text-red-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.6 15.6V8.4L15.8 12l-6.2 3.6Z"/></svg>
+            View All Recordings on YouTube
           </a>
         </div>
       </div>
@@ -316,9 +327,9 @@ const communityStructuredData = {
   <!-- CTA Section -->
   <section class="py-20 bg-slate-900 text-white">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <h2 class="text-3xl font-bold mb-6">Ready to Join?</h2>
+      <h2 class="text-3xl font-bold mb-6">Connect with the Jetson Community</h2>
       <p class="text-xl text-slate-300 mb-8">
-        By coordinating together as a group, we can keep up with the rapidly evolving pace of AI and more quickly arrive at deploying intelligent multimodal agents and autonomous robots into the field.
+        Meet developers building with Jetson, exchange ideas, share your projects, and collaborate on the future of edge AI and robotics.
       </p>
       <div class="flex flex-wrap justify-center gap-4">
         <a href={discord_url} target="_blank" rel="noopener" class="inline-flex items-center px-8 py-4 bg-nvidia-green text-slate-900 font-bold rounded-lg hover:bg-nvidia-green/90 transition-all">

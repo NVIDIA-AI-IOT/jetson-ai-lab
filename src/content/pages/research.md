@@ -4,10 +4,10 @@ description: "A global collective for advancing open-source Edge ML, open to any
 seo_description: "Join the Jetson AI Lab Discord community for open-source edge AI, robotics, monthly research meetings, project collaboration, and NVIDIA Jetson support."
 discord_url: "https://discord.gg/BmqNSK4886"
 forum_url: "https://forums.developer.nvidia.com/c/agx-autonomous-machines/jetson-embedded-systems/jetson-projects/78"
-meeting_time: "9:00 AM PST / 12:00 PM EST / 5:00 PM GMT"
+meeting_time: "9:00 AM PT / 12:00 PM ET"
 meeting_platform: "Microsoft Teams"
 meeting_link: "https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZWUwNTIxYmQtNGJmZC00MDA1LTkzN2MtYmFmMzJjZWUxNDFh%40thread.v2/0?context=%7b%22Tid%22%3a%2243083d15-7273-40c1-b7db-39efd9ccc17a%22%2c%22Oid%22%3a%223e5863c5-26ea-489e-a546-cdc43df532ed%22%7d"
-recordings_url: "https://drive.google.com/drive/folders/18BC7o32jorx_LzZXx5wW0Io_nf1ZwO6X?usp=sharing"
+recordings_url: "https://www.youtube.com/playlist?list=PL5B692fm6--sdf3tQk-1kp9T65y8p-D5u"
 research_topics:
   - left: "Agentic AI and tool-using models on Jetson"
     right: "Vision-language-action models for physical AI"
@@ -22,42 +22,23 @@ research_topics:
   - left: "Edge AI deployment, orchestration, and observability"
     right: "Smart home, industrial, and autonomous systems"
 past_meetings:
-  - date: "September 9, 2025"
-    title: "Jetson Thor Introduction"
-    videoId: "trvaafQqXMc"
+  - date: "April 14, 2026"
+    title: "TensorRT Edge-LLM on Jetson & Culture"
+    videoId: "Am5cjhLe0jo"
     topics:
-      - "Jetson Thor Introduction"
-  - date: "August 13, 2025"
-    title: "Q3 Kickoff & New Format"
-    videoId: "BFWt1JyOUFU"
+      - "TensorRT Edge-LLM on Jetson"
+      - "Community culture"
+  - date: "March 10, 2026"
+    title: "Jetson AI Lab Lightning Talks"
+    videoId: "wxCAGlkvU-Q"
     topics:
-      - "Jetson Community Q3 Kickoff call & new format"
-  - date: "October 15, 2024"
-    title: "LeRobot & Stanley H1 Humanoid"
-    videoId: "Dpe48AVKc4c"
+      - "Community lightning talks"
+  - date: "February 10, 2026"
+    title: "Drones on Jetson & Isaac Lab on DGX Spark"
+    videoId: "4bZbFVe5PHk"
     topics:
-      - "HuggingFace LeRobot (Chitoku Yato)"
-      - "Stanley H1 Humanoid (Dave Niewinski)"
-  - date: "October 1, 2024"
-    title: "ReMEmbR & Diffusion Policies"
-    videoId: "HfJR3NwsM4M"
-    topics:
-      - "ReMEmbR: Long-Horizon Memory for Navigation (Abrar Anwar)"
-      - "Diffusion Policies, Shape LLM, 3D Encoders"
-  - date: "September 17, 2024"
-    title: "NASA JPL ROSA & LeRobot Walkthrough"
-    videoId: "Gys_AUOYZ4c"
-    topics:
-      - "NASA JPL - ROSA (Rob Royce & Shehryar Khattak)"
-      - "LeRobot Walkthrough (Chitoku Yato)"
-      - "VLM Agent in Isaac Sim/ROS (Kabilan Kb)"
-  - date: "September 3, 2024"
-    title: "Edge NeRF & OpenVLA Review"
-    videoId: "r1i3QQrRnfI"
-    topics:
-      - "Edge NeRFs and nerfstudio (Johnny Núñez Cano)"
-      - "Review of OpenVLA results (Dustin Franklin)"
-      - "Oculus Interface for Jetson (Al Costa)"
+      - "Drones on Jetson"
+      - "Isaac Lab on DGX Spark"
 team_members:
   - name: "Nurgaliyev Shakhizat"
     role: "Researcher"
@@ -331,58 +312,13 @@ emeritus_members:
     expertise: ["jetson-inference", "jetson-containers"]
 ---
 
-The Jetson AI Lab Research Group is a global collective for advancing open-source Edge ML, open to anyone to join and collaborate with others from the community and leverage each other's work. Our goal is using advanced AI for good in real-world applications in accessible and responsible ways.
-
-By coordinating together as a group, we can keep up with the rapidly evolving pace of AI and more quickly arrive at deploying intelligent multimodal agents and autonomous robots into the field.
-
-There are virtual meetings that anyone is welcome to join, offline discussion on the [Jetson Projects](https://forums.developer.nvidia.com/c/agx-autonomous-machines/jetson-embedded-systems/jetson-projects/78) forum, and guidelines for upstreaming open-source contributions.
-
-## Upcoming Meetings
-
-**Regular Series: 2nd Tuesday of every month**
-
-We are pleased to announce the resumption of the Jetson AI Lab Research Group Community calls. The primary objective of these calls remains consistent with our past meetings. We aim to discuss emerging trends, share insights on exciting projects undertaken by members of this group, address any issues or roadblocks, and explore new frameworks and libraries.
-
-We will share more details during the call. We look forward to reconnecting with all of you.
-
-Join the [Discord](https://discord.gg/BmqNSK4886) server to stay involved and receive the latest updates.
-
-## Research Topics
-
-Our group explores cutting-edge research areas in edge AI and robotics. These topics represent our current focus areas and will evolve as the state-of-the-art progresses and new challenges emerge.
-
 ## Contribution Guidelines
 
-When experiments are successful, we package the results in ways that make them easily reusable for others to integrate into their own projects. We encourage contributions through multiple channels:
+We welcome contributions that make edge AI projects easier for the community to reproduce, improve, and build upon. Before getting started, please review the [Jetson AI Lab contribution guidelines](https://github.com/NVIDIA-AI-IOT/jetson-ai-lab/blob/main/CONTRIBUTING.md).
 
-- Open-source libraries & code on GitHub
-- Models on [HuggingFace Hub](https://huggingface.co/models)
+- Contribute code, documentation, and tutorials to the [NVIDIA AI-IOT Jetson AI Lab repository](https://github.com/NVIDIA-AI-IOT/jetson-ai-lab)
 - Containers provided by [jetson-containers](https://github.com/dusty-nv/jetson-containers)
-- Discussions on the [Jetson Projects](https://forums.developer.nvidia.com/c/agx-autonomous-machines/jetson-embedded-systems/jetson-projects/78) forum
-- Documentation & tutorials on Jetson AI Lab
-- [Hackster.io](https://www.hackster.io/) for hardware-centric builds
+- Discuss ideas and proposals on the [Jetson Projects forum](https://forums.developer.nvidia.com/c/agx-autonomous-machines/jetson-embedded-systems/jetson-projects/78)
+- Share hardware-focused community projects on [Hackster.io](https://www.hackster.io/)
 
-Ongoing technical discussions are encouraged to occur on the forums, Discord, or GitHub Issues, with status updates on projects given during the meetings.
-
-## Meeting Schedule
-
-**Regular Series: 2nd Tuesday of every month starting September 9, 2025**
-
-We hold virtual meetings that anyone is welcome to join and speak during. We discuss the latest updates and experiments that we want to explore. Please remain courteous to others during the calls. We'll stick around after for anyone who has questions or didn't get the chance to be heard.
-
-### Future Meetings
-
-- **October 14th, 2025** - 2nd Tuesday
-- **November 11th, 2025** - 2nd Tuesday
-- **December 9th, 2025** - 2nd Tuesday
-- **January 13th, 2026** - 2nd Tuesday
-
-Please join the `#events` channel on the [Discord](https://discord.gg/BmqNSK4886) server for the latest info. The meetings will be recorded so anyone unable to attend live can watch them after.
-
-## Past Meetings
-
-Our meeting recordings and resources are available for review and reference.
-
-## Core Contributors
-
-Our research group brings together experts from academia, industry, and the open-source community who are passionate about advancing edge AI and robotics. Below are sustaining members who participate in the research forum and related activities. People who are no longer active in the group but made foundational contributions — including widely used tools such as [jetson-containers](https://github.com/dusty-nv/jetson-containers) — are listed separately as **emeritus contributors** at the end of this page.
+Use the forums, Discord, or GitHub Issues for ongoing technical discussions, and share project updates during community meetings.
