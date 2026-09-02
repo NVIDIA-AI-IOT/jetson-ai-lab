@@ -4,10 +4,36 @@ export interface Props {
   title: string;
   description?: string;
   image?: string;
+  imageAlt?: string;
+  structuredData?: Record<string, unknown> | Record<string, unknown>[];
 }
 
-const { title, description = "The NVIDIA Jetson AI Lab is your guide to running generative AI models entirely on-device with NVIDIA Jetson. Explore optimized tutorials, benchmarks and hands-on examples for LLMs, VLMs, VLAs, speech recognition, and more.", image = "/images/hero/nvidia-logo.png" } = Astro.props;
+const {
+  title,
+  description = "The NVIDIA Jetson AI Lab is your guide to running generative AI models entirely on-device with NVIDIA Jetson. Explore optimized tutorials, benchmarks and hands-on examples for LLMs, VLMs, VLAs, speech recognition, and more.",
+  image = "/images/hero/nvidia-logo.png",
+  imageAlt = "NVIDIA Jetson AI Lab",
+  structuredData = [],
+} = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const siteName = 'Jetson AI Lab';
+const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
+const websiteStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: siteName,
+  alternateName: 'NVIDIA Jetson AI Lab',
+  url: new URL('/', Astro.site).href,
+  description: 'Guides, models, tutorials, and community resources for running generative AI on NVIDIA Jetson.',
+  publisher: {
+    '@type': 'Organization',
+    name: 'NVIDIA',
+    url: 'https://www.nvidia.com/',
+  },
+  inLanguage: 'en',
+};
+const pageStructuredData = Array.isArray(structuredData) ? structuredData : [structuredData];
+const allStructuredData = [websiteStructuredData, ...pageStructuredData];
 ---
 
 <!DOCTYPE html>
@@ -20,21 +46,28 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <link rel="apple-touch-icon" href="/images/icons/nvidia-logo.png" />
     <link rel="canonical" href={canonicalURL} />
     <meta name="generator" content={Astro.generator} />
-    <title>{title} | Jetson AI Lab</title>
+    <title>{fullTitle}</title>
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonicalURL} />
-    <meta property="og:title" content={`${title} | Jetson AI Lab`} />
+    <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={new URL(image, Astro.site)} />
+    <meta property="og:image:alt" content={imageAlt} />
     <meta property="og:site_name" content="Jetson AI Lab" />
+    <meta property="og:locale" content="en_US" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={`${title} | Jetson AI Lab`} />
+    <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={new URL(image, Astro.site)} />
+    <meta name="twitter:image:alt" content={imageAlt} />
+
+    {allStructuredData.map((data) => (
+      <script type="application/ld+json" set:html={JSON.stringify(data)} />
+    ))}
 
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-SXH8S4Y8RW"></script>
