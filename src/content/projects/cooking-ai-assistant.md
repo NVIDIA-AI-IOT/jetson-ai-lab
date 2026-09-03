@@ -5,7 +5,7 @@ author: "Dimiter Kendri"
 date: "2024-04-01"
 source: "Hackster"
 link: "https://www.hackster.io/dhq/cooking-meals-with-a-local-ai-assistant-on-jetson-axg-orin-2fcb98"
-video: "https://player.vimeo.com/video/928227995?h=28825b3214"
+image: "https://hackster.imgix.net/uploads/attachments/1698401/_3ES5OLW4vh.blob?auto=compress&w=1600&h=1200&fit=min&fm=jpg"
 featured: false
 jetson: ["Jetson AGX Orin"]
 tags: ["VLM", "Speech", "Agentic AI"]

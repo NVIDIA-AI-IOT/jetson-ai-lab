@@ -1,0 +1,247 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+
+const allProjects = await getCollection('projects');
+allProjects.sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+
+const allSources = [...new Set(allProjects.map((project) => project.data.source))].sort();
+const jetsonOrder = ['Jetson Thor', 'Jetson AGX Orin', 'Jetson Orin Nano'];
+const jetsonLabels: Record<string, string> = {
+  'Jetson Orin Nano': 'Jetson Orin Nano / NX',
+};
+const allJetsons = jetsonOrder.filter((device) =>
+  allProjects.some((project) => (project.data.jetson || []).includes(device as any))
+);
+const allTags = [...new Set(allProjects.flatMap((project) => project.data.tags || []))].sort();
+---
+
+<Layout
+  title="Community Projects"
+  description="Community projects showcasing generative AI implementations on the NVIDIA Jetson platform."
+>
+  <section class="relative bg-nvidia-black text-white py-24 overflow-hidden">
+    <div class="absolute inset-0 overflow-hidden">
+      <div class="absolute -top-40 -right-40 w-96 h-96 bg-nvidia-green/20 rounded-full blur-3xl"></div>
+      <div class="absolute top-20 -left-20 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="text-5xl md:text-6xl font-bold tracking-tight mb-6">
+        <span class="bg-clip-text text-transparent bg-gradient-to-r from-nvidia-white to-nvidia-gray-300">
+          Community Projects
+        </span>
+      </h1>
+      <p class="text-xl text-nvidia-gray-300 max-w-2xl mx-auto leading-relaxed">
+        Discover guides, tutorials, and articles contributed by the community showcasing generative AI on the Jetson platform.
+      </p>
+
+      <div class="mt-10 flex flex-wrap justify-center gap-4">
+        <a href="https://discord.gg/BmqNSK4886" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-nvidia-green text-nvidia-black font-bold rounded-lg hover:bg-nvidia-green/90 transition-all">
+          Join Discord
+        </a>
+        <a href="https://github.com/NVIDIA-AI-IOT/jetson-ai-lab" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-lg hover:bg-white/20 transition-all border border-white/10">
+          Contribute on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-12 bg-nvidia-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col lg:flex-row gap-8">
+        <aside class="lg:w-64 flex-shrink-0">
+          <div class="lg:sticky lg:top-24 space-y-1">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-nvidia-black">Filters</h2>
+              <button id="filter-reset" type="button" class="text-xs text-nvidia-green hover:underline hidden">
+                Clear all
+              </button>
+            </div>
+            <span id="filter-count" class="block text-sm text-nvidia-gray-400 mb-4" aria-live="polite"></span>
+
+            <div class="border-b border-nvidia-gray-200 pb-4 mb-4">
+              <button
+                type="button"
+                class="filter-section-toggle flex items-center justify-between w-full text-left py-2"
+                data-section="jetson"
+                aria-expanded="true"
+                aria-controls="section-jetson"
+              >
+                <span class="text-sm font-semibold text-nvidia-gray-500 uppercase tracking-wide">Jetson Device</span>
+                <svg class="w-4 h-4 text-nvidia-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              <fieldset class="filter-section-content space-y-2 mt-2" id="section-jetson">
+                <legend class="sr-only">Filter by Jetson device</legend>
+                <label class="flex items-center gap-2 cursor-pointer group">
+                  <input type="radio" name="filter-jetson" value="" checked class="accent-nvidia-green" />
+                  <span class="text-sm text-nvidia-gray-600 group-hover:text-nvidia-black">All devices</span>
+                </label>
+                {allJetsons.map((device) => (
+                  <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="radio" name="filter-jetson" value={device} class="accent-nvidia-green" />
+                    <span class="text-sm text-nvidia-gray-600 group-hover:text-nvidia-black">{jetsonLabels[device] || device}</span>
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+
+            <div class="border-b border-nvidia-gray-200 pb-4 mb-4">
+              <button
+                type="button"
+                class="filter-section-toggle flex items-center justify-between w-full text-left py-2"
+                data-section="source"
+                aria-expanded="true"
+                aria-controls="section-source"
+              >
+                <span class="text-sm font-semibold text-nvidia-gray-500 uppercase tracking-wide">Source</span>
+                <svg class="w-4 h-4 text-nvidia-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              <fieldset class="filter-section-content space-y-2 mt-2" id="section-source">
+                <legend class="sr-only">Filter by source</legend>
+                <label class="flex items-center gap-2 cursor-pointer group">
+                  <input type="radio" name="filter-source" value="" checked class="accent-nvidia-green" />
+                  <span class="text-sm text-nvidia-gray-600 group-hover:text-nvidia-black">All sources</span>
+                </label>
+                {allSources.map((source) => (
+                  <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="radio" name="filter-source" value={source} class="accent-nvidia-green" />
+                    <span class="text-sm text-nvidia-gray-600 group-hover:text-nvidia-black">{source}</span>
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+
+            <div class="pb-4">
+              <button
+                type="button"
+                class="filter-section-toggle flex items-center justify-between w-full text-left py-2"
+                data-section="tags"
+                aria-expanded="true"
+                aria-controls="section-tags"
+              >
+                <span class="text-sm font-semibold text-nvidia-gray-500 uppercase tracking-wide">Tags</span>
+                <svg class="w-4 h-4 text-nvidia-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              <fieldset class="filter-section-content space-y-2 mt-2 max-h-64 overflow-y-auto" id="section-tags">
+                <legend class="sr-only">Filter by tags</legend>
+                {allTags.map((tag) => (
+                  <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="checkbox" name="filter-tag" value={tag} class="accent-nvidia-green" />
+                    <span class="text-sm text-nvidia-gray-600 group-hover:text-nvidia-black">{tag}</span>
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+          </div>
+        </aside>
+
+        <div class="flex-1 min-w-0">
+          <div id="projects-grid" class="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+            {allProjects.map((project) => <ProjectCard project={project} />)}
+          </div>
+
+          <div id="no-results" class="hidden py-16 text-center">
+            <p class="text-nvidia-gray-500 text-lg">No projects match the selected filters.</p>
+            <p class="text-nvidia-gray-400 text-sm mt-2">Try adjusting your filters or uncheck some tags.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-16 bg-nvidia-gray-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-3xl font-bold text-nvidia-black mb-4">Share Your Project</h2>
+      <p class="text-lg text-nvidia-gray-600 mb-8">
+        Built something cool with Jetson and generative AI? We'd love to feature your project!
+      </p>
+      <a href="https://discord.gg/BmqNSK4886" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-8 py-4 bg-nvidia-green text-nvidia-black font-bold rounded-lg hover:bg-nvidia-green/90 transition-all">
+        Share on Discord
+      </a>
+    </div>
+  </section>
+</Layout>
+
+<script is:inline>
+  (function () {
+    var resetBtn = document.getElementById('filter-reset');
+    var countEl = document.getElementById('filter-count');
+    var noResults = document.getElementById('no-results');
+    var grid = document.getElementById('projects-grid');
+    var cards = document.querySelectorAll('#projects-grid .project-card');
+
+    function getRadioValue(name) {
+      var checked = document.querySelector('input[name="' + name + '"]:checked');
+      return checked ? checked.value : '';
+    }
+
+    function getCheckedTags() {
+      var checked = document.querySelectorAll('input[name="filter-tag"]:checked');
+      var tags = [];
+      checked.forEach(function (checkbox) { tags.push(checkbox.value); });
+      return tags;
+    }
+
+    function applyFilters() {
+      var source = getRadioValue('filter-source');
+      var jetson = getRadioValue('filter-jetson');
+      var selectedTags = getCheckedTags();
+      var visible = 0;
+
+      cards.forEach(function (card) {
+        var show = true;
+        if (source && card.dataset.source !== source) show = false;
+        if (jetson && (card.dataset.jetson || '').split(',').indexOf(jetson) === -1) show = false;
+        if (selectedTags.length > 0) {
+          var cardTags = (card.dataset.tags || '').split(',');
+          var hasAll = selectedTags.every(function (tag) { return cardTags.indexOf(tag) !== -1; });
+          if (!hasAll) show = false;
+        }
+
+        card.classList.toggle('hidden', !show);
+        if (show) visible += 1;
+      });
+
+      var hasFilters = Boolean(source || jetson || selectedTags.length > 0);
+      resetBtn.classList.toggle('hidden', !hasFilters);
+      noResults.classList.toggle('hidden', visible > 0);
+      grid.classList.toggle('hidden', visible === 0);
+      countEl.textContent = hasFilters ? 'Showing ' + visible + ' of ' + cards.length : cards.length + ' projects';
+    }
+
+    document.querySelectorAll('input[name="filter-source"], input[name="filter-jetson"], input[name="filter-tag"]').forEach(function (input) {
+      input.addEventListener('change', applyFilters);
+    });
+
+    resetBtn.addEventListener('click', function () {
+      document.querySelectorAll('input[name="filter-source"][value=""], input[name="filter-jetson"][value=""]').forEach(function (radio) {
+        radio.checked = true;
+      });
+      document.querySelectorAll('input[name="filter-tag"]').forEach(function (checkbox) {
+        checkbox.checked = false;
+      });
+      applyFilters();
+    });
+
+    document.querySelectorAll('.filter-section-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var content = document.getElementById('section-' + button.dataset.section);
+        var arrow = button.querySelector('svg');
+        content.classList.toggle('hidden');
+        var expanded = !content.classList.contains('hidden');
+        button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        arrow.style.transform = expanded ? '' : 'rotate(-90deg)';
+      });
+    });
+
+    applyFilters();
+  })();
+</script>

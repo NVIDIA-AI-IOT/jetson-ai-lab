@@ -105,7 +105,7 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 const FOOTER = `## Other Pages
 
 - [Model Catalog](${SITE}/models/): Browse all supported models with one-click deployment commands for Jetson Orin and Thor
-- [Community Projects](${SITE}/community/): Community-contributed projects, demos, and integrations built on Jetson
+- [Community Projects](${SITE}/projects/): Community-contributed projects, demos, and integrations built on Jetson
 - [Jetson AI Lab Discord Community & Research Group](${SITE}/research/): Join the Jetson community for monthly research meetings, open-source edge AI collaboration, robotics projects, and the official Discord server
 `;
 

@@ -1,0 +1,109 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+
+const { project } = Astro.props;
+const { data } = project;
+const isNvidia = data.origin === 'nvidia';
+const badge = isNvidia ? 'NVIDIA' : data.source;
+
+const sourceColors: Record<string, { bg: string; text: string }> = {
+  GitHub: { bg: 'bg-gray-800', text: 'text-white' },
+  Hackster: { bg: 'bg-orange-500', text: 'text-white' },
+  YouTube: { bg: 'bg-red-600', text: 'text-white' },
+  NVIDIA: { bg: 'bg-nvidia-green', text: 'text-nvidia-black' },
+  JetsonHacks: { bg: 'bg-blue-600', text: 'text-white' },
+  Medium: { bg: 'bg-gray-900', text: 'text-white' },
+  Seeed: { bg: 'bg-green-600', text: 'text-white' },
+  Course: { bg: 'bg-indigo-600', text: 'text-white' },
+  Other: { bg: 'bg-gray-500', text: 'text-white' },
+};
+
+const colors = sourceColors[badge] || sourceColors.Other;
+const isDirectVideo = Boolean(data.video && /\.(mp4|webm)(?:$|\?)/i.test(data.video));
+const formattedDate = new Date(`${data.date}T00:00:00`).toLocaleDateString('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+---
+
+<a
+  href={data.link}
+  target="_blank"
+  rel="noopener noreferrer"
+  class="project-card group bg-nvidia-gray-50 rounded-xl overflow-hidden border border-nvidia-gray-200 hover:border-nvidia-green/50 hover:shadow-lg transition-all duration-300"
+  data-origin={data.origin}
+  data-source={data.source}
+  data-jetson={(data.jetson || []).join(',')}
+  data-tags={(data.tags || []).join(',')}
+>
+  <div class="relative aspect-video bg-nvidia-gray-100 overflow-hidden">
+    {data.video && isDirectVideo ? (
+      <video
+        class="w-full h-full object-cover"
+        autoplay
+        loop
+        muted
+        playsinline
+        preload="metadata"
+        aria-label={data.title}
+      >
+        <source src={data.video} type={data.video.includes('.webm') ? 'video/webm' : 'video/mp4'} />
+      </video>
+    ) : data.video ? (
+      <iframe
+        src={data.video}
+        title={data.title}
+        class="w-full h-full"
+        loading="lazy"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      ></iframe>
+    ) : data.image ? (
+      <img
+        src={data.image}
+        alt={data.title}
+        loading="lazy"
+        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+      />
+    ) : (
+      <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-nvidia-gray-100 to-nvidia-gray-200">
+        <svg class="w-16 h-16 text-nvidia-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17 9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z"></path>
+        </svg>
+      </div>
+    )}
+
+    <span class={`absolute top-3 left-3 px-2 py-1 text-xs font-bold rounded ${colors.bg} ${colors.text}`}>
+      {badge}
+    </span>
+  </div>
+
+  <div class="p-5">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm text-nvidia-gray-500">{data.author}</span>
+      <time datetime={data.date} class="text-sm text-nvidia-gray-400">{formattedDate}</time>
+    </div>
+
+    <h2 class="text-lg font-bold text-nvidia-black mb-2 group-hover:text-nvidia-green transition-colors line-clamp-2">
+      {data.title}
+    </h2>
+
+    <p class="text-nvidia-gray-600 text-sm line-clamp-3">{data.description}</p>
+
+    {data.tags && (
+      <div class="flex flex-wrap gap-1.5 mt-4">
+        {data.tags.slice(0, 3).map((tag) => (
+          <span class="px-2 py-0.5 bg-nvidia-gray-100 text-nvidia-gray-600 text-xs rounded-full">
+            {tag}
+          </span>
+        ))}
+      </div>
+    )}
+  </div>
+</a>
