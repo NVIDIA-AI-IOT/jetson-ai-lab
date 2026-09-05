@@ -1,0 +1,303 @@
+---
+title: "UEFI Rescue Shell on Jetson Orin Nano"
+description: "Recover an unbootable Jetson Orin Nano (JetPack 7.2.x) via the UEFI Shell: the 30-second ESC-menu fix, serial console setup, NVRAM slot surgery, installer-ISO failure signatures, and when to fall back to USB recovery flashing."
+category: "Setup"
+section: "Recovery & Firmware"
+order: 5
+tags: ["setup", "recovery", "uefi", "bootloader", "jetpack-7.2", "jetson-orin-nano", "serial-console", "nvme", "troubleshooting", "firmware"]
+featured: false
+isNew: true
+authors:
+  - name: "explicitcontextualunderstanding"
+    github: "explicitcontextualunderstanding"
+---
+
+import Tabs from '../../../components/Tabs.astro';
+
+Your Jetson Orin Nano powers on, but instead of Ubuntu you see:
+
+```text
+UEFI Interactive Shell v2.2
+UEFI v2.70 (NVIDIA, 0x00010000)
+Shell>
+```
+
+Do not reflash yet. On JetPack 7.2.x (Jetson Linux R39.2.x), the Orin Nano boots through an EDK2 UEFI firmware in QSPI flash, and that firmware includes a full interactive shell with NVRAM manipulation (`dmpstore`, `setvar`, `bcfg`), filesystem navigation (`map`, `ls`, `cp`), and direct kernel launch. Most "bricked" Orin Nanos are recoverable from this shell in minutes, without erasing anything.
+
+This guide covers the JetPack 7.2.x generation only: Ubuntu 24.04, kernel 6.8, the unified ISO installer, and the `jetson-orin-nano-devkit-super` board configuration (see the [JetPack 7.2 announcement](https://forums.developer.nvidia.com/t/jetpack-7-2-jetson-software-goes-agentic-with-jetson-linux-39-2/372060)). The deep-dive companion repository, [jetson-uefi-rescue-toolkit](https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit), carries the full runbook, host-side verification scripts, and automated UEFI Shell scripts referenced below.
+
+<div class="admonition warning">
+  <p class="admonition-title">⚠️ Two firmware facts that shape everything below</p>
+  <p><strong>Handle numbers are not stable.</strong> Filesystem handles (<code>FS0:</code>, <code>FS1:</code>, ...) are assigned by device enumeration on every boot. The same USB stick can be <code>FS4:</code> on one boot and <code>FS0:</code> on the next, and the first handles are usually firmware-internal volumes. Always run <code>map -r</code> and identify media by device path (<code>USB(...)</code> vs <code>NVMe(...)</code>), never by memorized number.</p>
+  <p><strong>Boot-slot health is sticky.</strong> After repeated failed boots, the firmware marks the OS slot <em>Unbootable</em> in NVRAM, and that flag survives power cycles. Clearing it (not reflashing) is what most recoveries actually need.</p>
+</div>
+
+## Triage: which layer is failing?
+
+Before running any command, classify the failure. Each layer has a different remedy, and the layers are ordered: a fix for layer N does nothing for layer N+1.
+
+| # | Layer | Typical symptom | Discriminating evidence | First remedy |
+|---|-------|-----------------|------------------------|--------------|
+| 1 | **Firmware delivery (QSPI)** | Blank display, no serial output at all | `lsusb` with recovery jumper shows `0955:7020` APX device | Force Recovery + reflash (below) |
+| 2 | **Firmware (QSPI/UEFI)** | Drops to `Shell>` with an `ASSERT`, or refuses a verified-valid binary | PE header verifies (0xAA64) but `LoadImage` says unsupported | ESC Setup menu quarantine clear |
+| 3 | **Boot config (ESP content)** | `Shell>` drop without ASSERT; launcher prints `Android image header not seen` | `BOOTAA64.EFI` ran fine, found no `extlinux.conf`/`grubaa64.efi` next to it | Stage GRUB on the ESP |
+| 4 | **Filesystem (rootfs)** | Kernel starts, then mount of the root filesystem fails | Partition label/GUID correct but ext4 won't mount | `e2fsck` from live environment |
+| 5 | **Kernel / device tree** | Serial prints `Linux version`, then panic before userspace | Panic text names the failing subsystem | Boot a matching r39.2.x kernel |
+| 6 | **OS configuration** | Kernel boots, `systemd` reached, but services or SSH fail | Logs in `/var/log` | Recovery shell, inspect rootfs |
+
+## The 30-second fix: ESC setup menu
+
+Try this before anything else. It is non-destructive and clears the most common failure: a boot slot quarantined as *Unbootable* after failed boot attempts.
+
+1. Power cycle the board and press **ESC** repeatedly (or press **F11** for the Boot Manager Menu) when the firmware banner appears.
+2. Navigate to **Device Manager → NVIDIA Configuration → L4T Configuration**.
+3. Set **OS chain A status** to **Normal** (it will show *Unbootable* if quarantined).
+4. Verify **L4T Boot Mode** is **ExtLinux**.
+5. Press **F10** to save, **ESC** to exit, and reboot.
+
+```text
+┌────────────────────────────────────────────────────────┐
+│ NVIDIA Configuration                                   │
+│   L4T Configuration                                    │
+│     OS chain A status:  [Normal]       <-- Set Normal  │
+│     OS chain B status:  [Normal]                       │
+│     L4T Boot Mode:      [ExtLinux]     <-- Set         │
+└────────────────────────────────────────────────────────┘
+```
+
+If the board boots now, you are done. If the menu freezes or refuses to save (locked NVRAM), continue to the shell below.
+
+## Serial console setup
+
+The UEFI shell is a serial-first environment. During severe boot regressions the HDMI/DisplayPort output frequently fails to initialize, so a blank display does not mean a dead board—the shell is usually waiting on the debug console.
+
+<div class="admonition note">
+  <p class="admonition-title">📘 Connecting</p>
+  <p>Every Orin Nano carrier exposes a USB debug console over the Micro-USB / USB-C port. On the host it appears as <code>/dev/ttyUSB*</code> or <code>/dev/ttyACM*</code> (Linux) or <code>/dev/cu.usbmodem*</code> (macOS). Open it at <strong>115200 8N1, no flow control</strong>: <code>picocom -b 115200 /dev/ttyUSB0</code> or <code>screen /dev/cu.usbmodem* 115200</code>. If the USB debug port is dead or flaky, wire a 3.3V TTL serial adapter to the carrier's 12-pin button header (J14).</p>
+</div>
+
+<details class="nv-details">
+<summary>J14 12-pin button header pinout (UART & RCM)</summary>
+<div class="nv-details-content">
+
+When the Micro-USB or USB-C debug port is dead or unresponsive, wire a 3.3V USB-to-UART serial adapter directly to the 12-pin button header (J14, documented in NVIDIA's [Board Automation guide](https://docs.nvidia.com/jetson/archives/r36.4.3/DeveloperGuide/AT/BoardAutomation.html)):
+
+| Pin | Signal | Target connection | Function |
+|---|---|---|---|
+| **Pin 3** | `UART2_TXD` | Adapter RXD | Jetson serial transmit (3.3V TTL) |
+| **Pin 4** | `UART2_RXD` | Adapter TXD | Jetson serial receive (3.3V TTL) |
+| **Pin 10** | `FORCE_RECOVERY_N` | Short to Pin 11 | Pull low during power-on to enter Force Recovery (RCM) |
+| **Pin 11** | `GND` | Adapter GND & Pin 10 | Ground reference |
+| **Power** | *Do not connect* | Disconnected | **Warning: 3.3V TTL only; never connect the adapter 5V/3.3V power lead** |
+
+<div class="admonition warning">
+  <p class="admonition-title">⚠️ 3.3V TTL only</p>
+  <p>Use 3.3V TTL levels only. <strong>Never connect the adapter's 5V or 3.3V power lead</strong> to any pin on the header—backpowering the carrier board rail can permanently damage the module.</p>
+</div>
+
+</div>
+</details>
+
+## UEFI Shell Triage
+
+Run `help -b` first: it lists the commands compiled into your firmware build (the JP7.2.x build ships 71, a full Level 3 interactive shell). Then:
+
+### 1. Map the devices
+
+```text
+Shell> map -fs
+Shell> map -r
+```
+
+`map -r` prints full device paths. Decode in seconds: `USB(...)` is your rescue thumbdrive, `NVMe(...)` is the internal SSD, `Fv(...)`/`MemoryMapped(...)` are firmware volumes (not storage), and a `BLKx:` handle without an `FSx:` sibling is a partition the firmware cannot read (ext4 or raw ISO9660).
+
+### 2. Find and launch the bootloader
+
+Walk the readable `FSx:` handles until you find `\EFI\BOOT\` containing `BOOTAA64.EFI` (NVIDIA's `L4tLauncher`) or `grubaa64.efi`, then launch it by typing its name:
+
+```text
+FS4:\EFI\BOOT\> grubaa64.efi
+```
+
+- **Boots**: done.
+- **`Android image header not seen`**: the launcher executed but found no boot config next to it. Stage GRUB beside it (next step).
+- **`LoadImage unsupported`** on a verified-valid binary: the boot chain itself is quarantined. Go back to the ESC menu, or clear the slot flags via NVRAM below.
+
+<div class="admonition note">
+  <p class="admonition-title">📘 Uppercase path sensitivity</p>
+  <p>Early-stage EDK2 lookups for <code>BOOTAA64.EFI</code> look for exact uppercase paths. Always stage files into <code>\EFI\BOOT&#92;</code> rather than lowercase <code>\efi\boot&#92;</code>.</p>
+</div>
+
+### 3. Stage GRUB next to L4tLauncher
+
+The launcher probes for `extlinux.conf`, then `grubaa64.efi` + `grub.cfg`, then an Android boot image—in that order (per NVIDIA's [L4TLauncher source code](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.c)), and its probe messages are how you tell layer 3 from layer 2. If it fell through to the Android check, copy GRUB and its config next to `BOOTAA64.EFI`:
+
+```text
+Shell> fs4:\stage-grub.nsh fs4: fs2:
+Shell> fs2:\EFI\BOOT\grubaa64.efi
+```
+
+<details class="nv-details">
+<summary>The same three commands, typed manually</summary>
+<div class="nv-details-content">
+
+Example mapping: rescue USB = `fs4:`, target NVMe ESP = `fs2:`—substitute whatever your `map -r` showed.
+
+```text
+Shell> cp fs4:\boot\grub\grub.cfg fs2:\EFI\BOOT\grub.cfg
+Shell> cp fs4:\efi\boot\grubaa64.efi fs2:\EFI\BOOT\grubaa64.efi
+Shell> fs2:\EFI\BOOT\grubaa64.efi
+```
+
+A `grub.cfg` sitting next to `grubaa64.efi` lets GRUB load its configuration even when it cannot read secondary ISO9660 or ext4 partitions.
+
+</div>
+</details>
+
+<details class="nv-details">
+<summary>Direct EFI-stub kernel launch (when GRUB and L4tLauncher are dead)</summary>
+<div class="nv-details-content">
+
+When both `L4tLauncher` and GRUB fail to execute, the ARM64 Linux kernel (`Image`) can be booted directly from the UEFI Shell using its built-in EFI stub:
+
+```text
+FS4:\casper\> Image initrd=fs4:\casper\initrd console=ttyTCU0,115200 root=/dev/nvme0n1p1 rw rootdelay=30
+```
+
+- `FS4:\casper\`: Adjust `FS4:` to the media handle hosting your kernel and initrd (rescue USB or NVMe partition identified via `map -r`).
+- `console=ttyTCU0,115200`: Routes console output to the Tegra Combined UART (TCU) on Orin.
+- `root=/dev/nvme0n1p1 rw`: Mounts the target NVMe root filesystem read-write.
+- `rootdelay=30`: Critical for NVMe storage; allows the PCIe controller sufficient time to enumerate before the kernel attempts to mount rootfs.
+
+</div>
+</details>
+
+The [companion toolkit](https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit) ships these as automated scripts (`startup.nsh`, `stage-grub.nsh`, `boot-kernel-stub.nsh`) plus host-side pre-flight verifiers for the rescue stick.
+
+## NVRAM Slot Surgery
+
+When the ESC menu will not save, reset the boot-slot flags from the shell instead. Slot health lives in NVRAM under NVIDIA's public variable GUID (`781e084c-a330-417c-b678-38e696380cb9`, specified in the [NVIDIA UEFI Adaptation Guide](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html)):
+
+```text
+Shell> dmpstore RootfsStatusSlotA
+Shell> dmpstore L4TDefaultBootMode
+```
+
+- `RootfsStatusSlotA` / `RootfsStatusSlotB`: `0x00000000` = Normal, `0x000000FF` = Unbootable. A wedged recovery loop usually shows `0xFF`.
+- `L4TDefaultBootMode`: `0x00000001` = ExtLinux (normal), `0x00000003` = Recovery partition (a recovery loop persists with this value).
+
+Clear a wedged flag with an empty `setvar` assignment (deleting the variable restores its default):
+
+```text
+Shell> setvar RootfsStatusSlotA -guid 781e084c-a330-417c-b678-38e696380cb9 =
+```
+
+<div class="admonition danger">
+  <p class="admonition-title">🚫 If setvar returns EFI_WRITE_PROTECTED</p>
+  <p>Some JetPack builds restrict NVRAM writes at runtime, and stock 7.2.x can when Secure Boot or variable locks are active. Do not loop on it: use the ESC setup menu instead, or fall back to recovery flashing. Once a variable is confirmed written, verify with <code>dmpstore</code> and power-cycle before concluding success.</p>
+</div>
+
+Inside the Linux recovery shell (`bash-5.1#` on serial after a rootfs fallback), the same flags are resettable in-band through `efivarfs` without needing the UEFI Shell or ESC menu:
+
+<details class="nv-details">
+<summary>Linux recovery shell: in-band slot reset via efivarfs</summary>
+<div class="nv-details-content">
+
+Linux kernel `efivarfs` protects UEFI variables with immutable filesystem attributes (`chattr +i`) and requires an 8-byte little-endian payload: a 4-byte attribute bitmask (`\x07\x00\x00\x00` = `EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS`), followed by 4 bytes for the 32-bit integer value (`0x00000000` for Normal status):
+
+```bash
+mount -t efivarfs none /sys/firmware/efi/efivars
+printf "\x07\x00\x00\x00\x00\x00\x00\x00" > /tmp/var_normal.bin
+chattr -i /sys/firmware/efi/efivars/RootfsStatusSlotA-781e084c-a330-417c-b678-38e696380cb9
+dd if=/tmp/var_normal.bin of=/sys/firmware/efi/efivars/RootfsStatusSlotA-781e084c-a330-417c-b678-38e696380cb9 bs=8 count=1
+reboot -f
+```
+
+*(For Slot B, repeat the `chattr` and `dd` steps with `RootfsStatusSlotB-781e084c-a330-417c-b678-38e696380cb9`).*
+
+</div>
+</details>
+
+## Installer ISO failure signatures
+
+JetPack 7.2.x installs from a unified, UEFI-bootable ISO written to a USB stick (target: onboard NVMe). Two failure signatures are common enough to memorize:
+
+### Boot loop before the installer starts
+
+```text
+ISO installation medium detected, running PreIsoInstaller logic
+RunPreIsoInstaller: Capsule staged 5 times but version not bumped, aborting to prevent boot loop
+L4TLauncher: Iso boot loop detected, halting
+```
+
+The ISO arms a QSPI firmware capsule on every boot, but the firmware version never advances (see NVIDIA's [Capsule Update documentation](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Library/FmpDeviceLib/CapsuleUpdateJetson.md))—typically NVRAM write protection, or a newer PCN-revision module (PCN 211461/211462, introduced in [Jetson Linux r36.4.0](https://developer.nvidia.com/embedded/jetson-linux-r3640)) sitting on pre-r36.4.0 firmware. Remedy: bump QSPI out-of-band from a Linux host in Force Recovery (`sudo ./l4t_initrd_flash.sh --erase-all jetson-orin-nano-devkit-super internal`), verify the banner reports `39.2.x`, then boot the ISO again.
+
+### Install aborts at Step 9/13 ("Updating boot firmware")
+
+```text
+curtin in-target nvidia-l4t-bootloader ... exit 100
+nvidia-l4t-bootloader postinst: does not match any known boards
+```
+
+The bootloader package's post-install hook could not match the board identity string in `COMPATIBLE_SPEC` against its known-boards table—usually a stale or wrong board name left by a prior release. The NVMe rootfs is typically already fully extracted; only the bootloader step failed. Check identity with `grep COMPATIBLE_SPEC /etc/nv_boot_control.conf` (an Orin Nano 8 GB Super devkit reads `3767--0005--1--jetson-orin-nano-devkit-super-`), correct the string if wrong, then reinstall the bootloader packages offline from the ISO's own pool (`/cdrom/pool/main/n/`) into the installed target.
+
+## Last Resort: Force Recovery (RCM)
+
+RCM is the escalation for layer-1 failures—when the firmware itself cannot execute anything. It is also the *last* tool to reach for: a full flash rewrites QSPI and discards exactly the state the earlier tiers exist to diagnose.
+
+1. Disconnect power. Jumper the **FORCE_RECOVERY_N** pin (Pin 10) to GND (Pin 11) on the J14 button header (or pins 9–10 on legacy carrier revisions).
+2. Connect USB-C to the host, reconnect power, remove the jumper (the state latches on reset release).
+3. Confirm the host sees the device: `lsusb | grep -i nvidia` → `0955:7020 NVIDIA Corp. APX`.
+4. Flash from an Ubuntu host:
+
+```bash
+sudo ./l4t_initrd_flash.sh --erase-all jetson-orin-nano-devkit-super internal
+```
+
+<details class="nv-details">
+<summary>Bench-validating rescue media before it touches the board</summary>
+<div class="nv-details-content">
+
+A rescue stick can be boot-tested end-to-end on a workstation with QEMU and AAVMF (Debian's TianoCore EDK2 build for AArch64—the same firmware family as Jetson's): build a byte-faithful replica of the stick, attach it as USB mass storage to `qemu-system-aarch64 -M virt`, and require both a visible GRUB entry and the kernel reaching `Linux version` on the console.
+
+The validity is asymmetric: a GRUB-layer failure under AAVMF is diagnostic for the Jetson (same EDK2 family, same GRUB semantics), but a success proves only the GRUB layer—it says nothing about `L4tLauncher` probe order, Tegra USB/NVMe enumeration, QSPI/NVRAM state, or ext4 driver behavior. Always finish with one boot on real hardware before trusting the stick. There is no Tegra234 machine model in QEMU and no public FVP from NVIDIA, so this substitute-firmware point is the only available one. Full procedure: the companion runbook, Tier 2.
+
+</div>
+</details>
+
+## Authoritative references
+
+<details class="nv-details">
+<summary>NVIDIA documentation, source code, and developer references</summary>
+<div class="nv-details-content">
+
+Official specifications and repositories underlying JetPack 7.2.x firmware triage:
+
+- **Firmware & NVRAM Architecture**:
+  - [NVIDIA UEFI Adaptation Guide (r39.2.1)](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html) — Variable schemas (`RootfsStatusSlotA`, `L4TDefaultBootMode`, GUID `781e084c-a330-417c-b678-38e696380cb9`), capsule update processing, and `efivarfs` restoration.
+  - [NVIDIA edk2-nvidia Build Configuration](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Platform/NVIDIA/Kconfig) — Source Kconfig defining interactive UEFI Shell build rules.
+
+- **Bootloader & Capsule Subsystem Source**:
+  - [L4TLauncher Application Source Code](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.c) — Official probing order (`extlinux.conf` → `grubaa64.efi` → Android header fallback) and `EFI_UNSUPPORTED` binary refusal logic.
+  - [Capsule Update Documentation for Jetson](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Library/FmpDeviceLib/CapsuleUpdateJetson.md) — `FmpCapsuleSinglePartitionChain`, `/EFI/UpdateCapsule/` payload handling, and the 5-capsule retry abort loop.
+
+- **Hardware, Carrier Pinouts & Flashing**:
+  - [NVIDIA Board Automation Guide (r36.4.3)](https://docs.nvidia.com/jetson/archives/r36.4.3/DeveloperGuide/AT/BoardAutomation.html) — J14 12-pin button header pinouts, UART2 pin mappings, and hardware Force Recovery (RCM) strap electrical specs.
+  - [Jetson Orin Nano Developer Kit User Guide](https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/quick_start.html) — Official hardware setup, power delivery, and devkit specifications.
+  - [Jetson Linux r36.4.0 Release](https://developer.nvidia.com/embedded/jetson-linux-r3640) — Hardware revision documentation for PCN 211461 / 211462 module requirements.
+
+- **Platform Baseline & Field Triage**:
+  - [JetPack 7.2 Release Announcement](https://forums.developer.nvidia.com/t/jetpack-7-2-jetson-software-goes-agentic-with-jetson-linux-39-2/372060) — Unified ISO installer, Ubuntu 24.04, kernel 6.8, CUDA 13, and arm64-SBSA baseline.
+  - [NVIDIA Developer Forum: Persistent Recovery Boot Failure](https://forums.developer.nvidia.com/t/jetson-orin-nano-persistent-recovery-boot-failure-with-multiple-jetpack-versions/347683) — Field triage of wedged slot status NVRAM variables and recovery loops.
+  - [NVIDIA Developer Forum: Boot Assertion and Reset to Recovery](https://forums.developer.nvidia.com/t/boot-assertion-and-reset-to-recovery-by-jetson-uefi/279461) — Triage of assertion-driven shell drops and retry counter exhaustion.
+  - [NVIDIA edk2-nvidia Issue #22: Failing Boot Retry Count](https://github.com/NVIDIA/edk2-nvidia/issues/22) — Maintainer discussion on boot retry budget exhaustion.
+
+</div>
+</details>
+
+## Next steps
+
+- [Companion toolkit: scripts, host-side verifiers, full two-tier runbook](https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit)
+- [NVIDIA UEFI Adaptation guide (r39.2.1)—variable schemas and efivarfs procedure](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html)
+- [Quick Start Guide with Yocto](/tutorials/yocto-on-jetson)—the flashing-side view of the same JetPack 7.2.x baseline
+- [SSD + Docker Setup](/tutorials/ssd-docker-setup)—getting NVMe storage right *before* you need recovery
