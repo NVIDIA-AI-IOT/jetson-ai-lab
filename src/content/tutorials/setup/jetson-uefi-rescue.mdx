@@ -274,23 +274,23 @@ The validity is asymmetric: a GRUB-layer failure under AAVMF is diagnostic for t
 Official specifications and repositories underlying JetPack 7.2.x firmware triage:
 
 - **Firmware & NVRAM Architecture**:
-  - [NVIDIA UEFI Adaptation Guide (r39.2.1)](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html) — Variable schemas (`RootfsStatusSlotA`, `L4TDefaultBootMode`, GUID `781e084c-a330-417c-b678-38e696380cb9`), capsule update processing, and `efivarfs` restoration.
-  - [NVIDIA edk2-nvidia Build Configuration](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Platform/NVIDIA/Kconfig) — Source Kconfig defining interactive UEFI Shell build rules.
+  - [NVIDIA UEFI Adaptation Guide (r39.2.1)](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html)—Variable schemas (`RootfsStatusSlotA`, `L4TDefaultBootMode`, GUID `781e084c-a330-417c-b678-38e696380cb9`), capsule update processing, and `efivarfs` restoration.
+  - [NVIDIA edk2-nvidia Build Configuration](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Platform/NVIDIA/Kconfig)—Source Kconfig defining interactive UEFI Shell build rules.
 
 - **Bootloader & Capsule Subsystem Source**:
-  - [L4TLauncher Application Source Code](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.c) — Official probing order (`extlinux.conf` → `grubaa64.efi` → Android header fallback) and `EFI_UNSUPPORTED` binary refusal logic.
-  - [Capsule Update Documentation for Jetson](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Library/FmpDeviceLib/CapsuleUpdateJetson.md) — `FmpCapsuleSinglePartitionChain`, `/EFI/UpdateCapsule/` payload handling, and the 5-capsule retry abort loop.
+  - [L4TLauncher Application Source Code](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.c)—Official probing order (`extlinux.conf` → `grubaa64.efi` → Android header fallback) and `EFI_UNSUPPORTED` binary refusal logic.
+  - [Capsule Update Documentation for Jetson](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Library/FmpDeviceLib/CapsuleUpdateJetson.md)—`FmpCapsuleSinglePartitionChain`, `/EFI/UpdateCapsule/` payload handling, and the 5-capsule retry abort loop.
 
 - **Hardware, Carrier Pinouts & Flashing**:
-  - [NVIDIA Board Automation Guide (r36.4.3)](https://docs.nvidia.com/jetson/archives/r36.4.3/DeveloperGuide/AT/BoardAutomation.html) — J14 12-pin button header pinouts, UART2 pin mappings, and hardware Force Recovery (RCM) strap electrical specs.
-  - [Jetson Orin Nano Developer Kit User Guide](https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/quick_start.html) — Official hardware setup, power delivery, and devkit specifications.
-  - [Jetson Linux r36.4.0 Release](https://developer.nvidia.com/embedded/jetson-linux-r3640) — Hardware revision documentation for PCN 211461 / 211462 module requirements.
+  - [NVIDIA Board Automation Guide (r36.4.3)](https://docs.nvidia.com/jetson/archives/r36.4.3/DeveloperGuide/AT/BoardAutomation.html)—J14 12-pin button header pinouts, UART2 pin mappings, and hardware Force Recovery (RCM) strap electrical specs.
+  - [Jetson Orin Nano Developer Kit User Guide](https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/quick_start.html)—Official hardware setup, power delivery, and devkit specifications.
+  - [Jetson Linux r36.4.0 Release](https://developer.nvidia.com/embedded/jetson-linux-r3640)—Hardware revision documentation for PCN 211461 / 211462 module requirements.
 
 - **Platform Baseline & Field Triage**:
-  - [JetPack 7.2 Release Announcement](https://forums.developer.nvidia.com/t/jetpack-7-2-jetson-software-goes-agentic-with-jetson-linux-39-2/372060) — Unified ISO installer, Ubuntu 24.04, kernel 6.8, CUDA 13, and arm64-SBSA baseline.
-  - [NVIDIA Developer Forum: Persistent Recovery Boot Failure](https://forums.developer.nvidia.com/t/jetson-orin-nano-persistent-recovery-boot-failure-with-multiple-jetpack-versions/347683) — Field triage of wedged slot status NVRAM variables and recovery loops.
-  - [NVIDIA Developer Forum: Boot Assertion and Reset to Recovery](https://forums.developer.nvidia.com/t/boot-assertion-and-reset-to-recovery-by-jetson-uefi/279461) — Triage of assertion-driven shell drops and retry counter exhaustion.
-  - [NVIDIA edk2-nvidia Issue #22: Failing Boot Retry Count](https://github.com/NVIDIA/edk2-nvidia/issues/22) — Maintainer discussion on boot retry budget exhaustion.
+  - [JetPack 7.2 Release Announcement](https://forums.developer.nvidia.com/t/jetpack-7-2-jetson-software-goes-agentic-with-jetson-linux-39-2/372060)—Unified ISO installer, Ubuntu 24.04, kernel 6.8, CUDA 13, and arm64-SBSA baseline.
+  - [NVIDIA Developer Forum: Persistent Recovery Boot Failure](https://forums.developer.nvidia.com/t/jetson-orin-nano-persistent-recovery-boot-failure-with-multiple-jetpack-versions/347683)—Field triage of wedged slot status NVRAM variables and recovery loops.
+  - [NVIDIA Developer Forum: Boot Assertion and Reset to Recovery](https://forums.developer.nvidia.com/t/boot-assertion-and-reset-to-recovery-by-jetson-uefi/279461)—Triage of assertion-driven shell drops and retry counter exhaustion.
+  - [NVIDIA edk2-nvidia Issue #22: Failing Boot Retry Count](https://github.com/NVIDIA/edk2-nvidia/issues/22)—Maintainer discussion on boot retry budget exhaustion.
 
 </div>
 </details>
