@@ -174,20 +174,11 @@ The vLLM server exposes an OpenAI-compatible API on port `8000` with reasoning p
 
 The TensorRT Edge-LLM command is an experimental, **Thor-only** NVFP4 path. Its default engine is intentionally conservative: batch size 1, maximum input length 2048 tokens, and KV-cache capacity 2200 tokens. The model's 1M-token capability is not enabled by this engine configuration.
 
-Standard OpenAI-compatible chat completions have been validated on Jetson AGX Thor. OpenAI `tools` requests are not supported by this TensorRT Edge-LLM 0.10.0 sample because the shipped tokenizer configuration cannot apply its tool-aware chat template. Use the vLLM command above for validated tool calling, structured reasoning parsing, long-context tuning, or speculative decoding.
+The Thor Edge-LLM route has received a **serving smoke pass**, not a full model-behavior validation: the initial model download, export and engine build, server startup, `/v1/models`, and a basic non-streaming chat completion were exercised on Jetson AGX Thor.
+
+Validation confirms that `enable_thinking=false` works in both regular and streaming chat completions. With `enable_thinking=true`, however, reasoning appears in assistant `content` rather than a separate reasoning field. OpenAI `tools` requests fail in both regular and streaming modes because the shipped tokenizer configuration cannot apply its tool-aware chat template. Use the vLLM command above for tool calling, structured reasoning parsing, long-context tuning, or speculative decoding.
 
 The helper serves on port `8000` by default. If that port is already in use, append `--port 8001` after `--stage serve` in the Docker command, then use port `8001` for the OpenAI-compatible API.
-
-### Pre-merge staging validation
-
-The public helper URL in the install command is published only after this change is merged and deployed to `jetson-ai-lab`. It returns `404` before then by design. For staging validation, obtain the helper from the checked-out staging branch instead of using the production URL:
-
-```bash
-cp public/code-samples/tensorrt_edge_llm/run_nemotron35_lightning.sh "$HOME/run-nemotron35-lightning"
-chmod +x "$HOME/run-nemotron35-lightning"
-```
-
-Alternatively, a reviewer with access to the private staging repository can download that same file with `gh api` and the `feat/nemotron-3-5-lightning-edgellm` ref. The staging Pages site is access-controlled and is not a reliable unauthenticated `curl` distribution endpoint.
 
 ## Additional Resources
 
