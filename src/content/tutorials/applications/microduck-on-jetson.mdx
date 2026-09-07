@@ -102,7 +102,7 @@ The CLI implements upstream's documented commands and wire protocol; it does not
 
 The `sim-remote-io` branch is the only one carrying `robotd --sim` and `robotd --fake`; `main` has no simulator backend.
 
-```bash
+```bash nocheck
 mkdir -p ~/git && cd ~/git
 git clone https://github.com/pollen-robotics/microduck.git
 git -C microduck checkout 0cd676d6fbb6e90a762c84aa63abe7a02dbc9495
@@ -123,7 +123,7 @@ Sockets, pidfiles and engine state live under `DUCK_SIM_STATE`, default `~/.cach
 
 ## Step 3: Build the daemons
 
-```bash
+```bash nocheck
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
 cd ~/git/microduck
@@ -163,7 +163,7 @@ The same commands are being re-run on Thor with the viewer window open. This tab
 At the pinned commit, `microduck_rl` routes `torch` to a CUDA 12.9 index on every `linux-aarch64` host. That predates Thor's GPU. The fix routes Jetson boards to NVIDIA's `sbsa/cu130` index and adds three wheels the SBSA `torch` links but does not declare. It is open as [pollen-robotics/microduck_rl#39](https://github.com/pollen-robotics/microduck_rl/pull/39) (issue [#38](https://github.com/pollen-robotics/microduck_rl/issues/38)). Until it merges, check out the pull request's branch from its fork instead of the pinned `develop` commit. `env doctor` will then report the `rl_pinned_commit` check as failing on Thor. That is expected and is the only failing check.
 </Warning>
 
-```bash
+```bash nocheck
 cd ~/git
 git clone -b fix/jetson-thor-torch-source https://github.com/OriNachum/microduck_rl.git microduck_rl
 cd microduck_rl
@@ -209,17 +209,21 @@ microduck-cli env doctor: healthy
 
 The doctor exits `2` and names every failing check when the box is not ready. Do not proceed on a `2`. The one expected exception is Thor on the pull-request branch, where `rl_pinned_commit` fails by design (see the Thor tab).
 
+<Note title="Two [FAIL] lines under a healthy verdict on a uv tool install">
+With the CLI installed from PyPI (Step 1), version 0.9.4 prints `[FAIL] microduck_pinned_commit: pinned commit for microduck is unknown (docs/upstream-pins.md unreadable or the row is missing)` and the same for `rl_pinned_commit`, while the first line still says `healthy` and the exit code is `0`. The wheel does not carry the pins file the check reads; the check is a warning, so the verdict is right and the `[FAIL]` prefix is misleading. Compare the commits yourself with `git -C ~/git/microduck rev-parse HEAD` against the table in Step 2. A fix that ships the pins inside the package is tracked in the CLI repository.
+</Note>
+
 ## Step 6: Bring the simulation up
 
 ```bash
 microduck env up --sim --skip-build
 ```
 
-`--sim` starts the real `duck-body` MuJoCo simulator behind `robotd --sim` and waits up to 120 seconds for the duck to report healthy. A viewer window appears on your display. Two variants:
+`--sim` starts the real `duck-body` MuJoCo simulator behind `robotd --sim` and waits up to 120 seconds for the duck to report healthy. A viewer window appears on your display. Two variants, the first the same body with no window, the second `robotd --fake` with no physics and no window:
 
 ```bash
-microduck env up --sim --headless --skip-build   # same body, no window
-microduck env up --fake                          # robotd --fake: no physics, no window
+microduck env up --sim --headless --skip-build
+microduck env up --fake
 ```
 
 Drop `--skip-build` the first time if you skipped Step 3; `env up` runs the cargo build itself.
@@ -227,6 +231,12 @@ Drop `--skip-build` the first time if you skipped Step 3; `env up` runs the carg
 <Note title="Driving from an SSH session">
 The viewer opens on the box's own graphical session, not in your terminal. When you run `env up --sim` over SSH, export the desktop session's `DISPLAY` and `XAUTHORITY` into your shell first (read them from the environment of the logged-in session's `gnome-shell` process), or use `--headless`.
 </Note>
+
+<Warning title="Keep the desktop session unlocked while the window is open">
+On the Spark run the desktop locked itself after five idle minutes and the simulator body exited with its window: `robotd` kept running and logging `bus write failed ... Connection refused`, and `duck monitor` never returned. Unlock the session before `env up --sim` and turn off automatic locking for the run (`gsettings set org.gnome.desktop.session idle-delay 0`, then restore it), or use `--headless`.
+</Warning>
+
+`env up` returns as soon as the daemon answers `healthy`, which can be within two seconds, before the body has finished its first frames: `duck health` right after it may still show `imu: not ready` and `achieved None`. Give it a few seconds; the second reading shows `imu: ready` and the loop at 50 Hz.
 
 ## Step 7: Stand the duck up
 
@@ -282,6 +292,8 @@ microduck duck quack
 microduck duck record --seconds 5 > senses.jsonl
 ```
 
+`record` writes one JSON object per line to stdout and every diagnostic to stderr, so the file stays pure JSONL. In simulation two stderr lines are expected: `dropped reason=record-source-absent` for the pad and for the ToF daemon, neither of which exists in the sim. Five seconds gave 174 records on Spark.
+
 ## Step 9: React with rules, not code
 
 The rules layer is data. A rule names a condition on the duck's sense snapshot and an intent to fire, with a cooldown and a duration. Save this as `my-rules.toml`:
@@ -308,12 +320,19 @@ microduck rules engine run --duck duck-a --rules ./my-rules.toml --apply --max-t
 The engine is the only process that opens the duck's control socket. It logs its start sequence on stderr (connect, hello, health, init, enable, armed), then every rule firing and every drop with a named reason:
 
 ```text
-{'ticks': 300, 'achieved_hz': 50.0, 'overruns': 0}
+[SENSE stage=start source=~/.cache/duck-sim/duck-a.sock event=connect] opening the robot control socket
+[SENSE stage=start source=~/.cache/duck-sim/duck-a.sock event=hello] daemon api_version=16
+[SENSE stage=start source=~/.cache/duck-sim/duck-a.sock event=health] healthy
+[SENSE stage=start source=~/.cache/duck-sim/duck-a.sock event=init] robot.init
+[SENSE stage=start source=~/.cache/duck-sim/duck-a.sock event=enable] enabled — driving
+[SENSE stage=start source=~/.cache/duck-sim/duck-a.sock event=armed] 4 rule(s) loaded, idle registered
 [SENSE stage=rule source=verify-look event=fired] look -> look-1
 [SENSE stage=rule source=verify-look event=cooldown] dropped reason=cooldown: fired 0.020s ago, cooldown_s is 5.0
 ```
 
-A rule that fires and a human typing an intent are judged by the same admission registry. With no engine live, this validates the intent and prints what would be admitted, sending nothing:
+The JSON on stdout ends with the run's metrics; on Spark, 300 ticks at `"achieved_hz": 49.998` with `"overruns": 0` and a mean tick of 0.3 ms. The stderr log had 747 lines for those six seconds: two firings, 210 cooldown drops and 528 `inhibits` drops from the shipped rules, each with its reason.
+
+A rule that fires and a human typing an intent are judged by the same admission registry. With no engine live, this validates the intent and prints its verdict (`intent stop: admitted`), sending nothing:
 
 ```bash
 microduck rules intent stop
@@ -339,7 +358,11 @@ microduck rules intent stop
 WANDB_MODE=offline microduck policy smoke Mjlab-Velocity-Flat-MicroDuck --json
 ```
 
-On the GB10 the smoke completed in about a minute (`real 0m58.6s` in the [Spark record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-sim-bringup.md)), with `ok: true` in the JSON payload.
+On the GB10 the smoke completed in about a minute on a cold kernel cache (`real 0m58.6s` in the [first Spark record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-sim-bringup.md)) and in 16 seconds on a warm one (the [2026-09-07 re-test](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-07-spark-retest.md)), with `ok: true` in the JSON payload.
+
+<Warning title="The GPU must actually be free">
+Spark's memory is unified. If another process holds the device memory (a resident LLM server, say), the smoke fails within ten seconds even while `free -g` still shows headroom: Warp prints `"NVIDIA GB10" (0 GiB, sm_121, ...)`, then `Warp CUDA error 2: out of memory` and `torch.AcceleratorError: CUDA error: out of memory`, and the payload says `ok: false`. That is exactly what happened on the 2026-09-07 re-test beside a running vLLM engine; stopping that one engine for the smoke made Warp see 122 GiB and the run pass. Check what is using the GPU before you read the failure as anything else.
+</Warning>
 
 </div>
 <div class="nv-tab-panel">
@@ -356,7 +379,7 @@ WANDB_MODE=offline timeout 30m microduck policy smoke Mjlab-Velocity-Flat-MicroD
 
 The [Thor record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md) shows `ok: true` after 144 seconds; the extra time over Spark is first-run kernel compilation (one kernel alone took 25 seconds). If the box also runs other services, confirm they are still healthy afterwards:
 
-```bash
+```bash nocheck
 docker ps
 ```
 
@@ -383,7 +406,7 @@ microduck env status
 
 The viewer lives on the box's graphical session. To capture it from SSH, export the logged-in session's display variables and take a shot of the focused window only:
 
-```bash
+```bash nocheck
 export DISPLAY=<the session's display>
 export XAUTHORITY=<the session's X authority file>
 export DBUS_SESSION_BUS_ADDRESS=<the session's bus address>
@@ -434,7 +457,25 @@ It is not ignoring you. At these pins the walk network's joint targets are stati
 <summary>No window appears with env up --sim</summary>
 <div class="nv-details-content">
 
-The body cannot open a window without a display. Over SSH, export the desktop session's `DISPLAY` and `XAUTHORITY` (see "Watching the window from a headless session"), or add `--headless` and use `duck monitor --json` instead.
+The body cannot open a window without a display. Over SSH, export the desktop session's `DISPLAY` and `XAUTHORITY` (see "Watching the window from a headless session"), or add `--headless` and use `duck monitor --json` instead. `xwininfo -root -tree | grep -i mujoco` on that display lists the viewer window when it exists.
+
+</div>
+</details>
+
+<details class="nv-details">
+<summary>duck monitor hangs, robotd logs "bus write failed ... Connection refused"</summary>
+<div class="nv-details-content">
+
+The simulator body is gone while the daemon is still up. On a desktop that locks itself, the lock closes the viewer window and the body exits with it. Run `microduck env down`, unlock the session, disable automatic locking for the run, and bring the stack up again. `env down` reports the body as `gone` with `no /proc entry` in this case, which is the confirmation.
+
+</div>
+</details>
+
+<details class="nv-details">
+<summary>policy smoke fails with "CUDA error: out of memory" in seconds</summary>
+<div class="nv-details-content">
+
+Something else holds the GPU. On unified-memory boxes `free -g` does not tell you; Warp's banner does (`0 GiB`). Stop or pause the other GPU tenant for the duration of the smoke, confirm it is healthy again afterwards, and note both in your own record.
 
 </div>
 </details>
@@ -447,7 +488,7 @@ The body cannot open a window without a display. Over SSH, export the desktop se
 
 ## References
 
-- [microduck-cli](https://github.com/agentculture/microduck-cli) and its verification records for [DGX Spark](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-sim-bringup.md), [Jetson AGX Thor](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md) and [Jetson AGX Orin](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-orin-sanity.md)
+- [microduck-cli](https://github.com/agentculture/microduck-cli) and its verification records for [DGX Spark](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-sim-bringup.md) (and the [2026-09-07 re-test that followed this tutorial](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-07-spark-retest.md)), [Jetson AGX Thor](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md) and [Jetson AGX Orin](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-orin-sanity.md)
 - [pollen-robotics/microduck](https://github.com/pollen-robotics/microduck), branch `sim-remote-io`, and its [simulation design notes](https://github.com/pollen-robotics/microduck/blob/sim-remote-io/docs/design/simulation.md)
 - [pollen-robotics/microduck_rl](https://github.com/pollen-robotics/microduck_rl), branch `develop`
 - [microduck_rl#39](https://github.com/pollen-robotics/microduck_rl/pull/39): Jetson torch-source fix
