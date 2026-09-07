@@ -30,11 +30,11 @@ This tutorial brings the whole stack up on a Jetson: the real `robotd` daemon dr
 - A 50 Hz tick engine that owns the control socket and logs every intent it admits or drops.
 - On Jetson AGX Thor and DGX Spark: a 64-environment, 5-iteration training smoke test of the `Mjlab-Velocity-Flat-MicroDuck` task on the GPU.
 
-The Spark path was followed end to end on **2026-09-07** with the CLI at version **0.9.4** from PyPI. The Thor and Orin records date from 2026-09-04 and ran earlier checkouts of the CLI (`2b00480` and `3c09fb0`, version 0.9.1); their tabs say so, and their re-run on 0.9.4 is pending. The per-box tabs below say what was verified where, and when.
+The Spark path was followed end to end on **2026-09-07** with the CLI at version **0.9.4** from PyPI. On **2026-09-08** the operator followed it on Jetson AGX Thor with the same wheel: the training smoke passed there, and the simulation's memory footprint was measured on Thor and on Jetson AGX Orin ([record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-08-thor-orin-tutorial-run.md)). The 2026-09-04 Thor and Orin records, which ran earlier checkouts of the CLI (`2b00480` and `3c09fb0`, version 0.9.1), remain the reference for the simulation and control steps on those boards. The per-box tabs below say what was verified where, and when.
 
 ## Why Jetson?
 
-The duck's control loop, its ONNX policies and the MuJoCo physics all run on one machine. Jetson AGX Thor and DGX Spark carry the unified memory and the Blackwell-class GPU that `mujoco-warp` and `torch` want for training thousands of parallel environments, so the same board that will eventually sit inside a robot can also train the policy it runs. Jetson AGX Orin runs the simulation, the daemon and the CLI comfortably; at the current upstream pins its `sm_87` GPU has no matching `torch` wheel for training, so this tutorial treats Orin as a simulation and control target only.
+MicroDuck ships with its own onboard computer, which runs `robotd` and the policies on the real robot. A Jetson does not compete with it: it can replace that board as the duck's central unit, or sit beside it as the machine that runs the simulation, the training and the agent driving the CLI, with the same daemon and the same wire protocol on both. The duck's control loop, its ONNX policies and the MuJoCo physics all run on one machine. Jetson AGX Thor and DGX Spark carry the unified memory and the Blackwell-class GPU that `mujoco-warp` and `torch` want for training thousands of parallel environments, so the same board that will eventually sit inside a robot can also train the policy it runs. Jetson AGX Orin runs the simulation, the daemon and the CLI comfortably; at the current upstream pins its `sm_87` GPU has no matching `torch` wheel for training, so this tutorial treats Orin as a simulation and control target only.
 
 ## Pipeline Overview
 
@@ -71,9 +71,9 @@ At the upstream commits this tutorial pins, `duck move` reaches the daemon and t
 
 | Box | Tested software | What this tutorial covers there |
 |---|---|---|
+| **Jetson AGX Thor** | JetPack 7, L4T R38.2.2, CUDA 13.0, Python 3.12 | Simulation, CLI, training smoke (with the torch-source fix described in its tab). Verified 2026-09-04 headless; the smoke re-run on the 0.9.4 wheel on 2026-09-08 beside a running production stack. |
+| **Jetson AGX Orin** | L4T R39, CUDA 13.2, Python 3.12 | Simulation and CLI only. Verified 2026-09-04 headless; simulation memory footprint measured 2026-09-08. |
 | **DGX Spark** (GB10) | DGX OS, CUDA 13.0, Python 3.12 | Simulation, CLI, training smoke. Verified 2026-09-07 with the viewer window open. |
-| **Jetson AGX Thor** | JetPack 7, L4T R38.2.2, CUDA 13.0, Python 3.12 | Simulation, CLI, training smoke (with the torch-source fix described in its tab). Verified 2026-09-04 headless; operator re-run pending. |
-| **Jetson AGX Orin** | L4T R39, CUDA 13.2, Python 3.12 | Simulation and CLI only. Verified 2026-09-04 headless; operator re-run pending. |
 
 - **Python 3.12 or newer.** The CLI requires it. The three boxes above ship Python 3.12.3. JetPack 6 ships Python 3.10 and was **not tested**; there, `uv python install 3.12` gives `uv` a managed interpreter for the CLI, but the RL virtual environment (`torch` 2.9.1, `cp312` wheels) is untested on JetPack 6.
 - **[uv](https://docs.astral.sh/uv/)** for the CLI install and the RL virtual environment.
@@ -111,8 +111,27 @@ mkdir -p ~/git && cd ~/git
 git clone https://github.com/pollen-robotics/microduck.git
 git -C microduck checkout 0cd676d6fbb6e90a762c84aa63abe7a02dbc9495
 git clone https://github.com/pollen-robotics/microduck_rl.git
-git -C microduck_rl checkout 29e887ecfbf5d37144759e5a9f8a176dfb83d547
 ```
+
+<Warning title="On a Jetson, check out the torch-source fix instead of the pinned microduck_rl commit">
+At the pinned `microduck_rl` commit, `torch` is routed to a CUDA 12.9 index on every `linux-aarch64` host, which has no kernels for Thor's `sm_110` GPU. The fix is open as [pollen-robotics/microduck_rl#39](https://github.com/pollen-robotics/microduck_rl/pull/39) (issue [#38](https://github.com/pollen-robotics/microduck_rl/issues/38)); until it merges, a Jetson checks out the pull request's head commit. Do this now, not in Step 4: on the 2026-09-08 Thor run the clone was moved back to the pinned commit after the fix had been applied, and the next `uv run` quietly re-installed the CUDA 12.9 `torch`, which failed the smoke with "no kernel image is available for execution on the device" ([record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-08-thor-orin-tutorial-run.md)). `env doctor` reports the mismatch as a warning; that is expected.
+</Warning>
+
+On **Jetson AGX Thor and Jetson AGX Orin**:
+
+```bash nocheck
+cd ~/git/microduck_rl
+git fetch https://github.com/OriNachum/microduck_rl.git fix/jetson-thor-torch-source
+git checkout a30a9e4
+```
+
+On **DGX Spark**, the pinned commit as shipped:
+
+```bash nocheck
+git -C ~/git/microduck_rl checkout 29e887ecfbf5d37144759e5a9f8a176dfb83d547
+```
+
+`a30a9e4` is the pull request's head at the time of writing; `git -C ~/git/microduck_rl log --oneline -1` should name it.
 
 <Note title="Where the CLI looks for the clones">
 `microduck` resolves the clones from `MICRODUCK_CLONE` and `DUCK_SIM_RL`, defaulting to `../microduck` and `../microduck_rl` relative to its own checkout. On a `uv tool` install, export the two variables:
@@ -142,46 +161,37 @@ cargo build -p robotd -p robotctl -p tof -p sounds
 
 `robotd` loads the duck's ONNX policies through `onnxruntime` from the `microduck_rl` virtual environment, even for the `--fake` body, so this step is required for every path. How `torch` is sourced differs per box; pick your tab.
 
-<Tabs labels={["DGX Spark", "Jetson AGX Thor", "Jetson AGX Orin"]}>
+<Tabs labels={["Jetson AGX Thor", "Jetson AGX Orin", "DGX Spark"]}>
 <div class="nv-tab-panel active">
 
-<Info title="Verified 2026-09-07, viewer window open">
-DGX Spark (GB10) is the host class `microduck_rl`'s torch routing was written for. Upstream's configuration works as shipped.
+<Info title="Verified 2026-09-04 (headless); smoke re-run 2026-09-08 on the 0.9.4 wheel">
+The [2026-09-08 record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-08-thor-orin-tutorial-run.md) covers the operator's run on the PyPI wheel beside Thor's production containers: the smoke passed in 26 seconds, and the simulation's footprint was measured. The [2026-09-04 record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md) has the full sanity pass and the torch resolution.
 </Info>
+
+With the clone at `a30a9e4` from Step 2:
 
 ```bash nocheck
 cd ~/git/microduck_rl
-uv sync
-```
-
-`uv sync` resolves `torch` 2.9.1 from PyTorch's CUDA index for `linux-aarch64`, plus `warp-lang`, `mujoco` and `mujoco-warp`. Nothing else to do.
-
-</div>
-<div class="nv-tab-panel">
-
-<Info title="Verified 2026-09-04 (headless); operator re-run pending">
-The same commands will be re-run on Thor with the viewer window open, on the 0.9.4 wheel; this tab will be updated with that record.
-</Info>
-
-<Warning title="Thor training needs a torch-source fix that is not merged upstream yet">
-At the pinned commit, `microduck_rl` routes `torch` to a CUDA 12.9 index on every `linux-aarch64` host. That predates Thor's GPU. The fix routes Jetson boards to NVIDIA's `sbsa/cu130` index and adds three wheels the SBSA `torch` links but does not declare. It is open as [pollen-robotics/microduck_rl#39](https://github.com/pollen-robotics/microduck_rl/pull/39) (issue [#38](https://github.com/pollen-robotics/microduck_rl/issues/38)). Until it merges, point the `microduck_rl` clone you made in Step 2 at the pull request's branch instead of the pinned `develop` commit. `env doctor` will then report `rl_pinned_commit` as a mismatch on Thor; that is expected. On a `uv tool` install the two pin checks read `[FAIL] … unknown` anyway (see the note in Step 5), so read the doctor's verdict line, not the count of `[FAIL]` prefixes.
-</Warning>
-
-```bash nocheck
-cd ~/git/microduck_rl
-git fetch https://github.com/OriNachum/microduck_rl.git fix/jetson-thor-torch-source
-git checkout a30a9e4
 UV_HTTP_TIMEOUT=600 uv sync
 ```
 
-`a30a9e4` is the pull request's head at the time of writing; `git -C ~/git/microduck_rl log --oneline -1` should name it.
+`torch` 2.9.1 arrives as a native `linux_aarch64` wheel from `pypi.jetson-ai-lab.io/sbsa/cu130`, with the three wheels it links but does not declare (`nvpl-blas`, `nvpl-lapack`, `nvidia-cudss-cu13`). The download is several gigabytes; give it time, and keep the `UV_HTTP_TIMEOUT` so a slow mirror does not abort the sync. No `LD_LIBRARY_PATH` is needed: the branch pre-loads those libraries when the `mjlab_microduck` package is imported, which every train and play path does before `torch`.
 
-With that branch, `torch` 2.9.1 arrives as a native `linux_aarch64` wheel from `pypi.jetson-ai-lab.io/sbsa/cu130`, and no `LD_LIBRARY_PATH` is needed. The [Thor record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md) shows the resolution and a CUDA probe on Thor.
+<Note title="Probing torch by hand on this branch">
+A bare `python -c "import torch"` in the virtual environment fails with `ImportError: libnvpl_lapack_lp64_gomp.so.0` because nothing pre-loaded the library. Import the package first:
+
+```bash nocheck
+cd ~/git/microduck_rl
+.venv/bin/python -c "import mjlab_microduck.tasks, torch; print(torch.__version__, torch.cuda.get_arch_list())"
+```
+
+On Thor this prints `2.9.1 ['sm_110', 'sm_121']`.
+</Note>
 
 </div>
 <div class="nv-tab-panel">
 
-<Info title="Verified 2026-09-04 (headless); operator re-run pending">
+<Info title="Verified 2026-09-04 (headless); footprint measured 2026-09-08">
 Simulation, daemon, CLI and rules layer all pass on Orin. This tab covers those. It contains no training command.
 </Info>
 
@@ -189,14 +199,38 @@ Simulation, daemon, CLI and rules layer all pass on Orin. This tab covers those.
 The only `torch` 2.9.1 wheel for Python 3.12 on the Jetson indexes ships kernels for `sm_110` and `sm_121`, not Orin's `sm_87`. It installs and initialises CUDA, then fails with "no kernel image is available for execution on the device". The fallback tree was probed and is closed at this pin; the [Orin record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-orin-sanity.md) has the details. `env doctor` says so on its `host_class` line. Train on Thor, Spark or Hugging Face Jobs instead.
 </Warning>
 
-You still need the virtual environment for `onnxruntime`, which `robotd` loads for the policies:
+You still need the virtual environment for `onnxruntime`, which `robotd` loads for the policies. With the clone at `a30a9e4` from Step 2 the same `uv sync` as on Thor resolves `torch` from NVIDIA's SBSA index (the branch keys that index on the `-tegra` kernel, which Orin has too):
 
 ```bash nocheck
 cd ~/git/microduck_rl
+UV_HTTP_TIMEOUT=600 uv sync
+```
+
+If you kept the clone at the pinned `develop` commit instead, override the index by hand, and prefix every later `uv` call in the clone the same way, or a bare `uv run` re-locks toward upstream's index and starts a multi-gigabyte re-download:
+
+```bash nocheck
 UV_INDEX="pytorch-cu129=https://pypi.jetson-ai-lab.io/sbsa/cu130" uv sync
 ```
 
-`torch` 2.9.1 is a direct dependency, so it still installs; the `UV_INDEX` override picks NVIDIA's SBSA wheel (which installs and initialises CUDA but has no `sm_87` kernels) instead of PyTorch's `cu129` build, and `onnxruntime`, `mujoco` and the rest resolve normally. Any later bare `uv run` inside the clone re-locks toward upstream's index and starts a multi-gigabyte re-download, so prefix `uv` calls there with the same variable. `env up` does not go through `uv` (it runs the virtual environment's Python directly), but every `policy` verb does run `uv run` in the clone — another reason the Orin path stops before Step 10.
+Either way `torch` installs and initialises CUDA but cannot train on `sm_87`; `onnxruntime`, `mujoco` and the rest resolve normally. `env up` does not go through `uv` (it runs the virtual environment's Python directly), so the simulation is unaffected.
+
+</div>
+<div class="nv-tab-panel">
+
+<Info title="Verified 2026-09-07, viewer window open">
+DGX Spark (GB10) is the host class `microduck_rl`'s torch routing was written for. Upstream's configuration works as shipped.
+</Info>
+
+```bash nocheck
+cd ~/git/microduck_rl
+UV_HTTP_TIMEOUT=600 uv sync
+```
+
+`uv sync` resolves `torch` 2.9.1 from PyTorch's CUDA index for `linux-aarch64`, plus `warp-lang`, `mujoco` and `mujoco-warp`. Nothing else to do.
+
+<Note title="This step takes a while">
+The virtual environment weighs about 7.5 GB once resolved (`torch`, the CUDA libraries it pulls, `warp-lang`, `mujoco-warp`), and `uv` downloads all of it on the first sync. Expect minutes on a fast link and considerably longer on a slow one; `UV_HTTP_TIMEOUT=600` keeps a slow mirror from aborting the run. Later syncs are quick.
+</Note>
 
 </div>
 </Tabs>
@@ -213,10 +247,10 @@ Thirteen checks, each with a remediation when it fails. A healthy box prints:
 microduck-cli env doctor: healthy
 ```
 
-The doctor exits `2` and names every failing check when the box is not ready. Do not proceed on a `2`. A pin mismatch is only a warning, so Thor on the pull-request branch still gets a `healthy` verdict; it is the verdict line that matters (see the Thor tab and the note below).
+The doctor exits `2` and names every failing check when the box is not ready. Do not proceed on a `2`. A pin mismatch is only a warning, so a Jetson with `microduck_rl` on the pull-request branch from Step 2 still gets a `healthy` verdict, with one `[WARN] rl_pinned_commit` line naming both commits; it is the verdict line that matters.
 
-<Note title="Two [FAIL] lines under a healthy verdict on a uv tool install">
-With the CLI installed from PyPI (Step 1), version 0.9.4 prints `[FAIL] microduck_pinned_commit: pinned commit for microduck is unknown (docs/upstream-pins.md unreadable or the row is missing)` and the same for `rl_pinned_commit`, while the first line still says `healthy` and the exit code is `0`. The wheel does not carry the pins file the check reads; the check is a warning, so the verdict is right and the `[FAIL]` prefix is misleading. Compare the commits yourself with `git -C ~/git/microduck rev-parse HEAD` against the table in Step 2. A fix that ships the pins inside the package is tracked in the CLI repository.
+<Note title="On the 0.9.4 wheel: two [FAIL] lines under a healthy verdict">
+Version 0.9.4 from PyPI prints `[FAIL] microduck_pinned_commit: pinned commit for microduck is unknown (docs/upstream-pins.md unreadable or the row is missing)` and the same for `rl_pinned_commit`, while the first line still says `healthy` and the exit code is `0`: the wheel did not carry the pins file the check read, and a warning-severity check was printed with the `[FAIL]` prefix. Both are fixed in `microduck-cli` 0.9.6 ([agentculture/microduck-cli#10](https://github.com/agentculture/microduck-cli/pull/10)): the pins ship inside the package, so a wheel verifies both clones, and warnings print `[WARN]`. On 0.9.4, compare the commits yourself with `git -C ~/git/microduck rev-parse HEAD` against the table in Step 2 and read the verdict line.
 </Note>
 
 ## Step 6: Bring the simulation up
@@ -243,6 +277,10 @@ On the Spark run the desktop locked itself after five idle minutes and the simul
 </Warning>
 
 `env up` returns as soon as the daemon answers `healthy`, which can be within two seconds, before the body has finished its first frames: `duck health` right after it may still show `imu: not ready` and `achieved None`. Give it a few seconds; the second reading shows `imu: ready` and the loop at 50 Hz.
+
+<Info title="What the simulation costs in memory">
+Measured on 2026-09-08 from `/proc/<pid>/status` with the duck standing ([record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-08-thor-orin-tutorial-run.md)): the MuJoCo body (`python -m mjlab_microduck.sim.body_server`) held 933 MB of resident memory on Jetson AGX Thor with the viewer window open and 590 MB on Jetson AGX Orin headless; `robotd --sim` held 34 MB and 41 MB. Box-wide, Orin's `used` rose by 0.9 GB while the stack was up, beside its production containers with 8 GB available. The simulation is about a gigabyte; only the training smoke in Step 10 needs real headroom.
+</Info>
 
 ## Step 7: Stand the duck up
 
@@ -359,21 +397,8 @@ microduck rules intent stop
 
 `policy smoke` runs `microduck_rl`'s own trainer on the `Mjlab-Velocity-Flat-MicroDuck` task with 64 environments for 5 iterations. It proves the GPU path end to end and records a smoke-gate entry that the long-running `policy train` verb refuses to proceed without.
 
-<Tabs labels={["DGX Spark", "Jetson AGX Thor", "Jetson AGX Orin"]}>
+<Tabs labels={["Jetson AGX Thor", "Jetson AGX Orin", "DGX Spark"]}>
 <div class="nv-tab-panel active">
-
-```bash
-WANDB_MODE=offline microduck policy smoke Mjlab-Velocity-Flat-MicroDuck --json
-```
-
-On the GB10 the smoke completed in about a minute on a cold kernel cache (`real 0m58.6s` in the [first Spark record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-sim-bringup.md)) and in 16 seconds on a warm one (the [2026-09-07 re-test](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-07-spark-retest.md)), with `ok: true` in the JSON payload.
-
-<Warning title="The GPU must actually be free">
-Spark's memory is unified. If another process holds the device memory (a resident LLM server, say), the smoke fails within ten seconds even while `free -g` still shows headroom: Warp prints `"NVIDIA GB10" (0 GiB, sm_121, ...)`, then `Warp CUDA error 2: out of memory` and `torch.AcceleratorError: CUDA error: out of memory`, and the payload says `ok: false`. That is exactly what happened on the 2026-09-07 re-test beside a running vLLM engine; stopping that one engine for the smoke made Warp see 122 GiB and the run pass. Check what is using the GPU before you read the failure as anything else.
-</Warning>
-
-</div>
-<div class="nv-tab-panel">
 
 Thor shares its memory between the CPU and the GPU, and the smoke compiles every `mujoco-warp` kernel on a cold cache. Check headroom first and proceed only with at least 20 GB available:
 
@@ -385,17 +410,34 @@ free -g
 WANDB_MODE=offline timeout 30m microduck policy smoke Mjlab-Velocity-Flat-MicroDuck --json
 ```
 
-The [Thor record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md) shows `ok: true` after 144 seconds; the extra time over Spark is first-run kernel compilation (one kernel alone took 25 seconds). If the box also runs other services, confirm they are still healthy afterwards:
+On 2026-09-08, on the 0.9.4 wheel with 36 GB available beside Thor's production stack (three vLLM engines and their services), the smoke reported `ok: true` after 26 seconds on a warm kernel cache with a peak of 2.8 GB resident ([record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-08-thor-orin-tutorial-run.md)). The [2026-09-04 record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md) shows the cold-cache figure, 144 seconds, where one kernel alone took 25 seconds to compile. If the box also runs other services, confirm they are still healthy afterwards; on 2026-09-08 every container was still up and the engines `healthy`:
 
 ```bash nocheck
 docker ps
 ```
 
+<Warning title="If it fails with 'no kernel image is available for execution on the device'">
+The virtual environment holds the CUDA 12.9 `torch` again. That is what happened on the first 2026-09-08 attempt: the clone had been moved back to the pinned commit after Step 2, and `policy smoke`'s `uv run` re-synced `torch` to match (`Uninstalled 1 package … Installed 1 package` at the top of its stderr). Check out `a30a9e4` and `uv sync` again, then re-run.
+</Warning>
+
 </div>
 <div class="nv-tab-panel">
 
 <Warning title="No training step on Orin">
-There is no `torch` wheel with `sm_87` kernels at these pins, so `policy smoke` fails on AGX Orin with "no kernel image is available". Everything up to Step 9 works; run the smoke on Thor, Spark or Hugging Face Jobs.
+There is no `torch` wheel with `sm_87` kernels at these pins, so `policy smoke` fails on AGX Orin with "no kernel image is available". Everything up to Step 9 works, and costs about 0.6 GB of memory (Step 6); run the smoke on Thor, Spark or Hugging Face Jobs.
+</Warning>
+
+</div>
+<div class="nv-tab-panel">
+
+```bash
+WANDB_MODE=offline microduck policy smoke Mjlab-Velocity-Flat-MicroDuck --json
+```
+
+On the GB10 the smoke completed in about a minute on a cold kernel cache (`real 0m58.6s` in the [first Spark record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-sim-bringup.md)) and in 16 seconds on a warm one (the [2026-09-07 re-test](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-07-spark-retest.md)), with `ok: true` in the JSON payload.
+
+<Warning title="The GPU must actually be free">
+Spark's memory is unified. If another process holds the device memory (a resident LLM server, say), the smoke fails within ten seconds even while `free -g` still shows headroom: Warp prints `"NVIDIA GB10" (0 GiB, sm_121, ...)`, then `Warp CUDA error 2: out of memory` and `torch.AcceleratorError: CUDA error: out of memory`, and the payload says `ok: false`. That is exactly what happened on the 2026-09-07 re-test beside a running vLLM engine; stopping that one engine for the smoke made Warp see 122 GiB and the run pass. Check what is using the GPU before you read the failure as anything else.
 </Warning>
 
 </div>
@@ -444,10 +486,19 @@ The `--fake` body is not venv-free. `robotd` loads `libonnxruntime` from the RL 
 </details>
 
 <details class="nv-details">
-<summary>env doctor on Thor: rl_pinned_commit fails</summary>
+<summary>env doctor on a Jetson: rl_pinned_commit is a mismatch</summary>
 <div class="nv-details-content">
 
-Expected while the `microduck_rl` clone is on the pull-request branch from the Thor tab; on a `uv tool` install `microduck_pinned_commit` prints a `[FAIL] … unknown` line as well (Step 5's note). Both are warnings and the verdict stays `healthy`. It clears when [#39](https://github.com/pollen-robotics/microduck_rl/pull/39) merges and the CLI re-pins.
+Expected while the `microduck_rl` clone is on the pull-request branch from Step 2: `[WARN]` on 0.9.6, `[FAIL]` on the 0.9.4 wheel (which prints `microduck_pinned_commit … unknown` as well, Step 5's note). Both are warnings and the verdict stays `healthy`. It clears when [#39](https://github.com/pollen-robotics/microduck_rl/pull/39) merges and the CLI re-pins. Do not "fix" it by checking the pinned commit back out on a Jetson; that re-installs the `torch` that cannot run on Thor (Step 10's Thor tab).
+
+</div>
+</details>
+
+<details class="nv-details">
+<summary>import torch fails with ImportError: libnvpl_lapack_lp64_gomp.so.0</summary>
+<div class="nv-details-content">
+
+You imported `torch` by hand in the `microduck_rl` virtual environment on the pull-request branch. The branch pre-loads that library when `mjlab_microduck.tasks` is imported, which every `train` and `play` path does first; a bare probe does not. Use the probe in the Thor tab of Step 4, or run the smoke, which is unaffected.
 
 </div>
 </details>
@@ -496,9 +547,10 @@ Something else holds the GPU. On unified-memory boxes `free -g` does not tell yo
 
 ## References
 
-- [microduck-cli](https://github.com/agentculture/microduck-cli) and its verification records for [DGX Spark](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-sim-bringup.md) (and the [2026-09-07 re-test that followed this tutorial](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-07-spark-retest.md)), [Jetson AGX Thor](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md) and [Jetson AGX Orin](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-orin-sanity.md)
+- [microduck-cli](https://github.com/agentculture/microduck-cli) and its verification records for [DGX Spark](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-sim-bringup.md) (and the [2026-09-07 re-test that followed this tutorial](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-07-spark-retest.md)), [Jetson AGX Thor](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md), [Jetson AGX Orin](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-orin-sanity.md) and the [2026-09-08 Thor and Orin run on the wheel](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-08-thor-orin-tutorial-run.md)
 - [pollen-robotics/microduck](https://github.com/pollen-robotics/microduck), branch `sim-remote-io`, and its [simulation design notes](https://github.com/pollen-robotics/microduck/blob/sim-remote-io/docs/design/simulation.md)
 - [pollen-robotics/microduck_rl](https://github.com/pollen-robotics/microduck_rl), branch `develop`
 - [microduck_rl#39](https://github.com/pollen-robotics/microduck_rl/pull/39): Jetson torch-source fix
+- [microduck-cli#10](https://github.com/agentculture/microduck-cli/pull/10): `env doctor` pins packaged into the wheel, `[WARN]` for warnings (0.9.6)
 - [MuJoCo](https://mujoco.org/) and [mujoco-warp](https://github.com/google-deepmind/mujoco_warp)
 - [NVIDIA Jetson PyPI index](https://pypi.jetson-ai-lab.io/)
