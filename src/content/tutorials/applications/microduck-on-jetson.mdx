@@ -145,7 +145,7 @@ cargo build -p robotd -p robotctl -p tof -p sounds
 DGX Spark (GB10) is the host class `microduck_rl`'s torch routing was written for. Upstream's configuration works as shipped.
 </Info>
 
-```bash
+```bash nocheck
 cd ~/git/microduck_rl
 uv sync
 ```
@@ -185,7 +185,7 @@ The only `torch` 2.9.1 wheel for Python 3.12 on the Jetson indexes ships kernels
 
 You still need the virtual environment for `onnxruntime`, which `robotd` loads for the policies:
 
-```bash
+```bash nocheck
 cd ~/git/microduck_rl
 UV_INDEX="pytorch-cu129=https://pypi.jetson-ai-lab.io/sbsa/cu130" uv sync
 ```
