@@ -30,13 +30,15 @@ This tutorial brings the whole stack up on a Jetson: the real `robotd` daemon dr
 - A 50 Hz tick engine that owns the control socket and logs every intent it admits or drops.
 - On Jetson AGX Thor and DGX Spark: a 64-environment, 5-iteration training smoke test of the `Mjlab-Velocity-Flat-MicroDuck` task on the GPU.
 
-Everything here was verified on three machines with the CLI at version **0.9.4**. The per-box tabs below say what was verified where, and when.
+The Spark path was followed end to end on **2026-09-07** with the CLI at version **0.9.4** from PyPI. The Thor and Orin records date from 2026-09-04 and ran earlier checkouts of the CLI (`2b00480` and `3c09fb0`, version 0.9.1); their tabs say so, and their re-run on 0.9.4 is pending. The per-box tabs below say what was verified where, and when.
 
 ## Why Jetson?
 
 The duck's control loop, its ONNX policies and the MuJoCo physics all run on one machine. Jetson AGX Thor and DGX Spark carry the unified memory and the Blackwell-class GPU that `mujoco-warp` and `torch` want for training thousands of parallel environments, so the same board that will eventually sit inside a robot can also train the policy it runs. Jetson AGX Orin runs the simulation, the daemon and the CLI comfortably; at the current upstream pins its `sm_87` GPU has no matching `torch` wheel for training, so this tutorial treats Orin as a simulation and control target only.
 
 ## Pipeline Overview
+
+<div class="mermaid-diagram">
 
 ```mermaid
 flowchart LR
@@ -47,6 +49,8 @@ flowchart LR
   D --> S["MuJoCo body<br/>(microduck_rl duck-body)"]
   C -. "policy smoke / train" .-> T["microduck_rl<br/>torch + mujoco-warp"]
 ```
+
+</div>
 
 | Stage | What happens |
 |---|---|
@@ -68,13 +72,13 @@ At the upstream commits this tutorial pins, `duck move` reaches the daemon and t
 | Box | Tested software | What this tutorial covers there |
 |---|---|---|
 | **DGX Spark** (GB10) | DGX OS, CUDA 13.0, Python 3.12 | Simulation, CLI, training smoke. Verified 2026-09-07 with the viewer window open. |
-| **Jetson AGX Thor** | JetPack 7, L4T R38.2.2, CUDA 13.0, Python 3.12 | Simulation, CLI, training smoke (with the torch-source fix described in its tab). Verified 2026-09-04 headless; operator re-run in progress. |
-| **Jetson AGX Orin** | L4T R39, CUDA 13.2, Python 3.12 | Simulation and CLI only. Verified 2026-09-04 headless; operator re-run in progress. |
+| **Jetson AGX Thor** | JetPack 7, L4T R38.2.2, CUDA 13.0, Python 3.12 | Simulation, CLI, training smoke (with the torch-source fix described in its tab). Verified 2026-09-04 headless; operator re-run pending. |
+| **Jetson AGX Orin** | L4T R39, CUDA 13.2, Python 3.12 | Simulation and CLI only. Verified 2026-09-04 headless; operator re-run pending. |
 
 - **Python 3.12 or newer.** The CLI requires it. The three boxes above ship Python 3.12.3. JetPack 6 ships Python 3.10 and was **not tested**; there, `uv python install 3.12` gives `uv` a managed interpreter for the CLI, but the RL virtual environment (`torch` 2.9.1, `cp312` wheels) is untested on JetPack 6.
 - **[uv](https://docs.astral.sh/uv/)** for the CLI install and the RL virtual environment.
 - **A Rust toolchain** via [rustup](https://rustup.rs/), to build `robotd` and its sibling daemons natively. The build takes several minutes on a Jetson.
-- **git**, and about 30 GB of free disk for the two clones, the Rust build and the RL virtual environment.
+- **git**, and about 10 GB of free disk: roughly 1.5 GB for the `microduck` clone with its debug build and 7.5 GB for `microduck_rl` with its virtual environment (measured on Spark, the heaviest path), plus `uv`'s cache.
 - **A display** for the MuJoCo viewer window, or the `--headless` flag if nobody is watching.
 - **Free memory for the training smoke:** on Thor, the tutorial proceeds only with at least 20 GB available (see the Thor tab). The simulation alone needs far less.
 
@@ -89,7 +93,7 @@ uv tool install microduck-cli==0.9.4
 microduck --version
 ```
 
-Every verification record behind this tutorial ran at CLI version 0.9.4, which is why the install line pins it. `microduck` and `microduck-cli` are the same entry point. Agents start with `microduck learn`, which prints the command map, the exit-code contract and the `--json` output contract; `microduck explain <noun> <verb>` describes any single verb.
+The install line pins 0.9.4 because that is the wheel this tutorial was followed with on Spark; the Thor and Orin records were made from earlier checkouts (see their tabs). `microduck` and `microduck-cli` are the same entry point. Agents start with `microduck learn`, which prints the command map, the exit-code contract and the `--json` output contract; `microduck explain <noun> <verb>` describes any single verb.
 
 ## Step 2: Clone the upstream repositories at the pinned commits
 
@@ -155,27 +159,29 @@ uv sync
 </div>
 <div class="nv-tab-panel">
 
-<Info title="Verified 2026-09-04 (headless); operator re-run in progress">
-The same commands are being re-run on Thor with the viewer window open. This tab will be updated with that record.
+<Info title="Verified 2026-09-04 (headless); operator re-run pending">
+The same commands will be re-run on Thor with the viewer window open, on the 0.9.4 wheel; this tab will be updated with that record.
 </Info>
 
 <Warning title="Thor training needs a torch-source fix that is not merged upstream yet">
-At the pinned commit, `microduck_rl` routes `torch` to a CUDA 12.9 index on every `linux-aarch64` host. That predates Thor's GPU. The fix routes Jetson boards to NVIDIA's `sbsa/cu130` index and adds three wheels the SBSA `torch` links but does not declare. It is open as [pollen-robotics/microduck_rl#39](https://github.com/pollen-robotics/microduck_rl/pull/39) (issue [#38](https://github.com/pollen-robotics/microduck_rl/issues/38)). Until it merges, check out the pull request's branch from its fork instead of the pinned `develop` commit. `env doctor` will then report the `rl_pinned_commit` check as failing on Thor. That is expected and is the only failing check.
+At the pinned commit, `microduck_rl` routes `torch` to a CUDA 12.9 index on every `linux-aarch64` host. That predates Thor's GPU. The fix routes Jetson boards to NVIDIA's `sbsa/cu130` index and adds three wheels the SBSA `torch` links but does not declare. It is open as [pollen-robotics/microduck_rl#39](https://github.com/pollen-robotics/microduck_rl/pull/39) (issue [#38](https://github.com/pollen-robotics/microduck_rl/issues/38)). Until it merges, point the `microduck_rl` clone you made in Step 2 at the pull request's branch instead of the pinned `develop` commit. `env doctor` will then report `rl_pinned_commit` as a mismatch on Thor; that is expected. On a `uv tool` install the two pin checks read `[FAIL] … unknown` anyway (see the note in Step 5), so read the doctor's verdict line, not the count of `[FAIL]` prefixes.
 </Warning>
 
 ```bash nocheck
-cd ~/git
-git clone -b fix/jetson-thor-torch-source https://github.com/OriNachum/microduck_rl.git microduck_rl
-cd microduck_rl
+cd ~/git/microduck_rl
+git fetch https://github.com/OriNachum/microduck_rl.git fix/jetson-thor-torch-source
+git checkout a30a9e4
 UV_HTTP_TIMEOUT=600 uv sync
 ```
+
+`a30a9e4` is the pull request's head at the time of writing; `git -C ~/git/microduck_rl log --oneline -1` should name it.
 
 With that branch, `torch` 2.9.1 arrives as a native `linux_aarch64` wheel from `pypi.jetson-ai-lab.io/sbsa/cu130`, and no `LD_LIBRARY_PATH` is needed. The [Thor record](https://github.com/agentculture/microduck-cli/blob/main/docs/verification/2026-09-04-thor-sanity.md) shows the resolution and a CUDA probe on Thor.
 
 </div>
 <div class="nv-tab-panel">
 
-<Info title="Verified 2026-09-04 (headless); operator re-run in progress">
+<Info title="Verified 2026-09-04 (headless); operator re-run pending">
 Simulation, daemon, CLI and rules layer all pass on Orin. This tab covers those. It contains no training command.
 </Info>
 
@@ -190,7 +196,7 @@ cd ~/git/microduck_rl
 UV_INDEX="pytorch-cu129=https://pypi.jetson-ai-lab.io/sbsa/cu130" uv sync
 ```
 
-The `UV_INDEX` override keeps `uv` from downloading a multi-gigabyte `torch` build that cannot run here; `onnxruntime`, `mujoco` and the rest resolve normally. Any later bare `uv run` inside the clone re-locks toward upstream's index, so prefix `uv` calls there with the same variable. The CLI never runs `uv` inside the clone: `env up` invokes the virtual environment's Python directly.
+`torch` 2.9.1 is a direct dependency, so it still installs; the `UV_INDEX` override picks NVIDIA's SBSA wheel (which installs and initialises CUDA but has no `sm_87` kernels) instead of PyTorch's `cu129` build, and `onnxruntime`, `mujoco` and the rest resolve normally. Any later bare `uv run` inside the clone re-locks toward upstream's index and starts a multi-gigabyte re-download, so prefix `uv` calls there with the same variable. `env up` does not go through `uv` (it runs the virtual environment's Python directly), but every `policy` verb does run `uv run` in the clone — another reason the Orin path stops before Step 10.
 
 </div>
 </Tabs>
@@ -207,7 +213,7 @@ Thirteen checks, each with a remediation when it fails. A healthy box prints:
 microduck-cli env doctor: healthy
 ```
 
-The doctor exits `2` and names every failing check when the box is not ready. Do not proceed on a `2`. The one expected exception is Thor on the pull-request branch, where `rl_pinned_commit` fails by design (see the Thor tab).
+The doctor exits `2` and names every failing check when the box is not ready. Do not proceed on a `2`. A pin mismatch is only a warning, so Thor on the pull-request branch still gets a `healthy` verdict; it is the verdict line that matters (see the Thor tab and the note below).
 
 <Note title="Two [FAIL] lines under a healthy verdict on a uv tool install">
 With the CLI installed from PyPI (Step 1), version 0.9.4 prints `[FAIL] microduck_pinned_commit: pinned commit for microduck is unknown (docs/upstream-pins.md unreadable or the row is missing)` and the same for `rl_pinned_commit`, while the first line still says `healthy` and the exit code is `0`. The wheel does not carry the pins file the check reads; the check is a warning, so the verdict is right and the `[FAIL]` prefix is misleading. Compare the commits yourself with `git -C ~/git/microduck rev-parse HEAD` against the table in Step 2. A fix that ships the pins inside the package is tracked in the CLI repository.
@@ -216,17 +222,17 @@ With the CLI installed from PyPI (Step 1), version 0.9.4 prints `[FAIL] microduc
 ## Step 6: Bring the simulation up
 
 ```bash
-microduck env up --sim --skip-build
+microduck env up --sim
 ```
 
 `--sim` starts the real `duck-body` MuJoCo simulator behind `robotd --sim` and waits up to 120 seconds for the duck to report healthy. A viewer window appears on your display. Two variants, the first the same body with no window, the second `robotd --fake` with no physics and no window:
 
 ```bash
-microduck env up --sim --headless --skip-build
+microduck env up --sim --headless
 microduck env up --fake
 ```
 
-Drop `--skip-build` the first time if you skipped Step 3; `env up` runs the cargo build itself.
+`env up` runs the cargo build itself when the daemons are missing or stale, and returns in a moment when nothing changed, so there is no flag to remember.
 
 <Note title="Driving from an SSH session">
 The viewer opens on the box's own graphical session, not in your terminal. When you run `env up --sim` over SSH, export the desktop session's `DISPLAY` and `XAUTHORITY` into your shell first (read them from the environment of the logged-in session's `gnome-shell` process), or use `--headless`.
@@ -272,12 +278,14 @@ Turn the head toward a point in the trunk frame. Pick a visibly large target; sm
 microduck duck look --x 0.2 --y 0.4 --z -0.1 --apply
 ```
 
-Run one of the daemon's one-shot skills. Never guess a skill name; ask the live daemon what it has:
+Run one of the daemon's one-shot skills. Never guess a skill name; ask the live daemon what it has, then run one:
 
 ```bash
-microduck rules check --duck duck-a
+microduck policy list --duck duck-a
 microduck duck do roulade --apply
 ```
+
+`policy list --duck` prints the daemon's `## skills` section (`ground_pick`, `kick_left`, `kick_right`, `roulade`, `sitstand` on this daemon); `duck do` accepts the CLI's fixed spelling of those (`ground-pick`, `kick-left`, `kick-right`, `roulade`, `sit`), which `microduck duck do --help` lists.
 
 Send a velocity for a few seconds, then stop (remember the warning at the top: at these pins the duck leans rather than walks):
 
@@ -317,7 +325,7 @@ microduck rules check --rules ./my-rules.toml --duck duck-a
 microduck rules engine run --duck duck-a --rules ./my-rules.toml --apply --max-ticks 300 --json
 ```
 
-The engine is the only process that opens the duck's control socket. It logs its start sequence on stderr (connect, hello, health, init, enable, armed), then every rule firing and every drop with a named reason:
+The engine is the one long-running process on the duck's control socket; the one-shot `duck` verbs above share the same socket and nothing stops you from mixing them, so do not drive by hand while an engine is live. It logs its start sequence on stderr (connect, hello, health, init, enable, armed), then every rule firing and every drop with a named reason:
 
 ```text
 [SENSE stage=start source=~/.cache/duck-sim/duck-a.sock event=connect] opening the robot control socket
@@ -439,7 +447,7 @@ The `--fake` body is not venv-free. `robotd` loads `libonnxruntime` from the RL 
 <summary>env doctor on Thor: rl_pinned_commit fails</summary>
 <div class="nv-details-content">
 
-Expected while the `microduck_rl` clone is on the pull-request branch from the Thor tab. Every other check should pass. It clears when [#39](https://github.com/pollen-robotics/microduck_rl/pull/39) merges and the CLI re-pins.
+Expected while the `microduck_rl` clone is on the pull-request branch from the Thor tab; on a `uv tool` install `microduck_pinned_commit` prints a `[FAIL] … unknown` line as well (Step 5's note). Both are warnings and the verdict stays `healthy`. It clears when [#39](https://github.com/pollen-robotics/microduck_rl/pull/39) merges and the CLI re-pins.
 
 </div>
 </details>
