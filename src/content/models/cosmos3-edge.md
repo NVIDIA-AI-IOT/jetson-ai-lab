@@ -4,7 +4,7 @@ model_id: "cosmos3-edge"
 short_description: "NVIDIA's edge-optimized omnimodal world model (4B) — multimodal reasoning, video generation, and robot action policies on Jetson."
 family: "NVIDIA Cosmos"
 icon: "🤖"
-is_new: true
+is_new: false
 order: 4
 type: "Multimodal"
 vision_capable: true
