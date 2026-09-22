@@ -1,7 +1,7 @@
 // Public, standalone prompts adapted from the recorded walkthrough.
 // Keep credentials, internal bug links, and private recording tooling out of this file.
 export const walkthroughVideos = {
-  setup: { title: 'Set up your Jetson with Codex', youtubeId: 'un8h0gDTB60' },
+  setup: { title: 'Set up your Jetson with Codex', youtubeId: 'fWYZMA1mddE' },
   kiosk: { title: 'Build a standalone VLM kiosk with Codex', youtubeId: 'TJ6hXRGTRgA' },
 };
 

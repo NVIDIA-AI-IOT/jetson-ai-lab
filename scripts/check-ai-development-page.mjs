@@ -28,7 +28,7 @@ try {
   assert.equal(await page.locator('.impact-research a').count(), 3);
   assert((await page.locator('#impact-caption').textContent()).includes('not measured results or guaranteed time savings'));
   assert.deepEqual(await page.locator('iframe').evaluateAll((frames) => frames.map((frame) => frame.src)), [
-    'https://www.youtube-nocookie.com/embed/un8h0gDTB60',
+    'https://www.youtube-nocookie.com/embed/fWYZMA1mddE',
     'https://www.youtube-nocookie.com/embed/TJ6hXRGTRgA',
   ]);
   assert.equal(await page.locator('iframe[allowfullscreen][title][loading="lazy"]').count(), 2);
