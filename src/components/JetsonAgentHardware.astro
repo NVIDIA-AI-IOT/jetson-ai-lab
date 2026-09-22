@@ -1,0 +1,68 @@
+---
+import IsometricCamera from './IsometricCamera.astro';
+import IsometricSensor from './IsometricSensor.astro';
+---
+
+<figure class="hardware-figure" aria-labelledby="hardware-figure-caption">
+  <svg viewBox="0 0 760 533" role="img" aria-labelledby="hardware-title hardware-description">
+    <title id="hardware-title">A coding agent working with real Jetson hardware</title>
+    <desc id="hardware-description">The coding agent harness runs on the Jetson alongside project files and device tools. It can read a connected camera and sensors, and issue approved commands to actuators through device software. Measurements feed the next experiment.</desc>
+    <defs>
+      <marker id="hardware-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1l7 4-7 4" fill="none" stroke="#4d7c0f" stroke-width="1.5" /></marker>
+    </defs>
+    <rect x="194" y="38" width="372" height="457" rx="26" fill="#f0f7e7" stroke="#a3c96a" stroke-dasharray="5 6" />
+    <text x="218" y="68" class="eyebrow">RUNNING ON JETSON</text>
+
+    <rect x="218" y="88" width="324" height="126" rx="14" fill="#0f172a" />
+    <g fill="none" stroke="#bef264" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M239 112l7 6-7 6m13 0h10" /></g>
+    <text x="276" y="124" class="agent-title">Coding agent harness</text>
+    <text x="240" y="150" class="agent-subtitle">Project files + terminal + device tools</text>
+    <path d="M240 165h280" stroke="#334155" />
+    <text x="380" y="193" text-anchor="middle" class="agent-loop">Inspect → Run → Measure</text>
+
+    <path d="M365 220v30" class="connection" marker-end="url(#hardware-arrow)" />
+    <path d="M397 251v-30" class="connection" marker-end="url(#hardware-arrow)" />
+    <image href="/images/hero/isometric_jon-devkit.png" x="220" y="257" width="325" height="227" />
+
+    <path d="M164 231h18v90h54" class="connection" marker-end="url(#hardware-arrow)" />
+    <path d="M164 414h38v-43h34" class="connection" marker-end="url(#hardware-arrow)" />
+    <path d="M527 356h60v-9h17" class="connection" marker-end="url(#hardware-arrow)" />
+
+    <g transform="translate(20 166)">
+      <rect width="144" height="126" rx="16" class="peripheral" />
+      <IsometricCamera />
+      <text x="72" y="106" text-anchor="middle" class="device-label">Camera</text>
+    </g>
+    <g transform="translate(20 350)">
+      <rect width="144" height="126" rx="16" class="peripheral" />
+      <IsometricSensor />
+      <text x="72" y="110" text-anchor="middle" class="device-label">Sensors</text>
+    </g>
+    <g transform="translate(604 280)">
+      <rect width="136" height="144" rx="16" class="peripheral" />
+      <g transform="translate(7 0) scale(.9)" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 86l33-18 37 18-33 19z" fill="#e2e8f0" />
+        <path d="M32 86v11l37 20v-12z" fill="#cbd5e1" />
+        <path d="M69 105l33-19v11l-33 20z" fill="#94a3b8" />
+        <path d="M66 84V62L48 44l24-23 22 14" stroke-width="9" stroke="#64748b" />
+        <circle cx="66" cy="62" r="6" fill="#76b900" /><circle cx="48" cy="44" r="6" fill="#76b900" /><circle cx="72" cy="21" r="6" fill="#76b900" />
+        <path d="M89 30l11 3 3 12m-12-5l-3 10 9 7" />
+      </g>
+      <text x="68" y="132" text-anchor="middle" class="device-label">Actuators</text>
+    </g>
+  </svg>
+  <figcaption id="hardware-figure-caption">Agent tools run on Jetson. AI models can run locally or in the cloud. You set permissions and safety limits.</figcaption>
+</figure>
+
+<style>
+  .hardware-figure { border: 1px solid #e2e8f0; border-radius: 1.25rem; background: linear-gradient(145deg, #f8fafc, white); overflow: hidden; }
+  svg { display: block; width: 100%; height: auto; font-family: inherit; }
+  .eyebrow { fill: #3f6212; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; }
+  .agent-title { fill: white; font-size: 19px; font-weight: 700; }
+  .agent-subtitle { fill: #cbd5e1; font-size: 14px; }
+  .agent-loop { fill: #bef264; font-size: 17px; font-weight: 600; }
+  .connection { fill: none; stroke: #4d7c0f; stroke-width: 2; stroke-linejoin: round; }
+  .peripheral { fill: white; stroke: #cbd5e1; }
+  .device-label { fill: #334155; font-size: 17px; font-weight: 600; }
+  figcaption { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; color: #64748b; font-size: .75rem; line-height: 1.65; }
+</style>

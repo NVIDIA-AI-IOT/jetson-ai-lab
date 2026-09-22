@@ -1,0 +1,27 @@
+---
+// The same equal-length, 120-degree axes used by IsometricCamera.
+const c = Math.sqrt(3) / 2;
+const project = (x: number, y: number, z: number) => [55 + c * (x - y), 58 + (x + y) / 2 - z];
+const point = (p: number[]) => p.map((n) => n.toFixed(4)).join(' ');
+const face = (vertices: number[][]) => vertices.map((v, i) => `${i ? 'L' : 'M'}${point(project(v[0], v[1], v[2]))}`).join(' ') + ' Z';
+// The emitter is centered on the hidden rear face (y=0), pointing along -Y.
+// The target lies in the parallel X/Z plane; the beam hits its exact center.
+const emitter = project(13, 0, 17);
+const target = project(13, -44, 17);
+---
+
+<g data-isometric-sensor fill="none" stroke="#475569" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <path data-sensor-target d={face([[1, -44, 27], [25, -44, 27], [25, -44, 7], [1, -44, 7]])} fill="#f1f5f9" stroke="#94a3b8" />
+  <!-- Paint the beam first so the opaque housing naturally occludes its origin. -->
+  <path data-sensor-beam d={`M${point(emitter)}L${point(target)}`} stroke="#4d7c0f" stroke-width="1.5" stroke-dasharray="3 4" />
+
+  <g data-sensor-housing>
+    <path d={face([[-5, -5, 4], [31, -5, 4], [31, 29, 4], [-5, 29, 4]])} fill="#e2e8f0" />
+    <path d={face([[31, -5, 4], [31, -5, 0], [31, 29, 0], [31, 29, 4]])} fill="#94a3b8" />
+    <path d={face([[-5, 29, 4], [31, 29, 4], [31, 29, 0], [-5, 29, 0]])} fill="#cbd5e1" />
+
+    <path d={face([[0, 0, 30], [26, 0, 30], [26, 24, 30], [0, 24, 30]])} fill="#475569" />
+    <path d={face([[26, 0, 30], [26, 0, 4], [26, 24, 4], [26, 24, 30]])} fill="#334155" />
+    <path d={face([[0, 24, 30], [26, 24, 30], [26, 24, 4], [0, 24, 4]])} fill="#64748b" />
+  </g>
+</g>

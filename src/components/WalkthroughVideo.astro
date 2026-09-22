@@ -1,0 +1,29 @@
+---
+interface Props { title: string; youtubeId?: string; }
+const { title, youtubeId = '' } = Astro.props;
+if (youtubeId && !/^[A-Za-z0-9_-]{11}$/.test(youtubeId)) {
+  throw new Error(`Invalid YouTube video ID for ${title}`);
+}
+---
+<div class="overflow-hidden rounded-2xl border border-slate-700 bg-slate-950">
+  {youtubeId ? (
+    <>
+      <iframe
+        class="aspect-video w-full border-0"
+        src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
+        title={title}
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+      />
+      <a href={`https://www.youtube.com/watch?v=${youtubeId}`} target="_blank" rel="noopener noreferrer" class="block px-5 py-3 text-sm font-semibold text-lime-300 hover:underline">Watch on YouTube ↗</a>
+    </>
+  ) : (
+    <div class="flex aspect-video flex-col items-center justify-center gap-4 p-6 text-center text-white">
+      <svg class="h-12 w-12 text-nvidia-green" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2"/><path d="m20 15 14 9-14 9V15Z" fill="currentColor"/></svg>
+      <p class="text-lg font-semibold">{title}</p>
+      <p class="max-w-sm text-sm text-slate-300">Video coming soon. Explore the step-by-step prompts below.</p>
+    </div>
+  )}
+</div>
