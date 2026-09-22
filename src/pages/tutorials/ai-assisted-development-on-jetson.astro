@@ -1,0 +1,310 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Tabs from '../../components/Tabs.astro';
+import AgentPrompt from '../../components/AgentPrompt.astro';
+import WalkthroughVideo from '../../components/WalkthroughVideo.astro';
+import JetsonAgentHardware from '../../components/JetsonAgentHardware.astro';
+import DevelopmentImpact from '../../components/DevelopmentImpact.astro';
+import { setupPrompts, demoPrompts, walkthroughVideos } from '../../data/ai-assisted-development';
+
+const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
+---
+
+<Layout
+  title="A New Way to Build Edge AI"
+  description="AI-assisted development on NVIDIA Jetson. Explore the development impact, watch Codex walkthroughs, and use practical prompts to build a standalone VLM demo."
+  image="/images/hero/jetson-family-line_50pcnt.png"
+>
+  <div id="ai-development">
+    <section class="relative overflow-hidden bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 py-16 text-white lg:py-24">
+      <div class="pointer-events-none absolute inset-0 opacity-15" style="background-image:linear-gradient(rgba(118,185,0,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(118,185,0,.3) 1px,transparent 1px);background-size:48px 48px"></div>
+      <div class="page-width relative">
+        <a href="/tutorials/" class="text-sm font-semibold text-lime-300 hover:text-white">← Back to tutorials</a>
+        <div class="mt-8 max-w-4xl">
+          <div>
+            <p class="eyebrow text-lime-300">AI-assisted development on NVIDIA Jetson</p>
+            <h1 class="mt-5 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">A New Way to<br /><span class="text-nvidia-green">Build Edge AI.</span></h1>
+            <p class="mt-6 max-w-3xl text-xl leading-relaxed text-slate-200">Put coding agents alongside real Jetson hardware to inspect, prototype, benchmark, and optimize faster.</p>
+            <p class="mt-4 text-lg text-slate-300">Less repetitive work. More time to build what matters.</p>
+            <div class="mt-8 flex flex-wrap gap-3">
+              <a href="#choose-an-agent" class="primary-link">Watch the walkthrough</a>
+              <a href="#prompts" class="rounded-lg border border-white/30 px-5 py-3 font-semibold text-white hover:bg-white/10">Try the prompts ↓</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <nav aria-label="On this page" class="sticky top-16 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div class="page-width section-links">
+        <a href="#why">Why AI-assisted development <span aria-hidden="true">↓</span></a>
+        <a href="#impact">Development impact <span aria-hidden="true">↓</span></a>
+        <a href="#choose-an-agent">Choose your agent <span aria-hidden="true">↓</span></a>
+        <a href="#prompts">Prompt examples <span aria-hidden="true">↓</span></a>
+        <a href="#examples">Built with AI assistance <span aria-hidden="true">↓</span></a>
+      </div>
+    </nav>
+
+    <section id="why" class="section-space bg-white">
+      <div class="page-width">
+        <p class="eyebrow text-green-800">Why AI-assisted development</p>
+        <h2 class="section-title">Turn device insight into results, faster.</h2>
+        <div class="device-insight-layout mt-10">
+          <JetsonAgentHardware />
+          <div class="device-insight-copy">
+            <p class="section-intro">A coding agent can do more than suggest code. Give it controlled access to your Jetson project and it can inspect the real system, carry out approved experiments, and help you interpret the results.</p>
+            <ol class="device-insight-steps" role="list">
+              <li><span class="insight-number" aria-hidden="true">1</span><div><h3>Inspect the real device.</h3><p>Discover connected hardware, available memory, software, and logs.</p></div></li>
+              <li><span class="insight-number" aria-hidden="true">2</span><div><h3>Run real experiments.</h3><p>Capture camera data, read sensors, and test approved actions through device tools.</p></div></li>
+              <li><span class="insight-number" aria-hidden="true">3</span><div><h3>Build on measured results.</h3><p>Compare model performance, refine your prototype, and verify on the target hardware.</p></div></li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="impact" class="section-space border-y border-slate-200 bg-slate-50">
+      <div class="page-width">
+        <p class="eyebrow text-green-800">The development impact</p>
+        <h2 class="section-title">Shorten the path from idea to deployment.</h2>
+        <p class="section-intro">Spend less time preparing data, building tools, and repeating setup. Put more time into testing ideas and improving your product.</p>
+        <DevelopmentImpact />
+        <aside class="impact-research" aria-labelledby="impact-research-title">
+          <h3 id="impact-research-title">Research &amp; further reading</h3>
+          <p>Background on the work surrounding ML models and on improving the full development lifecycle, not measurements of this Jetson workflow.</p>
+          <ul role="list">
+            <li><a href="https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning" target="_blank" rel="noopener noreferrer">Google Cloud: MLOps <span aria-hidden="true">↗</span></a></li>
+            <li><a href="https://www.bain.com/insights/from-pilots-to-payoff-generative-ai-in-software-development-technology-report-2025/" target="_blank" rel="noopener noreferrer">Bain: From Pilots to Payoff (2025) <span aria-hidden="true">↗</span></a></li>
+            <li><a href="https://dora.dev/research/2025/dora-report/" target="_blank" rel="noopener noreferrer">DORA: AI-assisted Development (2025) <span aria-hidden="true">↗</span></a></li>
+          </ul>
+        </aside>
+        <div class="mt-6 grid gap-5 md:grid-cols-3">
+          <article class="impact-card"><h3>Developer time</h3><p>Less repetitive setup, scripting, data preparation, and experiment orchestration. More attention for design and difficult problems.</p></article>
+          <article class="impact-card"><h3>Time to market</h3><p>Test assumptions earlier with working prototypes, reusable tools, and faster model evaluation cycles.</p></article>
+          <article class="impact-card"><h3>Total cost of ownership</h3><p>Engineering effort is one part of TCO. Evaluate it alongside hardware, agent and compute costs, validation, deployment, and ongoing support.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="choose-an-agent" class="section-space bg-slate-950 text-white">
+      <div class="page-width">
+        <p class="eyebrow text-lime-300">Choose your coding agent</p>
+        <h2 class="section-title text-white">Your Jetson. Your coding agent.</h2>
+        <p class="mt-5 text-lg leading-relaxed text-slate-300">The workflow is agent-agnostic. Start with the recorded Codex example; additional assistant walkthroughs are planned.</p>
+        <Tabs labels={['Codex', ...futureAgents]} class="mt-8">
+          <div class="nv-tab-panel active">
+            <div class="grid items-start gap-8 lg:grid-cols-2">
+              <div class="text-slate-900">
+                <p class="eyebrow text-green-800">Walkthrough 01 · Setup · Steps 1–7</p>
+                <h3 class="mt-3 text-2xl font-bold">From a USB cable to a ready-to-build Jetson.</h3>
+                <p class="mt-4 leading-relaxed text-slate-600">Watch a Mac connect to a Jetson Orin Nano Developer Kit, prepare Codex, install Jetson Device Skills, and finish GPU container setup.</p>
+                <p class="mt-3 text-sm leading-relaxed text-slate-600">Before the first prompt, install the <a class="font-semibold text-green-800 underline" href="https://learn.chatgpt.com/docs/app" target="_blank" rel="noopener noreferrer">ChatGPT desktop app</a> on your host and sign in with Codex access. The recording uses macOS; UI and connection details may differ on other hosts.</p>
+                <ol class="mt-5 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-slate-700">
+                  <li>Begin in a Mac-side task: connect, authenticate, and configure SSH.</li>
+                  <li>Install Codex CLI on Jetson and register its remote project.</li>
+                  <li>Inspect the device, add Skills, and prepare Docker with approval.</li>
+                </ol>
+                <a href="#setup-prompts" class="mt-6 inline-block font-bold text-green-800 underline underline-offset-4">Follow the setup prompts ↓</a>
+              </div>
+              <WalkthroughVideo {...walkthroughVideos.setup} />
+            </div>
+            <div class="mt-8 grid gap-5 border-t border-slate-200 pt-7 text-slate-900 md:grid-cols-2">
+              <article>
+                <h4 class="text-lg font-bold">Directly on Jetson</h4>
+                <p class="mt-2 text-sm leading-relaxed text-slate-600">Install and sign in to Codex CLI on Jetson, then run it from your project directory in a local terminal or SSH session. The agent's commands and files are on the device.</p>
+              </article>
+              <article>
+                <h4 class="text-lg font-bold">From your desktop app</h4>
+                <p class="mt-2 text-sm leading-relaxed text-slate-600">Use a host-side task for initial setup over SSH. Then add the Jetson in Settings &gt; Connections in the ChatGPT desktop app and choose a remote project folder. Start the application task there.</p>
+              </article>
+            </div>
+            <p class="mt-5 text-sm leading-relaxed text-slate-600">Keep the host and Jetson awake and connected during this walkthrough. For unattended workloads, configure and test persistent services explicitly; an open SSH session alone is not a persistence guarantee.</p>
+            <div class="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-green-800">
+              <a href="https://learn.chatgpt.com/docs/codex/cli" target="_blank" rel="noopener noreferrer">Codex CLI setup ↗</a>
+              <a href="https://learn.chatgpt.com/docs/remote-connections#connect-to-an-ssh-host" target="_blank" rel="noopener noreferrer">SSH remote projects ↗</a>
+              <a href="/tutorials/jetson-agent-skills/">Jetson Agent Skills →</a>
+            </div>
+          </div>
+          {futureAgents.map((agent) => (
+            <div class="nv-tab-panel">
+              <p class="eyebrow text-green-800">Companion walkthrough planned</p>
+              <h3 class="mt-3 text-2xl font-bold text-slate-900">{agent}</h3>
+              <p class="mt-4 max-w-2xl leading-relaxed text-slate-600">A step-by-step Jetson example is not yet available here. The shared approach stays the same: provide device context, review the plan, run bounded experiments, and validate the result. Setup and available integrations depend on the assistant.</p>
+              <a href="/tutorials/jetson-agent-skills/" class="mt-5 inline-block font-semibold text-green-800 underline">Explore Jetson Agent Skills</a>
+            </div>
+          ))}
+        </Tabs>
+      </div>
+    </section>
+
+    <section id="prompts" class="section-space bg-slate-50">
+      <div class="page-width">
+        <p class="eyebrow text-green-800">Prompt examples</p>
+        <h2 class="section-title">Start with an outcome. Let the agent help with the steps.</h2>
+        <p class="section-intro">These public prompts preserve the intent of the two recorded walkthroughs. Adapt the user name, connection, and model to your device. They are starting points, not unattended scripts.</p>
+
+        <details class="mt-8 rounded-xl border border-slate-300 bg-white p-5">
+          <summary class="cursor-pointer font-bold text-slate-900">Before you start: device, access, and approval checklist</summary>
+          <div class="mt-4 grid gap-6 text-sm leading-relaxed text-slate-600 md:grid-cols-2">
+            <div><h3 class="font-bold text-slate-900">Device and connection</h3><ul class="mt-2 list-disc space-y-2 pl-5">
+              <li>Complete Jetson's first-run setup and reboot. Keep a local display and keyboard available.</li>
+              <li>Use a data-capable cable and the USB device-mode port, or connect by Ethernet/Wi-Fi. Seeing the L4T-README drive does not establish SSH connectivity.</li>
+              <li>Keep DHCP automatic. On macOS, allow the USB accessory and check the app's Local Network permission if Terminal can connect but the app cannot.</li>
+              <li>The recorded R39.2.1 setup used a USB-network workaround before recording. If USB networking fails, resolve it first or use Ethernet; the prompts are not a universal USB repair procedure.</li>
+            </ul></div>
+            <div><h3 class="font-bold text-slate-900">You stay in control</h3><ul class="mt-2 list-disc space-y-2 pl-5">
+              <li>Use a least-privilege account. Verify host identity, preserve existing SSH keys, and investigate changed-key warnings.</li>
+              <li>Enter passwords and sign-in codes locally. Never commit credentials or include them in shared prompts.</li>
+              <li>Read proposed commands and review downloads, service changes, and reboots before approval.</li>
+              <li>Prompt wording is not a security boundary. Configure the agent's actual permissions and verify what it changed.</li>
+            </ul></div>
+          </div>
+          <a href="/tutorials/getting-started-with-jetson/" class="mt-4 inline-block text-sm font-semibold text-green-800 underline">Need to set up your developer kit first?</a>
+        </details>
+
+        <div id="setup-prompts" class="mt-12 scroll-mt-40">
+          <span id="first-prompt" class="scroll-mt-40" aria-hidden="true"></span>
+          <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div><p class="eyebrow text-green-800">Part 01 · Steps 1–7</p><h3 class="mt-2 text-2xl font-bold text-slate-900">Connect and prepare your Jetson</h3></div>
+            <span class="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Same host-side setup task</span>
+          </div>
+          <div class="space-y-3">{setupPrompts.map((prompt, index) => <AgentPrompt {...prompt} step={index + 1} />)}</div>
+        </div>
+
+        <aside id="skills" class="mt-7 scroll-mt-40 rounded-xl border border-green-800/20 bg-green-50 p-6">
+          <h3 class="text-lg font-bold text-slate-900">Skills turn device knowledge into reusable procedures.</h3>
+          <p class="mt-2 max-w-4xl leading-relaxed text-slate-700">Jetson Device Skills cover on-device workflows. BSP Skills cover host-side BSP customization. Keep this page as your starting point, and use the <a class="font-semibold text-green-800 underline" href="/tutorials/jetson-agent-skills/">Jetson Agent Skills guide</a> for installation, supported assistants, and the complete catalog.</p>
+        </aside>
+
+        <div id="demo-prompts" class="mt-12 scroll-mt-40">
+          <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div><p class="eyebrow text-green-800">Part 02 · Steps 8–10</p><h3 class="mt-2 text-2xl font-bold text-slate-900">Build a live VLM demo</h3></div>
+            <span class="rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-900">New task in the Jetson remote project</span>
+          </div>
+          <p class="mb-5 leading-relaxed text-slate-600">Already have a prepared Jetson? Start here. Connect the webcam and display to Jetson, verify GPU container access in the new session, and keep these three prompts in the same task.</p>
+          <div class="space-y-3">{demoPrompts.map((prompt, index) => <AgentPrompt {...prompt} step={setupPrompts.length + index + 1} />)}</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="examples" class="section-space border-t border-slate-200 bg-white">
+      <div class="page-width">
+        <p class="eyebrow text-green-800">Built with AI assistance</p>
+        <h2 class="section-title">From a request to a standalone camera demo.</h2>
+        <p class="section-intro">A worked example, not a blank-sheet rebuild: use Codex to assemble and configure existing software, then validate the result on a Jetson Orin Nano Developer Kit.</p>
+        <div class="mt-10 grid items-start gap-9 lg:grid-cols-2">
+          <WalkthroughVideo {...walkthroughVideos.kiosk} />
+          <div>
+            <p class="eyebrow text-green-800">Walkthrough 02 · Application · Steps 8–10</p>
+            <h3 class="mt-3 text-2xl font-bold text-slate-900">Live VLM WebUI kiosk</h3>
+            <p class="mt-4 leading-relaxed text-slate-600">A USB camera supplies live images to a local vision-language model. The Jetson displays fresh descriptions in its own browser, then starts the demo automatically after boot.</p>
+            <dl class="mt-6 space-y-4 text-sm">
+              <div><dt class="font-bold text-slate-900">Reused building blocks</dt><dd class="mt-1 text-slate-600">Live VLM WebUI, a Gemma4 E2B inference runtime, prebuilt containers, and upstream kiosk support.</dd></div>
+              <div><dt class="font-bold text-slate-900">Agent-assisted work</dt><dd class="mt-1 text-slate-600">Select a compatible setup, configure services, connect the camera, check resource use, and prepare automatic startup.</dd></div>
+              <div><dt class="font-bold text-slate-900">Human validation</dt><dd class="mt-1 text-slate-600">Review the plan, change the camera scene, check fresh captions, and verify reboot and offline startup. A demo is not production certification.</dd></div>
+            </dl>
+            <div class="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-green-800">
+              <a href="/tutorials/live-vlm-webui/">Live VLM WebUI guide →</a>
+              <a href="/models/gemma4-e2b/">Gemma4 E2B setup →</a>
+              <a href="https://github.com/NVIDIA-AI-IOT/live-vlm-webui/blob/main/docs/setup/kiosk.md" target="_blank" rel="noopener noreferrer">Upstream kiosk guide ↗</a>
+            </div>
+          </div>
+        </div>
+        <div class="mt-10 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center sm:grid-cols-4" aria-label="Demo data flow">
+          <div><p class="font-mono text-xs text-green-800">01</p><p class="mt-2 font-bold text-slate-900">USB camera</p><p class="mt-1 text-sm text-slate-600">Real scene</p></div>
+          <div><p class="font-mono text-xs text-green-800">02</p><p class="mt-2 font-bold text-slate-900">Local VLM</p><p class="mt-1 text-sm text-slate-600">Inference on Jetson</p></div>
+          <div><p class="font-mono text-xs text-green-800">03</p><p class="mt-2 font-bold text-slate-900">Live WebUI</p><p class="mt-1 text-sm text-slate-600">Fresh captions</p></div>
+          <div><p class="font-mono text-xs text-green-800">04</p><p class="mt-2 font-bold text-slate-900">Standalone kiosk</p><p class="mt-1 text-sm text-slate-600">No laptop after setup</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="next-steps" class="bg-nvidia-green py-12 text-slate-950">
+      <div class="page-width flex flex-wrap items-center justify-between gap-6">
+        <div><h2 class="text-2xl font-bold sm:text-3xl">Bring your AI into the physical world.</h2><p class="mt-3">Connect cameras and sensors. Build, test, and refine on real Jetson hardware.</p></div>
+        <a href="#setup-prompts" class="rounded-lg bg-slate-950 px-6 py-3 font-bold text-white hover:bg-slate-800">Try the first prompt ↑</a>
+      </div>
+    </section>
+  </div>
+</Layout>
+
+<style>
+  .page-width { max-width: 80rem; margin-inline: auto; padding-inline: 1.5rem; }
+  .section-links { display: flex; gap: .5rem; overflow-x: auto; padding-block: .75rem; }
+  .section-links a { display: inline-flex; flex-shrink: 0; align-items: center; gap: .75rem; min-height: 44px; padding: .625rem .875rem; border: 1px solid #cbd5e1; border-radius: .375rem; background: #f8fafc; color: #334155; font-size: .875rem; font-weight: 600; text-decoration: none; }
+  .section-links a span { color: #4d7c0f; }
+  .section-links a:hover, .section-links a:focus-visible { border-color: #76b900; background: #f0f7e7; color: #365314; }
+  .section-space { padding-block: 5rem; scroll-margin-top: 10rem; }
+  .eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+  .section-title { margin-top: .75rem; color: #0f172a; font-size: clamp(1.8rem, 3vw, 2.5rem); font-weight: 700; line-height: 1.18; letter-spacing: -.025em; text-wrap: balance; }
+  .section-title.text-white { color: white; }
+  .section-intro { max-width: 54rem; margin-top: 1.25rem; color: #475569; font-size: 1.125rem; line-height: 1.75; }
+  #impact > .page-width > .section-intro { max-width: none; }
+  .primary-link { display: inline-block; border-radius: .5rem; background: #76b900; padding: .75rem 1.25rem; color: #0f172a; font-weight: 700; }
+  .primary-link:hover { background: #a3e635; }
+  .device-insight-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: center; gap: 2.5rem; }
+  .device-insight-copy > .section-intro { margin-top: 0; margin-bottom: 2rem; }
+  .device-insight-steps { display: grid; gap: 2rem; padding: 0; list-style: none; }
+  .device-insight-steps > li { display: flex; align-items: flex-start; gap: 1rem; }
+  .insight-number { flex-shrink: 0; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: #f0f7e7; color: #3f6212; font-weight: 700; }
+  .device-insight-steps h3 { color: #0f172a; font-size: 1.2rem; font-weight: 700; }
+  .device-insight-steps p, .impact-card p { margin-top: .75rem; color: #475569; line-height: 1.7; }
+  @media (max-width: 1023px) { .device-insight-layout { grid-template-columns: 1fr; gap: 2rem; } }
+  .impact-card { padding: 1.5rem; border-left: 3px solid #76b900; background: white; border-radius: 0 .75rem .75rem 0; }
+  .impact-card h3 { font-weight: 700; color: #0f172a; }
+  .impact-research { margin-top: 1.25rem; color: #64748b; font-size: .8rem; line-height: 1.65; }
+  .impact-research h3 { font-weight: 700; color: #475569; }
+  .impact-research p { margin-top: .25rem; }
+  .impact-research ul { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin-top: .5rem; list-style: none; padding: 0; }
+  .impact-research a { color: #166534; text-decoration: underline; text-underline-offset: 3px; }
+  .impact-research a:hover { color: #0f172a; }
+  #ai-development :global(a:focus-visible), #ai-development :global(button:focus-visible), #ai-development :global(summary:focus-visible) { outline: 3px solid #76b900; outline-offset: 4px; }
+  #ai-development :global(.nv-tab-btn.active) { color: #166534; }
+  @media (min-width: 1024px) { .page-width { padding-inline: 2rem; } }
+  @media (max-width: 639px) { .section-space { padding-block: 3rem; } .page-width { padding-inline: 1rem; } }
+</style>
+
+<script>
+  // Add keyboard navigation and explicit relationships to this page's existing Tabs component.
+  function enhanceAgentTabs() {
+    const container = document.querySelector('#choose-an-agent .nv-tabs');
+    if (!(container instanceof HTMLElement) || container.dataset.accessibleTabs) return;
+    container.dataset.accessibleTabs = 'true';
+    const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>('.nv-tab-btn'));
+    const panels = Array.from(container.querySelectorAll<HTMLElement>('.nv-tab-panel'));
+    container.querySelector('.nv-tabs-labels')?.setAttribute('role', 'tablist');
+    buttons.forEach((button, index) => {
+      button.id = 'agent-tab-' + index;
+      button.setAttribute('aria-controls', 'agent-panel-' + index);
+      button.tabIndex = index === 0 ? 0 : -1;
+      panels[index].id = 'agent-panel-' + index;
+      panels[index].setAttribute('role', 'tabpanel');
+      panels[index].setAttribute('aria-labelledby', button.id);
+      button.addEventListener('click', () => {
+        buttons.forEach((item) => { item.tabIndex = item === button ? 0 : -1; });
+      });
+      button.addEventListener('keydown', (event) => {
+        let next = index;
+        if (event.key === 'ArrowRight') next = (index + 1) % buttons.length;
+        else if (event.key === 'ArrowLeft') next = (index + buttons.length - 1) % buttons.length;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = buttons.length - 1;
+        else return;
+        event.preventDefault();
+        buttons[next].click();
+        buttons[next].focus();
+      });
+    });
+  }
+  enhanceAgentTabs();
+  document.addEventListener('astro:page-load', enhanceAgentTabs);
+  function revealPromptFromHash() {
+    const target = document.getElementById(location.hash.slice(1));
+    if (target instanceof HTMLDetailsElement && target.classList.contains('agent-prompt')) {
+      target.open = true;
+      target.scrollIntoView({ block: 'start' });
+    }
+  }
+  revealPromptFromHash();
+  window.addEventListener('hashchange', revealPromptFromHash);
+</script>

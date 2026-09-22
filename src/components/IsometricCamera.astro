@@ -1,0 +1,34 @@
+---
+// One orthographic isometric projection for the body, lens, and indicator.
+// Unit axes: (+sqrt(3)/2, 1/2), (-sqrt(3)/2, 1/2), (0, -1).
+// Equal lengths and pairwise dot products of -1/2 give 120-degree axes.
+const c = Math.sqrt(3) / 2;
+const project = (x: number, y: number, z: number) => [76 + c * (x - y), 49 + (x + y) / 2 - z];
+const point = (p: number[]) => p.map((n) => n.toFixed(4)).join(' ');
+const face = (vertices: number[][]) => vertices.map((v, i) => `${i ? 'L' : 'M'}${point(project(v[0], v[1], v[2]))}`).join(' ') + ' Z';
+// The camera looks along +Y. Its circular lens lies in the X/Z plane.
+const lensRadius = 12;
+const rearY = 24;
+const frontY = 40;
+const ringTransform = (y: number, x = 17, z = 17) => `matrix(${c} .5 0 -1 ${point(project(x, y, z))})`;
+const rimPoint = (y: number, angle: number) => project(17 + lensRadius * Math.cos(angle), y, 17 + lensRadius * Math.sin(angle));
+// Tangency occurs at -45 and 135 degrees in the lens's own circular plane.
+// The projected circle has major/minor radii r*sqrt(3/2), r*sqrt(1/2), rotated 60°.
+const arc = `A${lensRadius * Math.sqrt(1.5)} ${lensRadius * Math.sqrt(.5)} 60 0 0`;
+const barrel = `M${point(rimPoint(rearY, -Math.PI / 4))} ${arc} ${point(rimPoint(rearY, 3 * Math.PI / 4))} L${point(rimPoint(frontY, 3 * Math.PI / 4))} ${arc} ${point(rimPoint(frontY, 7 * Math.PI / 4))} Z`;
+---
+
+<g data-isometric-camera fill="none" stroke="#475569" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <path d={face([[0, 0, 34], [34, 0, 34], [34, 24, 34], [0, 24, 34]])} fill="#f1f5f9" />
+  <path d={face([[34, 0, 34], [34, 0, 0], [34, 24, 0], [34, 24, 34]])} fill="#cbd5e1" />
+  <path d={face([[0, 24, 34], [34, 24, 34], [34, 24, 0], [0, 24, 0]])} fill="#e2e8f0" />
+  <path d={`M${point(project(34, 5, 22))}L${point(project(34, 13, 22))} M${point(project(34, 5, 16))}L${point(project(34, 13, 16))}`} stroke="#64748b" />
+  <circle r={lensRadius + 1.5} transform={ringTransform(rearY)} fill="#94a3b8" vector-effect="non-scaling-stroke" />
+  <path d={barrel} fill="#64748b" />
+  <g transform={ringTransform(frontY)}>
+    <circle r={lensRadius} fill="#334155" vector-effect="non-scaling-stroke" />
+    <circle r="8.5" fill="#0f172a" stroke="#94a3b8" stroke-width="1.3" vector-effect="non-scaling-stroke" />
+    <path d="M-5 2A5.5 5.5 0 0 0 -2 5" stroke="#cbd5e1" stroke-width="1.2" vector-effect="non-scaling-stroke" />
+  </g>
+  <circle r="2.8" transform={ringTransform(rearY, 29, 30)} fill="#76b900" stroke="#4d7c0f" stroke-width="1.2" vector-effect="non-scaling-stroke" />
+</g>

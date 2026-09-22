@@ -1,0 +1,85 @@
+---
+// Illustrative layout units only. These are not measured durations or savings.
+const phases = [
+  { title: 'Product design', lines: ['Product', 'design'], before: 12, after: 12, protected: true },
+  { title: 'Data & setup', lines: ['Data', '& setup'], before: 20, after: 10, protected: false },
+  { title: 'Tools & experiments', lines: ['Tools &', 'experiments'], before: 22, after: 11, protected: false },
+  { title: 'Product implementation', lines: ['Product', 'implementation'], before: 16, after: 16, protected: true },
+  { title: 'Optimize & integrate', lines: ['Optimize', '& integrate'], before: 18, after: 9, protected: false },
+  { title: 'Validate & release', lines: ['Validate', '& release'], before: 12, after: 12, protected: true },
+];
+const rows = [
+  { key: 'before', title: 'Conventional development', note: 'More manual preparation and repeated work' },
+  { key: 'after', title: 'AI-assisted development', note: 'Less repetitive work; more focus on your product' },
+] as const;
+---
+
+<figure class="impact-comparison mt-10" aria-labelledby="impact-chart-title" aria-describedby="impact-caption">
+  <div class="comparison-heading">
+    <h3 id="impact-chart-title">Compress the repetitive work. Preserve human judgment.</h3>
+    <span>Conceptual comparison</span>
+  </div>
+  <p class="scroll-hint">Scroll horizontally to compare the full development cycle →</p>
+  <div class="comparison-scroll" tabindex="0" role="region" aria-label="Development time comparison; scroll horizontally on smaller screens">
+    <div class="comparison-chart">
+      {rows.map((row) => (
+        <div class="comparison-row" data-comparison={row.key}>
+          <div class="row-heading"><h4>{row.title}</h4><p>{row.note}</p></div>
+          <div class="phase-bar">
+            {phases.map((phase, index) => (
+              <div class:list={['phase', { 'protected-phase': phase.protected, 'assisted-phase': row.key === 'after' && !phase.protected }]}
+                style={`grid-column: span ${phase[row.key]}`}
+                data-phase={index + 1} title={phase.title} aria-label={phase.title}>
+                <span class="phase-label" aria-hidden="true">{phase.lines.map((line) => <span>{line}</span>)}</span>
+              </div>
+            ))}
+            {row.key === 'after' && <div class="time-opportunity" style={`grid-column: span ${100 - phases.reduce((sum, phase) => sum + phase.after, 0)}`}>
+              <p>More time for your product.<br /><strong>Earlier delivery.</strong></p>
+              <div class="opportunity-arrow" aria-hidden="true"></div>
+            </div>}
+          </div>
+        </div>
+      ))}
+      <div class="comparison-axis" aria-hidden="true"><span>Idea</span><span>Illustrative development time →</span><span>Deployment</span></div>
+    </div>
+  </div>
+  <div class="judgment-note"><span class="protected-key" aria-hidden="true"></span><p><strong>Time protected for product development and quality.</strong> Agents can assist throughout; you guide the design, implementation, and release.</p></div>
+  <figcaption id="impact-caption">Illustrative workflow, not measured results or guaranteed time savings.</figcaption>
+</figure>
+
+<style>
+  .impact-comparison { overflow: hidden; border: 1px solid #cbd5e1; border-radius: 1rem; background: white; box-shadow: 0 4px 16px #0f172a06; }
+  .comparison-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem; align-items: center; padding: 1.5rem 2rem; border-bottom: 1px solid #e2e8f0; }
+  .comparison-heading h3 { color: #0f172a; font-size: 1.125rem; font-weight: 700; }
+  .comparison-heading > span { font-size: .75rem; color: #64748b; background: #f1f5f9; border-radius: 2rem; padding: .3rem .75rem; }
+  .comparison-scroll { overflow-x: auto; padding: 2rem; }
+  .comparison-scroll:focus-visible { outline: 3px solid #76b900; outline-offset: -3px; }
+  .comparison-chart { min-width: 960px; }
+  .comparison-row + .comparison-row { margin-top: 2rem; }
+  .row-heading { display: flex; align-items: baseline; gap: 1.25rem; margin-bottom: .85rem; }
+  .row-heading h4 { color: #0f172a; font-size: 1rem; font-weight: 700; }
+  .row-heading p { color: #64748b; font-size: .8rem; }
+  [data-comparison="after"] h4 { color: #3f6212; }
+  .phase-bar { display: grid; grid-template-columns: repeat(100, minmax(0, 1fr)); }
+  .phase { min-width: 0; min-height: 108px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem; border-right: 2px solid white; background: #e2e8f0; color: #334155; }
+  .phase:first-child { border-radius: .5rem 0 0 .5rem; }
+  .phase:nth-child(6) { border-radius: 0 .5rem .5rem 0; }
+  .phase-label { display: flex; flex-direction: column; text-align: center; font-size: .75rem; line-height: 1.5; font-weight: 600; }
+  .protected-phase { background: #334155; color: white; }
+  .assisted-phase { background: #76b900; color: #152300; }
+  .assisted-phase:nth-child(odd) { background: #a3d452; }
+  .time-opportunity { padding: .5rem 0 .5rem 1.5rem; display: flex; justify-content: center; flex-direction: column; border-right: 1px dashed #a3b18b; }
+  .time-opportunity p { color: #475569; font-size: 1rem; line-height: 1.6; }
+  .time-opportunity strong { color: #3f6212; }
+  .opportunity-arrow { position: relative; height: 1px; margin-top: .65rem; background: #76b900; }
+  .opportunity-arrow::before { content: ''; position: absolute; left: 0; top: -3px; width: 7px; height: 7px; border-left: 1px solid #4d7c0f; border-bottom: 1px solid #4d7c0f; transform: rotate(45deg); }
+  .comparison-axis { display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; margin-top: 1.5rem; padding-top: .6rem; color: #64748b; font-size: .7rem; }
+  .judgment-note { display: flex; align-items: baseline; gap: .75rem; padding: 1.25rem 2rem; background: #f8fafc; color: #475569; font-size: .85rem; line-height: 1.65; }
+  .protected-key { flex-shrink: 0; width: .65rem; height: .65rem; border-radius: 2px; background: #334155; }
+  figcaption { padding: 1rem 2rem; border-top: 1px solid #e2e8f0; color: #64748b; font-size: .75rem; line-height: 1.6; }
+  .scroll-hint { display: none; padding: 1rem 1.25rem 0; color: #64748b; font-size: .75rem; }
+  @media (max-width: 1100px) { .scroll-hint { display: block; } }
+  @media (max-width: 767px) {
+    .comparison-heading, .comparison-scroll, .judgment-note, figcaption { padding: 1.25rem; }
+  }
+</style>

@@ -1,0 +1,61 @@
+---
+interface Props {
+  id: string;
+  step: number;
+  title: string;
+  note: string;
+  noteLink?: { text: string; href: string };
+  prompt: string;
+}
+const { id, step, title, note, noteLink, prompt } = Astro.props;
+const noteParts = noteLink ? note.split(noteLink.text) : [note];
+---
+<details id={id} class="agent-prompt scroll-mt-40 rounded-xl border border-slate-200 bg-white">
+  <summary class="cursor-pointer px-5 py-4 font-semibold text-slate-900">
+    <span class="mr-3 whitespace-nowrap text-sm text-slate-500">Step {step}</span>{title}
+  </summary>
+  <div class="border-t border-slate-200 px-5 pb-5">
+    <p class="my-4 text-sm leading-relaxed text-slate-600">{noteParts.map((part, index) => <>{index > 0 && noteLink && <a href={noteLink.href} class="font-semibold text-green-800 underline underline-offset-4">{noteLink.text}</a>}{part}</>)}</p>
+    <div class="flex items-center justify-between gap-4 rounded-t-lg bg-slate-900 px-4 py-3">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Adapt, review, then send</span>
+      <button type="button" data-copy-prompt={id} aria-label={`Copy prompt: ${title}`} class="rounded border border-slate-500 px-3 py-1 text-sm font-semibold text-white hover:bg-slate-700">Copy prompt</button>
+    </div>
+    <pre class="whitespace-pre-wrap break-words rounded-b-lg bg-slate-950 p-5 text-sm leading-6 text-slate-100"><code id={`${id}-text`}>{prompt}</code></pre>
+    <p class="mt-2 min-h-5 text-sm text-slate-600" data-copy-status={id} role="status" aria-live="polite"></p>
+  </div>
+</details>
+
+<script>
+  document.addEventListener('click', async (event) => {
+    if (!(event.target instanceof Element)) return;
+    const button = event.target.closest<HTMLButtonElement>('[data-copy-prompt]');
+    if (!button) return;
+    const id = button.dataset.copyPrompt;
+    const source = document.getElementById(`${id}-text`);
+    const status = document.querySelector<HTMLElement>(`[data-copy-status="${id}"]`);
+    if (!source || !status) return;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(source.textContent ?? '');
+      } else {
+        // Support the HTTP LAN preview used for presentation rehearsals.
+        const field = document.createElement('textarea');
+        field.value = source.textContent ?? '';
+        field.style.cssText = 'position:fixed;left:-9999px;top:0';
+        document.body.append(field);
+        let copied = false;
+        try {
+          field.select();
+          copied = document.execCommand('copy');
+        } finally {
+          field.remove();
+          button.focus({ preventScroll: true });
+        }
+        if (!copied) throw new Error('Clipboard unavailable');
+      }
+      status.textContent = 'Copied. Review the prompt before sending it to your agent.';
+    } catch {
+      status.textContent = 'Copy was blocked. Select the prompt text and copy it manually.';
+    }
+  });
+</script>
