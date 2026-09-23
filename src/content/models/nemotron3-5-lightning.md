@@ -4,7 +4,7 @@ model_id: "nemotron3-5-lightning"
 short_description: "NVIDIA's fast open-weight model for responsive local agents, reasoning, coding, and tool use. It delivers performance comparable to the much larger Nemotron 3 Super."
 family: "NVIDIA Nemotron"
 icon: "⚡"
-is_new: true
+is_new: false
 order: -2
 type: "Text"
 vision_capable: false
