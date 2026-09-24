@@ -1,6 +1,6 @@
 ---
 title: "Quick Start Guide with Yocto"
-description: "Flash a prebuilt OE4T demo-image-full Yocto image (JetPack 7.2) to Jetson AGX Thor, AGX Orin, or Orin Nano. No BitBake build required."
+description: "Flash a prebuilt OE4T demo-image-reference Yocto image (JetPack 7.2.1) to Jetson AGX Thor, AGX Orin, or Orin Nano. No BitBake build required."
 category: "Setup"
 section: "Yocto"
 order: 1
@@ -27,7 +27,12 @@ Beginning with **JetPack 7.2 (Jetson Linux R39.2)**, Yocto is an officially supp
 - **`meta-tegra`** (the Jetson BSP layer) - GitHub: [github.com/OE4T/meta-tegra](https://github.com/OE4T/meta-tegra)
 - **`tegra-demo-distro`** (ready-to-use reference images) - GitHub: [github.com/OE4T/tegra-demo-distro](https://github.com/OE4T/tegra-demo-distro)
 
-You don't have to build anything to try it. In this guide you'll **download a prebuilt `demo-image-full` image and flash it** to your Jetson. `demo-image-full` is a desktop (Sato/X11) image that already includes `nvidia-docker` and the Multimedia API samples, a good way to see what a Yocto-based Jetson image looks like. It comes from the OE4T [`tegra-demo-distro` `wrynose` branch](https://github.com/OE4T/tegra-demo-distro/tree/wrynose).
+You don't have to build anything to try it. In this guide you'll **download a prebuilt `demo-image-reference` image and flash it** to your Jetson. This Sato/X11 desktop image is the OE4T QA reference image, with comprehensive validation tools, NVIDIA-accelerated container support, and a persistent `/data` partition that is configured automatically on first boot. It comes from the OE4T [`tegra-demo-distro` `wrynose` branch](https://github.com/OE4T/tegra-demo-distro/tree/wrynose).
+
+<div class="admonition warning">
+  <p class="admonition-title">🚧 JetPack 7.2.1 availability</p>
+  <p>JetPack 7.2.1 and the corresponding OE4T <code>meta-tegra</code> and <code>tegra-demo-distro</code> changes are released. NVIDIA currently lists the prebuilt Yocto images as <strong>Coming Soon</strong>; the download buttons and tarballs described below will become available on the JetPack downloads page when publication is complete.</p>
+</div>
 
 <div class="admonition note">
   <p class="admonition-title">📘 Where to get the images</p>
@@ -36,13 +41,13 @@ You don't have to build anything to try it. In this guide you'll **download a pr
 
 ## Supported images
 
-Download the `demo-image-full` tegraflash tarball for your target. Use the tarball whose `MACHINE` name matches your hardware. **Do not** use a tarball built for a different Jetson module or carrier.
+Download the `demo-image-reference` tegraflash tarball for your target. Use the tarball whose `MACHINE` name matches your hardware. **Do not** use a tarball built for a different Jetson module or carrier.
 
 | Hardware | OE4T `MACHINE` | Tarball name | Rootfs target |
 |----------|----------------|--------------|---------------|
-| Jetson AGX Thor devkit | `jetson-agx-thor-devkit` | `demo-image-full-jetson-agx-thor-devkit.rootfs.tegraflash-tar.zst` | NVMe (`nvme0n1p1`) |
-| Jetson AGX Orin devkit (64 GB) | `p3737-0000-p3701-0005` | `demo-image-full-p3737-0000-p3701-0005.rootfs.tegraflash-tar.zst` | internal eMMC (`mmcblk0p1`) |
-| Jetson Orin Nano (NVMe) | `jetson-orin-nano-devkit-nvme` | `demo-image-full-jetson-orin-nano-devkit-nvme.rootfs.tegraflash-tar.zst` | NVMe (`nvme0n1p1`) |
+| Jetson AGX Thor devkit | `jetson-agx-thor-devkit` | `demo-image-reference-jetson-agx-thor-devkit.rootfs.tegraflash-tar.zst` | NVMe (`nvme0n1p1`) |
+| Jetson AGX Orin devkit (64 GB) | `p3737-0000-p3701-0005` | `demo-image-reference-p3737-0000-p3701-0005.rootfs.tegraflash-tar.zst` | internal eMMC (`mmcblk0p1`) |
+| Jetson Orin Nano (NVMe) | `jetson-orin-nano-devkit-nvme` | `demo-image-reference-jetson-orin-nano-devkit-nvme.rootfs.tegraflash-tar.zst` | NVMe (`nvme0n1p1`) |
 
 <div class="admonition warning">
   <p class="admonition-title">⚠️ Install the NVMe drive first (NVMe targets)</p>
@@ -64,7 +69,7 @@ The end-to-end flow for this guide is short:
 
 ```mermaid
 flowchart LR
-    A["Download<br/>demo-image-full<br/>for your device"] --> B["Unpack<br/>flash tarball"]
+    A["Download<br/>demo-image-reference<br/>for your device"] --> B["Unpack<br/>flash tarball"]
     B --> C["Device into<br/>Recovery Mode"]
     C --> D["sudo<br/>./initrd-flash"]
     D --> E["Boot<br/>Jetson"]
@@ -75,17 +80,18 @@ flowchart LR
 
 </div>
 
-## What's in `demo-image-full`?
+## What's in `demo-image-reference`?
 
-The `tegrademo` distro from OE4T ships several reference image recipes. `demo-image-full` is the most complete one:
+`demo-image-reference` is a comprehensive QA validation image containing all publicly available test packages supplied by the OE/Yocto recipes. It includes:
 
-| Image | Contents |
-|-------|----------|
-| `demo-image-base` | Basic image, no graphics |
-| `demo-image-egl` | DRM/EGL graphics, no window manager |
-| `demo-image-sato` | X11 image with the Sato UI |
-| `demo-image-weston` | Wayland with the Weston compositor |
-| **`demo-image-full`** | **Sato UI plus `nvidia-docker` and Multimedia API samples** |
+- A Sato/X11 desktop, with Weston available for manual launch
+- Docker, `nvidia-container-toolkit`, and NVIDIA registry configuration
+- The NVIDIA runtime preconfigured as Docker's default OCI runtime
+- CUDA, cuDNN, TensorRT, VPI4, PVA SDK, Vulkan, and Nsight Systems validation tools
+- Open-source test and benchmark utilities such as glmark2, kmscube, lmbench, iperf3, and rt-tests
+- An automatically created and mounted `/data` partition for persistent data and container storage
+
+The older `demo-image-full` recipe still exists in `tegra-demo-distro`, but it is no longer the image used to produce the prebuilt JetPack 7.2.1 tarballs.
 
 ## Prerequisites
 
@@ -141,7 +147,7 @@ gsettings get org.gnome.desktop.media-handling automount-open
 
 ## Step 1: Download the image for your device
 
-From the [JetPack downloads page](https://developer.nvidia.com/embedded/jetpack/downloads) (JetPack 7.2 / Jetson Linux R39.2), under **Yocto Images**, click the button for your device: **Yocto for Jetson AGX Thor**, **Yocto for Jetson AGX Orin**, or **Yocto for Jetson Orin Nano**. Download the `.tegraflash-tar.zst` package whose `MACHINE` matches your hardware (see the [Supported images](#supported-images) table). Save it to `~/Downloads` and **leave the filename unchanged**.
+From the [JetPack downloads page](https://developer.nvidia.com/embedded/jetpack/downloads) (JetPack 7.2.1 / Jetson Linux R39.2.1), under **Yocto Images**, click the button for your device when it becomes available: **Yocto for Jetson AGX Thor**, **Yocto for Jetson AGX Orin**, or **Yocto for Jetson Orin Nano**. Download the `.tegraflash-tar.zst` package whose `MACHINE` matches your hardware (see the [Supported images](#supported-images) table). Save it to `~/Downloads` and **leave the filename unchanged**.
 
 ## Step 2: Unpack the flash tarball
 
@@ -164,7 +170,7 @@ Then unpack:
 ```bash
 mkdir -p ~/jetson-flash
 cd ~/jetson-flash
-tar xf ~/Downloads/demo-image-full-${MACHINE}.rootfs.tegraflash-tar.zst
+tar xf ~/Downloads/demo-image-reference-${MACHINE}.rootfs.tegraflash-tar.zst
 ```
 
 <div class="admonition tip">
@@ -258,7 +264,7 @@ On boot you'll reach a login prompt. Log in as **`root`** (the demo image has no
 
 ## Step 5: Verify the JetPack stack
 
-Once booted, confirm the JetPack components bundled in `demo-image-full` are present. Run these on the device (over serial or SSH):
+Once booted, confirm the JetPack components bundled in `demo-image-reference` are present. Run these on the device (over serial or SSH):
 
 **Check the L4T / JetPack release:**
 
@@ -269,143 +275,40 @@ cat /etc/nv_tegra_release
 **Verify Docker with the NVIDIA runtime:**
 
 ```bash
+docker info --format 'Default runtime: {{.DefaultRuntime}}'
 docker info | grep -i runtime
-docker run --rm --runtime nvidia hello-world
+docker run --rm hello-world
 ```
 
-If these respond, your Yocto image is up and the JetPack stack is functional. You now have a Sato desktop running on your Jetson with containers and the multimedia samples ready to use.
+The default runtime should report `nvidia`. If these commands respond successfully, your Yocto image is up and the JetPack stack is functional. You now have a Sato desktop running on your Jetson with the NVIDIA container runtime ready to use.
 
-## Step 6: Set up persistent storage for Docker containers
+## Step 6: Verify automatic persistent storage
 
-<details class="nv-details">
-<summary><strong>Expand: set up persistent storage for Docker containers</strong></summary>
-<div class="nv-details-content">
+The JetPack 7.2.1 `demo-image-reference` image configures persistent storage automatically on first boot. No manual partitioning, formatting, `/etc/fstab` changes, or Docker configuration are required.
 
-The reference image uses an A/B root filesystem layout so the inactive slot remains available for system updates. As a result, the mounted root filesystem is intentionally smaller than the physical drive: approximately 25 GB on AGX Thor and 14 GB on AGX Orin or Orin Nano. Large container images and model caches can fill it quickly.
+The image uses `systemd-repart` to create an ext4 partition labeled `data`, grow it into the available unallocated space, and mount it at `/data`. Docker and containerd wait for that mount and use these locations by default:
 
-Before downloading AI containers, create a separate data partition from the unallocated space left after the A/B slots, mount it at `/data`, and place both Docker and containerd storage there. These instructions apply to a **freshly flashed** image with no container data to migrate.
+- Docker: `/data/docker`
+- containerd: `/data/containerd`
 
-<div class="admonition note">
-  <p class="admonition-title">📘 AGX Orin: use an external SSD for vLLM</p>
-  <p>The unused portion of the 64 GB AGX Orin eMMC provides approximately 28 GB after formatting. This is useful for smaller containers and model caches, but the current NVIDIA AI-IOT vLLM image expands beyond that capacity. For vLLM on AGX Orin, install an NVMe SSD or connect a USB SSD and use that device for <code>/data</code> instead of creating the eMMC data partition below.</p>
-</div>
+The image also uses an overlay filesystem under `/data` to preserve SSH configuration, NetworkManager connections, and systemd network configuration across OTA updates.
 
-<div class="admonition warning">
-  <p class="admonition-title">⚠️ Confirm the free space before changing the partition table</p>
-  <p>The following procedure creates a partition only in currently unallocated space. Do not delete, resize, or format any existing A/B, EFI, recovery, or reserved partition. A later full-device flash may recreate the original partition table, so keep important data backed up.</p>
-</div>
-
-First inspect the device and confirm that the expected unallocated region is present:
-
-<Tabs labels={["AGX Thor (NVMe)", "AGX Orin (eMMC)", "Orin Nano (NVMe)"]}>
-  <div class="nv-tab-panel active">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS\nfdisk -l /dev/nvme0n1"}</code></pre>
-  </div>
-  <div class="nv-tab-panel">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS\nfdisk -l /dev/mmcblk0"}</code></pre>
-  </div>
-  <div class="nv-tab-panel">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS\nfdisk -l /dev/nvme0n1"}</code></pre>
-  </div>
-</Tabs>
-
-Open the corresponding disk with `fdisk`:
-
-<Tabs labels={["AGX Thor (NVMe)", "AGX Orin (eMMC)", "Orin Nano (NVMe)"]}>
-  <div class="nv-tab-panel active">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"fdisk /dev/nvme0n1"}</code></pre>
-  </div>
-  <div class="nv-tab-panel">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"fdisk /dev/mmcblk0"}</code></pre>
-  </div>
-  <div class="nv-tab-panel">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"fdisk /dev/nvme0n1"}</code></pre>
-  </div>
-</Tabs>
-
-At the `fdisk` prompt, enter `n` to create a new partition, accept the default partition number, first sector, and last sector, then enter `p` to review the result. The new partition must occupy only the large free region after the second rootfs slot. Enter `w` only after confirming that none of the existing partitions changed.
-
-Because the system disk is active, reboot so the kernel loads the updated partition table:
+Verify the automatic setup:
 
 ```bash
-reboot
-```
-
-<div class="admonition note">
-  <p class="admonition-title">📘 The IP address may change after reboot</p>
-  <p>If the Jetson receives its address through DHCP, it may come back with a different IP address. If SSH no longer connects to the previous address, check the DHCP lease table on your router or network, or use the serial console and run <code>ip -br address</code> to find the new address.</p>
-</div>
-
-After reconnecting, select the new partition. With the JetPack 7.2 reference layout, it is normally partition 13 on AGX Thor and partition 17 on AGX Orin or Orin Nano. AGX Orin uses eMMC, while Orin Nano uses NVMe. Confirm the actual partition with `lsblk` before continuing.
-
-<Tabs labels={["AGX Thor (NVMe)", "AGX Orin (eMMC)", "Orin Nano (NVMe)"]}>
-  <div class="nv-tab-panel active">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"export DATA_PARTITION=/dev/nvme0n1p13"}</code></pre>
-  </div>
-  <div class="nv-tab-panel">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"export DATA_PARTITION=/dev/mmcblk0p17"}</code></pre>
-  </div>
-  <div class="nv-tab-panel">
-    <pre style="background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px;"><code>{"export DATA_PARTITION=/dev/nvme0n1p17"}</code></pre>
-  </div>
-</Tabs>
-
-Format and mount only the newly created partition:
-
-```bash
-lsblk -f "$DATA_PARTITION"
-mkfs.ext4 -L JETSON_DATA "$DATA_PARTITION"
-
-mkdir -p /data
-DATA_UUID=$(blkid -s UUID -o value "$DATA_PARTITION")
-echo "UUID=$DATA_UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
-mount -a
-
 findmnt /data
 df -hT /data
-```
-
-Docker 29 can keep image layers in containerd independently of Docker's `data-root`, so redirect both locations. Preserve the NVIDIA runtime configuration in `/etc/docker/daemon.json`:
-
-```bash
-systemctl stop docker.socket docker containerd
-
-mkdir -p /data/docker /data/containerd /etc/containerd
-cp /etc/docker/daemon.json /etc/docker/daemon.json.before-data
-
-cat > /etc/docker/daemon.json <<'EOF'
-{
-  "data-root": "/data/docker",
-  "runtimes": {
-    "nvidia": {
-      "args": [],
-      "path": "nvidia-container-runtime"
-    }
-  }
-}
-EOF
-
-cat > /etc/containerd/config.toml <<'EOF'
-version = 2
-root = "/data/containerd"
-state = "/run/containerd"
-EOF
-
-systemctl start containerd docker
-```
-
-Verify the persistent mount, Docker storage root, and NVIDIA runtime:
-
-```bash
-findmnt /data
 docker info --format 'Docker root: {{.DockerRootDir}}'
-docker info | grep -i runtime
+docker info --format 'Default runtime: {{.DefaultRuntime}}'
+grep '^root' /etc/containerd/config.toml
 ```
 
-The Docker root should report `/data/docker`, and `nvidia` should remain listed as an available runtime. If the system already contains images or containers that you need to retain, migrate them before changing these paths; see [SSD + Docker Setup](/tutorials/ssd-docker-setup/) for the migration workflow.
+The output should show `/data` mounted as ext4, Docker rooted at `/data/docker`, containerd rooted at `/data/containerd`, and `nvidia` as Docker's default runtime.
 
+<div class="admonition note">
+  <p class="admonition-title">📘 Custom storage layouts</p>
+  <p>The automatic partition and persistent overlay are configured when building the distro. Products that need a different partition size, storage device, or set of persisted paths should customize the OE4T image configuration at build time rather than repartitioning a running reference image.</p>
 </div>
-</details>
 
 ## Optional: Serial console
 
@@ -432,11 +335,13 @@ Use `Ctrl-A` then `Ctrl-X` to exit `picocom`. Serial access differs per device:
 
 ## Build your own Yocto image
 
-The prebuilt `demo-image-full` is built from source on the OE4T `tegra-demo-distro` repository. To rebuild it yourself or customize it with your own layer and packages, follow the setup and build steps in the repository README: [github.com/OE4T/tegra-demo-distro](https://github.com/OE4T/tegra-demo-distro).
+The prebuilt `demo-image-reference` is built from source in the OE4T `tegra-demo-distro` repository. To rebuild it yourself or customize it with your own layer and packages, follow the setup and build steps in the repository README: [github.com/OE4T/tegra-demo-distro](https://github.com/OE4T/tegra-demo-distro).
+
+The reference image requires the `overlayfs` distro feature. For OTA workflows, `demo-image-reference-swupdate` is the swupdate payload used to deliver `demo-image-reference`.
 
 ## References & Next Steps
 
-- [JetPack SDK downloads](https://developer.nvidia.com/embedded/jetpack/downloads): JetPack 7.2 / Jetson Linux R39.2, including the Yocto images
+- [JetPack SDK downloads](https://developer.nvidia.com/embedded/jetpack/downloads): JetPack 7.2.1 / Jetson Linux R39.2.1 and Yocto image availability
 - [OE4T Flashing Basics (`wrynose`)](https://oe4t.github.io/wrynose/Flashing.html): the upstream flashing reference
 - [OE4T `tegra-demo-distro` `wrynose` branch](https://github.com/OE4T/tegra-demo-distro/tree/wrynose) and [`meta-tegra` `wrynose` machine configs](https://github.com/OE4T/meta-tegra/tree/wrynose/conf/machine)
 - [NVIDIA Jetson Linux R39.2: Flashing Support](https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/SD/FlashingSupport.html) and [Quick Start](https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/IN/QuickStart.html)
@@ -452,7 +357,7 @@ With your Jetson booted and persistent container storage in place, you're ready 
 | [vLLM](/tutorials/genai-on-jetson-llms-vlms/) | `ghcr.io/nvidia-ai-iot/vllm:latest-jetson-thor` | `ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin` |
 | [Ollama](/tutorials/ollama/) | `ghcr.io/nvidia-ai-iot/ollama:r38.2.arm64-sbsa-cu130-24.04` | `dustynv/ollama:r36.2.0` |
 
-On your Yocto-based Jetson, always pick the container tag that matches your GPU family: `latest-jetson-thor` for Thor (SM110) and `latest-jetson-orin` for Orin (SM87). These are rolling tags, so the exact Jetson Linux and CUDA versions behind them change over time. On an Orin running the R39.2 / JetPack 7.2 Yocto image, keep using the **Orin** tag.
+On your Yocto-based Jetson, always pick the container tag that matches your GPU family: `latest-jetson-thor` for Thor (SM110) and `latest-jetson-orin` for Orin (SM87). These are rolling tags, so the exact Jetson Linux and CUDA versions behind them change over time. On an Orin running the R39.2.1 / JetPack 7.2.1 Yocto image, keep using the **Orin** tag.
 
 <div class="admonition note">
   <p class="admonition-title">📘 Live VLM WebUI needs a model backend</p>
