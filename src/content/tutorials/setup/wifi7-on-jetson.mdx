@@ -244,6 +244,12 @@ Connect to your wireless network:
 sudo nmcli dev wifi connect "YourNetworkSSID" password "YourPassword"
 ```
 
+<div class="admonition warning">
+  <p class="admonition-title">⚠️ Brand-new Wi-Fi 7 routers: association may be silently rejected</p>
+  <p>If the connect step keeps failing (<code>ssid-not-found</code>) while other devices (phones, laptops) join the same SSID fine, the AP is likely rejecting association at the feature-negotiation phase. Wi-Fi 7 routers commonly default to MLO (Multi-Link Operation) / TWT / band-merge that the out-of-tree <code>rtw89</code> USB branch cannot negotiate — the kernel log shows a clean <code>send auth → authenticated</code> followed by an un-answered association request, repeated every ~35 s. Turn on the router's <strong>Wi-Fi 5 / legacy compatibility mode</strong> (on Xiaomi BE3600 CN firmware: <code>Wi-Fi 5 兼容模式</code>, which also hard-disables MLO and TWT) and the same <code>nmcli</code> command succeeds immediately. This drops the link to VHT (Wi-Fi 5) coding — on a verified setup, RX still negotiated 1733 Mbit/s PHY (VHT-MCS9, 160 MHz, NSS 2).</p>
+  <p>Diagnose the failure mode first: <code>sudo dmesg -w | grep -E 'auth|assoc'</code> — <code>authenticated</code> without a following <code>associated</code> is the feature-negotiation signature; a <code>4-way handshake failed</code> or <code>reason=2</code> deauth is instead a credentials problem.</p>
+</div>
+
 ### Step 7: Dual-radio coexistence and benchmarking
 
 If your Jetson has an onboard M.2 card (`rtl88x2ce` on `wlan0`), the new USB adapter operates on `wlan1`. The two PHY devices (`phy0` and `phy1`) run concurrently without driver conflict. If your carrier board does not include an internal M.2 wireless card, the USB adapter claims `wlan0` as the sole wireless interface, and multi-radio coexistence is not required.
@@ -324,6 +330,7 @@ bash host/wifi-bench.sh
 | Module builds and loads, but no interface appears | Firmware missing or silent power brownout | Run `dmesg \| grep -i rtw` to locate failing firmware path; ensure adapter is plugged into powered carrier port. |
 | WiFi interface disappears after system update | Kernel package upgrade orphaned out-of-tree `.ko` | Pin packages using `sudo apt-mark hold nvidia-l4t-*`, then rebuild driver against updated kernel headers. |
 | `nmcli: Not authorized to control networking` | Headless SSH session lacks polkit console agent | Add user to group: `sudo usermod -aG netdev $USER` or execute connection command with `sudo`. |
+| OPEN auth succeeds but association never completes (`send auth` → `authenticated` → repeated `aborting authentication ... by local choice`, no `AssocResp`) while other client types join the same AP | Wi-Fi 7 AP feature negotiation (MLO/TWT/band-merge) rejected by the out-of-tree rtw89 USB branch — verified on Xiaomi BE3600 (fw 1.0.87) with band-merge + MLO defaults; `dmesg -w` shows the loop every ~35 s, NetworkManager reports `ssid-not-found` | Router-side fix (verified): enable the router's **Wi-Fi 5 compatibility mode** (小米路由器: `Wi-Fi 5 兼容模式`) — it forcibly disables MLO/TWT and association succeeds immediately. When available, disable MLO/TWT individually first; on Xiaomi CN firmware they are hard-locked off by compat mode. Not a password, MAC-filter, or driver-flags problem — the AP silently drops the assoc request. |
 
 ---
 
