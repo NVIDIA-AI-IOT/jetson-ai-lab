@@ -44,6 +44,23 @@ flowchart TD
 
 Inspect live bus enumeration to determine the exact silicon:
 
+### Dual-mode USB bus anchoring (SuperSpeed switch)
+
+Realtek RTL8922AU/8912AU silicon (and BE-class Realtek USB adapters generally) is **dual-mode**: the same dongle enumerates as full-speed on the USB 2.0 fallback path (Bus 001 at 480M) or SuperSpeed on Bus 002 at 5000M depending on which host port it occupies. This is not user-visible at plug time, but it caps the host transfer rate: a 480M anchor soft-limits real throughput at about 400 Mbit/s regardless of the radio's negotiated PHY rate.
+
+The morrownr `rtw89` driver performs the mode switch **for you at module load** — `rtw89_usb_switch_mode_be()` runs as part of probe when the module parameter `switch_usb_mode` is Y (default), programs the pad controller for a SuperSpeed transition, and the device re-enumerates onto the SuperSpeed bus — but only if it is plugged into a port *routed* to Bus 002. Verify the anchoring, not the descriptor:
+
+```bash
+lsusb -t
+# Look for the adapter's line:
+# Port 002: Dev 008, If 0, Class=Vendor Specific Class, Driver=rtw89_8922au_git, 5000M
+```
+
+- `480M` (Bus 001): anchored to the USB 2.0 fallback path. Re-plug into a SuperSpeed-routed port and reload the module.
+- `5000M` (Bus 002): mode switch engaged, USB bus no longer the bottleneck.
+
+Do not conclude the adapter is "USB 2.0-only" from its descriptor (`bcdUSB 0x0200` is what a dual-mode adapter reports while running as high-speed): the empirical `lsusb -t` check after replug is the definitive verification.
+
 ```bash
 # For USB adapters
 lsusb
@@ -278,7 +295,14 @@ Connect to your wireless network:
 ```bash
 sudo nmcli dev wifi connect "YourNetworkSSID" password "YourPassword"
 ```
+sudo nmcli dev wifi connect "YourNetworkSSID" password "YourPassword"
+```
 
+<div class="admonition warning">
+  <p class="admonition-title">⚠️ Band steering: locate the 5 GHz BSSID explicitly</p>
+  <p>On merged dual-band SSIDs (Xiaomi: <code>Wi-Fi 多频合一</code>), NetworkManager frequently lands the adapter on the 2.4 GHz radio of the merged SSID — capped around 300 Mbit/s (HT MCS15 40 MHz) no matter what the 5 GHz band can do. Locate the per-band BSSIDs explicitly and pin the intended band:</p>
+  <p><code>nmcli -f SSID,BSSID,CHAN,SIGNAL dev wifi list ifname &lt;usb-if&gt;</code> — the SSID appears once per band, each with its own BSSID. Then connect with the BSSID for the 5 GHz radio: <code>sudo nmcli dev wifi connect "YourNetworkSSID" ifname &lt;usb-if&gt; bssid &lt;5GHz-BSSID&gt; password "YourPassword"</code>. If the 5 GHz entry is missing from the list, <code>sudo nmcli dev wifi rescan ifname &lt;usb-if&gt;</code> first — one missed scan is a cache race, not absence of coverage.</p>
+</div>
 <div class="admonition warning">
   <p class="admonition-title">⚠️ Brand-new Wi-Fi 7 routers: association may be silently rejected</p>
   <p>If the connect step keeps failing (<code>ssid-not-found</code>) while other devices (phones, laptops) join the same SSID fine, the AP is likely rejecting association at the feature-negotiation phase. Wi-Fi 7 routers commonly default to MLO (Multi-Link Operation) / TWT / band-merge that the out-of-tree <code>rtw89</code> USB branch cannot negotiate — the kernel log shows a clean <code>send auth → authenticated</code> followed by an un-answered association request, repeated every ~35 s. Turn on the router's <strong>Wi-Fi 5 / legacy compatibility mode</strong> (on Xiaomi BE3600 CN firmware: <code>Wi-Fi 5 兼容模式</code>, which also hard-disables MLO and TWT) and the same <code>nmcli</code> command succeeds immediately. This drops the link to VHT (Wi-Fi 5) coding — on a verified setup, RX still negotiated 1733 Mbit/s PHY (VHT-MCS9, 160 MHz, NSS 2).</p>
@@ -322,7 +346,18 @@ Testing between two nodes over a local wireless access point yielded the followi
 | **PCIe RTL8822CE** (`rtl88x2ce`) | 212 Mbit/s | 209 Mbit/s | 0 | 526.6 Mbit/s (VHT MCS7 80 MHz 2×2) |
 | **USB RTL8912AU** (`rtw89_8922au`) | 188 Mbit/s | 185 Mbit/s | 40 | 1080.6 Mbit/s (HE MCS10 80 MHz 2×2) |
 
-Both interfaces deliver equivalent throughput (~185 to 212 Mbit/s) because traffic crosses the access point twice on the same channel, making shared airtime the primary bottleneck. The USB WiFi 7 adapter negotiated more than double the PHY rate (1080.6 Mbit/s vs 526.6 Mbit/s), with full headroom realized when communicating with multi-gigabit wired endpoints or over dedicated 6 GHz channels.
+Both interfaces deliver equivalent throughput (~185 to 212 Mbit/s) because of the **two-hop hairpin penalty**: in a client-to-client test through one AP, every frame is transmitted twice over the same half-duplex channel (A → AP → B), halving usable airtime before TCP overhead is counted. The negotiated PHY rate describes *one* crossing by *one* radio — not the end-to-end achievable rate.
+
+Why a 1733 Mbit/s PHY still tops out near 250 Mbit/s end-to-end: (1) the hairpin divides airtime by two, and (2) the client-side PHY rate assumes ideal modulation at that instant, while the actual throughput also carries retransmissions and contention overhead. To exercise the adapter's own headroom, place the iperf3 peer on a **wired host** — that test exercises a single crossing per side and unlocks the 500-700+ Mbit/s single-hop class.
+
+To bench the SuperSpeed-anchored state with the AP at 160 MHz, re-run the two-hop pair after moving the dongle to a Bus 002 port:
+
+| Bus anchoring | Negotiated PHY | TCP TX | TCP RX | Dominant bottleneck |
+| :--- | :--- | :--- | :--- | :--- |
+| USB 2.0 (Bus 001, 480M) @ 160 MHz | ~400 Mbit/s host cap | 70–92 Mbit/s | 145–170 Mbit/s* | USB 2.0 bus ceiling |
+| SuperSpeed (Bus 002, 5000M) @ 160 MHz | 1733.3 Mbit/s TX / 1560.0 Mbit/s RX | 236–262 Mbit/s | 145–170 Mbit/s | two-hop shared airtime |
+
+*The USB-2.0 row's TCP RX number was not recorded for that configuration; the SuperSpeed row is the verified comparison. Either way the 160 MHz/SuperSpeed combination lifts TX throughput ~2.8× over the USB-2.0 TX baseline, and the remaining ceiling is airtime, not the bus.
 
 ### Step 8: Module persistence options
 
