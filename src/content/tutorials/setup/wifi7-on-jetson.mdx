@@ -22,7 +22,7 @@ This guide details the platform constraints, compares USB against PCIe options, 
 
 <div class="admonition warning">
   <p class="admonition-title">⚠️ The "Driver-Free" Multi-State USB Trap</p>
-  <p>Many BE6500-class USB adapters ship with an internal flash partition that enumerates as a USB CD-ROM drive (<code>0bda:1a2b</code>) containing a Windows <code>Setup.exe</code>. Linux loads <code>usb-storage</code>, leaving the wireless radio dark. The permanent fix is a kernel storage quirk, not <code>usb_modeswitch</code>.</p>
+  <p>Many BE6500-class USB adapters ship with an internal flash partition that enumerates as a USB CD-ROM drive (<code>0bda:1a2b</code>) containing a Windows <code>Setup.exe</code>. Linux loads <code>usb-storage</code>, leaving the wireless radio dark. Two distinct actions are required: a <strong>storage quirk</strong> (<code>usb_storage.conf</code>) that stops the kernel binding a storage driver to the installer partition, and the <code>usb_modeswitch</code> command — the step that actually switches the adapter to its network product ID. The quirk suppresses the storage claim; the switch turns the radio on. Single-state adapters (no installer partition) need neither.</p>
 </div>
 
 ---
@@ -35,7 +35,7 @@ Do not guess the driver requirement from the retail box or marketing sheet. Manu
 flowchart TD
     A["Plug in adapter"] --> B["Run lsusb / lspci"]
     B --> C{"Check VID:PID"}
-    C -- "0bda:1a2b" --> D["Virtual CD-ROM trap<br/>Add usb_storage.conf quirk"]
+    C -- "0bda:1a2b" --> D["Virtual CD-ROM trap<br/>usb_storage.conf quirk (suppression)<br/>then usb_modeswitch (mode switch)"]
     C -- "0bda:8912 / 8922" --> E["Realtek RTL8912AU/8922AU<br/>Build morrownr/rtw89 + unzstd firmware"]
     C -- "0e8d:7925" --> F["MediaTek MT7925<br/>In-kernel in 6.8 (udev only)"]
     C -- "8086:2725" --> G["Intel AX210<br/>In-kernel iwlwifi + unzstd"]
@@ -58,12 +58,12 @@ lspci -nnk
 
 | Bus | Numeric ID (VID:PID) | Underlying Silicon | Upstream Driver | JetPack 7.2 Action Required |
 | :--- | :--- | :--- | :--- | :--- |
-| **USB** | `0bda:1a2b` | Realtek Multi-State | `usb-storage` (trap) | Add `usb_storage.conf` quirk, then switch to network ID |
+| **USB** | `0bda:1a2b` | Realtek Multi-State | `usb-storage` (trap) | Add `usb_storage.conf` quirk (suppress storage binding), then run `usb_modeswitch -v 0bda -p 1a2b` to switch to network ID |
 | **USB** | `0bda:8912` | Realtek RTL8912AU | `rtw89_8922au` | Build out-of-tree `morrownr/rtw89`, then decompress firmware |
 | **USB** | `0bda:8922` | Realtek RTL8922AU | `rtw89_8922au` | Build out-of-tree `morrownr/rtw89`, then decompress firmware |
 | **USB** | `0bda:c852` | Realtek RTL8852CU | `rtl8852cu` | Build out-of-tree `morrownr/rtl8852cu` |
 | **USB** | `0e8d:7925` | MediaTek MT7925 | `mt7925u` | Built into kernel 6.8, decompress firmware if needed |
-| **PCIe** | `8086:2725` | Intel AX210 | `iwlwifi` | In-kernel driver, decompress `/lib/firmware/iwlwifi-ty-a0-gf-a0.pnvm` |
+| **PCIe** | `8086:2725` | Intel AX210 | `iwlwifi` | In-kernel driver; decompress BOTH `/lib/firmware/iwlwifi-ty-a0-gf-a0.pnvm` and the matching `iwlwifi-ty-a0-gf-a0-*.ucode` from their `.zst` copies |
 | **PCIe** | `8086:272b` | Intel BE200 (WiFi 7) | `iwlwifi` | Experimental, unstable on non-Intel host architectures |
 | **PCIe** | `10ec:b852` | Realtek RTL8852BE | `rtw89_8852be` | Not shipped in L4T, use Seeed prebuilt modules or compile `rtw89` |
 
@@ -127,7 +127,22 @@ On desktop Linux, out-of-tree drivers frequently collide with distribution-provi
 
 ### 3. Module signing and kernel taints
 
-`CONFIG_MODULE_SIG_ALL=y` is set, but NVIDIA does not distribute `signing_key.pem` in public headers. Plain `make` produces unsigned `.ko` binaries. They load without issue because the Tegra kernel already runs in an out-of-tree tainted state (`taint 4096`). Avoid running automated DKMS signing steps until you verify the manual build loads cleanly.
+`CONFIG_MODULE_SIG_ALL=y` is set, but NVIDIA does not distribute `signing_key.pem` in public headers. Plain `make` produces unsigned `.ko` binaries. Check what the running kernel actually enforces before deciding what to do:
+
+```bash
+zcat /proc/config.gz | grep CONFIG_MODULE_SIG
+```
+
+- `# CONFIG_MODULE_SIG_FORCE is not set` (the JetPack 7.2 default): an unsigned module loads and the kernel records taint bits `4096` (out-of-tree) and `8192` (unsigned) in `/proc/sys/kernel/tainted`. Taint records a load that already happened; it never waives a check that is about to happen.
+- `CONFIG_MODULE_SIG_FORCE=y`: unsigned modules are rejected at load time. Sign them with a trusted key:
+
+  ```bash
+  /lib/modules/$(uname -r)/build/scripts/sign-file sha512 <signing-key.pem> <signing-cert.der> <module>.ko
+  ```
+
+  The `sign-file` helper ships in the headers tree (resolves via the `build` symlink); the key and certificate do not. This kernel sets `# CONFIG_SECONDARY_TRUSTED_KEYRING is not set`, so there is no runtime path to enroll your own certificate: the module must be signed with the kernel build key, or the kernel rebuilt with yours.
+
+Avoid running automated DKMS signing steps until you verify the manual build loads cleanly.
 
 ### 4. Package upgrade danger
 
@@ -152,7 +167,13 @@ echo "options usb-storage quirks=0bda:1a2b:i" | sudo tee /etc/modprobe.d/usb_sto
 sudo update-initramfs -u
 ```
 
-Unplug and reconnect the adapter. `lsusb` should now display `0bda:8912`.
+Unplug and reconnect the adapter. The quirk suppresses the storage claim; the adapter still needs the mode switch itself:
+
+```bash
+sudo usb_modeswitch -v 0bda -p 1a2b
+```
+
+`lsusb` should now display `0bda:8912`. Confirm the re-enumeration in `dmesg` (look for the disconnect/reconnect pair).
 
 ### Step 2: Install toolchain and headers
 
@@ -195,9 +216,23 @@ sudo make install
 sudo depmod -a
 ```
 
+For DKMS-managed persistence across kernel updates, the README's documented invocation registers the cloned tree directly:
+
+```bash
+sudo dkms install "$PWD"
+```
+
+If DKMS stops at the signing step (see the signing section above), fall back to the manual `make install` path and prove the unsigned build loads before re-attempting DKMS.
+
 ### Step 5: Decompress firmware and load module
 
-Decompress the primary firmware and fallback versions directly into raw `.bin` format:
+If `/lib/firmware/rtw89/` holds no `rtw8922a_fw-*.bin.zst` at all, install the firmware set first from the cloned `rtw89` tree:
+
+```bash
+sudo make install_fw
+```
+
+Then decompress the primary firmware and fallback versions into raw `.bin` format:
 
 ```bash
 sudo sh -c 'cd /lib/firmware/rtw89 && for f in rtw8922a_fw-4.bin rtw8922a_fw-3.bin rtw8922a_fw-2.bin rtw8922a_fw-1.bin rtw8922a_fw.bin; do [ -f "$f" ] || zstd -d -q "${f}.zst" -o "$f"; done'
@@ -258,7 +293,7 @@ If your Jetson has an onboard M.2 card (`rtl88x2ce` on `wlan0`), the new USB ada
 
 Disconnecting interfaces to isolate traffic introduces two major hazards: it drops your routing tables and severs your SSH session if your console connection rides the disconnected interface.
 
-Instead, pin client traffic per interface using socket-level binding (`SO_BINDTODEVICE` via `iperf3 -B`):
+Instead, pin client traffic per interface using socket-level device binding. `iperf3 -B <IP>` alone binds only the socket's *source address* — pass `--bind-dev <interface>` as well for the real `SO_BINDTODEVICE` semantics (requires iperf 3.16+ and `CAP_NET_RAW`, so prefix with `sudo` where needed):
 
 ```bash
 # On the target iperf3 server (for example, a wired host or secondary node on the local subnet):
@@ -269,10 +304,13 @@ iperf3 -s
 # and each local interface IP (e.g. 192.168.1.100 for PCIe wlan0, 192.168.1.102 for USB wlan1)
 
 # Benchmark the PCIe interface:
-iperf3 -c 192.168.1.50 -B 192.168.1.100 -t 10
+iperf3 -c 192.168.1.50 -B 192.168.1.100 --bind-dev wlP1p1s0 -t 10
 
 # Benchmark the USB WiFi 7 interface:
-iperf3 -c 192.168.1.50 -B 192.168.1.102 -t 10
+iperf3 -c 192.168.1.50 -B 192.168.1.102 --bind-dev wlx90de80e635f0 -t 10
+
+# Confirm the binding landed on the intended interface, not merely the right source address:
+ip -s link show wlP1p1s0
 ```
 
 #### Empirical bench results
@@ -323,10 +361,10 @@ bash host/wifi-bench.sh
 
 | Symptom | Root Cause | Technical Remedy |
 | :--- | :--- | :--- |
-| `lsusb` shows `0bda:1a2b` (CD-ROM) | Multi-state USB hardware mode trap | Add `options usb-storage quirks=0bda:1a2b:i` to `/etc/modprobe.d/usb_storage.conf` and replug device. |
+| `lsusb` shows `0bda:1a2b` (CD-ROM) | Multi-state USB hardware mode trap | Add `options usb-storage quirks=0bda:1a2b:i` to `/etc/modprobe.d/usb_storage.conf` (suppress storage binding), replug, then run `sudo usb_modeswitch -v 0bda -p 1a2b` (the actual mode switch). |
 | `Direct firmware load ... failed with error -2` | Kernel lacks `.zst` decompression support | Locate `.zst` file in `/lib/firmware/` and decompress to `.bin` using `zstd -d`. |
 | `Invalid module format` on `insmod` | Module vermagic does not match kernel ABI | Rebuild modules against active headers: `/lib/modules/$(uname -r)/build`. |
-| `Key was rejected by service` | Kernel signature enforcement active | Load module without signing (Tegra kernel permits unsigned out-of-tree modules; verify taint flag in `dmesg`). |
+| `Key was rejected by service` | Signature enforcement rejected the module (CONFIG_MODULE_SIG_FORCE set, or signed with an untrusted key) | Read enforcement first: `zcat /proc/config.gz \| grep CONFIG_MODULE_SIG`. With `CONFIG_MODULE_SIG_FORCE=y` no taint state waives the check — sign the `.ko` with a trusted key (`/lib/modules/$(uname -r)/build/scripts/sign-file sha512 ...`) and load again. |
 | Module builds and loads, but no interface appears | Firmware missing or silent power brownout | Run `dmesg \| grep -i rtw` to locate failing firmware path; ensure adapter is plugged into powered carrier port. |
 | WiFi interface disappears after system update | Kernel package upgrade orphaned out-of-tree `.ko` | Pin packages using `sudo apt-mark hold nvidia-l4t-*`, then rebuild driver against updated kernel headers. |
 | `nmcli: Not authorized to control networking` | Headless SSH session lacks polkit console agent | Add user to group: `sudo usermod -aG netdev $USER` or execute connection command with `sudo`. |
@@ -340,7 +378,7 @@ bash host/wifi-bench.sh
   <a href="https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit/blob/main/docs/wifi7-adapters-jetpack-7-2.md" target="_blank" rel="noopener" class="nv-button">View Deep-Dive Toolkit Reference Guide →</a>
 </p>
 
-- [host/wifi-bench.sh](https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit/blob/main/host/wifi-bench.sh): Dual-interface benchmark automation script using SO_BINDTODEVICE socket binding.
+- [host/wifi-bench.sh](https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit/blob/main/host/wifi-bench.sh): Dual-interface benchmark automation script using SO_BINDTODEVICE socket binding (pass `--bind-dev <iface>` alongside `-B` for iperf 3.16+).
 - [morrownr/rtw89 Driver Repository](https://github.com/morrownr/rtw89): Linux driver source for Realtek 802.11ax and 802.11be wireless adapters.
 - [JetPack 7.2 AX210/AX200 WiFi Setup Guide (Seeed Studio Wiki)](https://wiki.seeedstudio.com/jetpack72_ax210_ax200_wifi_setup_guide/): Documents the platform-wide firmware `.zst` decompression requirement and provides prebuilt M.2 kernel modules.
 - [NVIDIA Jetson Linux Developer Guide (r39.2.1)](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html): Authoritative documentation for the JetPack 7.2.x kernel and firmware environment.
