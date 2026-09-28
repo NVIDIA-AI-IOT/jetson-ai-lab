@@ -2,6 +2,7 @@
 // Keep credentials, internal bug links, and private recording tooling out of this file.
 export const walkthroughVideos = {
   setup: { title: 'Set up your Jetson with Codex', youtubeId: 'fWYZMA1mddE' },
+  application: { title: 'Build a new Jetson application with Aditya Sahu', youtubeId: 'uXZI3Y2ASVg' },
   kiosk: { title: 'Build a standalone VLM kiosk with Codex', youtubeId: 'TJ6hXRGTRgA' },
 };
 
@@ -68,6 +69,7 @@ Keep the desktop and USB SSH working.`,
   },
 ];
 
+// Retain the published f8–f10 anchor IDs; this independent example displays Steps 1–3.
 export const demoPrompts = [
   {
     id: 'f8', title: 'Plan a live VLM application',

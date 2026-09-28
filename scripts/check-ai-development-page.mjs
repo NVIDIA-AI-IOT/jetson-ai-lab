@@ -29,9 +29,18 @@ try {
   assert((await page.locator('#impact-caption').textContent()).includes('not measured results or guaranteed time savings'));
   assert.deepEqual(await page.locator('iframe').evaluateAll((frames) => frames.map((frame) => frame.src)), [
     'https://www.youtube-nocookie.com/embed/fWYZMA1mddE',
+    'https://www.youtube-nocookie.com/embed/uXZI3Y2ASVg',
     'https://www.youtube-nocookie.com/embed/TJ6hXRGTRgA',
   ]);
-  assert.equal(await page.locator('iframe[allowfullscreen][title][loading="lazy"]').count(), 2);
+  assert.equal(await page.locator('iframe[allowfullscreen][title][loading="lazy"]').count(), 3);
+  assert.equal(await page.locator('#setup-prompts .agent-prompt').count(), 7);
+  assert.equal(await page.locator('#standalone-demo .agent-prompt').count(), 3);
+  assert.equal(await page.locator('#examples article').count(), 2);
+  assert.equal(await page.locator('#examples article').first().getAttribute('id'), 'build-an-application');
+  assert.equal(await page.locator('#choose-an-agent a[href="#examples"]').count(), 1, 'Missing setup skip link');
+  assert.equal(await page.locator('#setup-prompts').getAttribute('open'), null);
+  assert.equal(await page.locator('#demo-prompts').getAttribute('open'), null);
+  assert(!/Part 0[12]|Steps 8[–-]10/.test(await page.locator('#ai-development').textContent()));
 
   const missing = await page.locator('#ai-development a[href^="#"]').evaluateAll((links) =>
     links.map((link) => link.getAttribute('href')).filter((hash) => !document.getElementById(hash.slice(1))));
@@ -48,6 +57,9 @@ try {
   await page.keyboard.press('Home');
   assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true');
 
+  await page.locator('#setup-prompts > summary').click();
+  await page.locator('#demo-prompts > summary').click();
+
   // Exercise copying without relying on the test machine's clipboard permissions.
   await page.evaluate(() => {
     const capture = (value) => { window.__copiedPrompt = value; };
@@ -60,7 +72,8 @@ try {
   });
   for (let number = 1; number <= 10; number++) {
     const id = 'f' + number;
-    assert.equal(await page.locator('#' + id + ' summary span').textContent(), 'Step ' + number);
+    const step = number <= 7 ? number : number - 7;
+    assert.equal(await page.locator('#' + id + ' summary span').textContent(), 'Step ' + step);
     await page.locator('#' + id + ' summary').click();
     await page.locator('[data-copy-prompt="' + id + '"]').click();
     await page.waitForFunction((id) => document.querySelector('[data-copy-status="' + id + '"]').textContent.startsWith('Copied.'), id);
@@ -69,15 +82,39 @@ try {
   }
   const wifiPrompt = await page.locator('#f2-text').textContent();
   assert(wifiPrompt.includes('locally, not in this chat'));
-  await page.evaluate(() => { location.hash = 'f8'; });
-  await page.waitForFunction(() => document.getElementById('f8').open);
+  // Published deep links still open both the prompt and its new parent accordion,
+  // including on initial navigation (not only after a hashchange).
+  for (const id of ['f1', 'f6', 'f8', 'f10', 'first-prompt', 'setup-prompts', 'demo-prompts']) {
+    await page.goto(new URL('/tutorials/ai-assisted-development-on-jetson/#' + id, base).href);
+    await page.waitForFunction((id) => {
+      let el = document.getElementById(id);
+      if (!el) return false;
+      while (el) {
+        if (el instanceof HTMLDetailsElement && !el.open) return false;
+        el = el.parentElement;
+      }
+      return true;
+    }, id);
+  }
 
-  for (const width of [390, 768, 1024, 1440]) {
+  await page.evaluate(() => document.querySelectorAll('#ai-development details').forEach((el) => { el.open = true; }));
+  for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 960 });
     const size = await page.evaluate(() => ({ content: document.documentElement.scrollWidth, viewport: innerWidth }));
     assert(size.content <= size.viewport, 'Page overflows at ' + width + 'px');
+    const overflowCards = await page.locator('#examples article').evaluateAll((cards) => cards.filter((card) => card.scrollWidth > card.clientWidth).map((card) => card.id));
+    assert.deepEqual(overflowCards, [], 'Example card overflows with prompts expanded at ' + width + 'px');
     const figureSize = await page.locator('.impact-comparison').evaluate((el) => ({ content: el.scrollWidth, viewport: el.clientWidth }));
     assert(figureSize.content <= figureSize.viewport, 'Comparison figure overflows at ' + width + 'px');
+    const cards = await page.locator('#examples article').all();
+    const firstCard = await cards[0].boundingBox();
+    const secondCard = await cards[1].boundingBox();
+    if (width >= 1024) {
+      assert(Math.abs(firstCard.y - secondCard.y) < 1, 'Examples should be parallel on desktop');
+      assert(secondCard.x >= firstCard.x + firstCard.width, 'Example cards overlap');
+    } else {
+      assert(secondCard.y >= firstCard.y + firstCard.height, 'Examples should stack on mobile/tablet');
+    }
     for (let index = 0; index < 6; index++) {
       const beforeWidth = (await before.nth(index).boundingBox()).width;
       const afterWidth = (await after.nth(index).boundingBox()).width;
@@ -97,7 +134,7 @@ try {
     assert(links.includes('/tutorials/ai-assisted-development-on-jetson'), 'Missing landing-page link on ' + path);
   }
   assert.deepEqual(errors, [], 'Browser JavaScript errors');
-  console.log('PASS: two video embeds, ten prompt copies, tabs/keyboard, anchors, internal links, tutorial listing/crosslinks, mobile/tablet/desktop layout.');
+  console.log('PASS: three video embeds, independent 7 + 3 prompt numbering/copy, parallel examples, setup skip link, nested deep links, tabs/keyboard, internal links, responsive layout.');
   console.log('YouTube playback and captions must be checked manually on the presentation computer.');
 } finally {
   await browser.close();
