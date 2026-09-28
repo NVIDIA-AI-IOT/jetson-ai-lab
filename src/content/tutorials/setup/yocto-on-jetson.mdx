@@ -29,11 +29,6 @@ Beginning with **JetPack 7.2 (Jetson Linux R39.2)**, Yocto is an officially supp
 
 You don't have to build anything to try it. In this guide you'll **download a prebuilt `demo-image-reference` image and flash it** to your Jetson. This Sato/X11 desktop image is the OE4T QA reference image, with comprehensive validation tools, NVIDIA-accelerated container support, and a persistent `/data` partition that is configured automatically on first boot. It comes from the OE4T [`tegra-demo-distro` `wrynose` branch](https://github.com/OE4T/tegra-demo-distro/tree/wrynose).
 
-<div class="admonition warning">
-  <p class="admonition-title">🚧 JetPack 7.2.1 availability</p>
-  <p>JetPack 7.2.1 and the corresponding OE4T <code>meta-tegra</code> and <code>tegra-demo-distro</code> changes are released. NVIDIA currently lists the prebuilt Yocto images as <strong>Coming Soon</strong>; the download buttons and tarballs described below will become available on the JetPack downloads page when publication is complete.</p>
-</div>
-
 <div class="admonition note">
   <p class="admonition-title">📘 Where to get the images</p>
   <p>Prebuilt Yocto images are published on the <a href="https://developer.nvidia.com/embedded/jetpack/downloads" target="_blank" rel="noopener">JetPack SDK downloads page</a>. Under <strong>Yocto Images</strong>, use the button for your device: <strong>Yocto for Jetson AGX Thor</strong>, <strong>Yocto for Jetson AGX Orin</strong>, or <strong>Yocto for Jetson Orin Nano</strong>. If you'd rather build the image yourself, jump to <a href="#build-your-own-yocto-image">Build your own Yocto image</a>.</p>
@@ -147,7 +142,7 @@ gsettings get org.gnome.desktop.media-handling automount-open
 
 ## Step 1: Download the image for your device
 
-From the [JetPack downloads page](https://developer.nvidia.com/embedded/jetpack/downloads) (JetPack 7.2.1 / Jetson Linux R39.2.1), under **Yocto Images**, click the button for your device when it becomes available: **Yocto for Jetson AGX Thor**, **Yocto for Jetson AGX Orin**, or **Yocto for Jetson Orin Nano**. Download the `.tegraflash-tar.zst` package whose `MACHINE` matches your hardware (see the [Supported images](#supported-images) table). Save it to `~/Downloads` and **leave the filename unchanged**.
+From the [JetPack downloads page](https://developer.nvidia.com/embedded/jetpack/downloads) (JetPack 7.2.1 / Jetson Linux R39.2.1), under **Yocto Images**, click the button for your device: **Yocto for Jetson AGX Thor**, **Yocto for Jetson AGX Orin**, or **Yocto for Jetson Orin Nano**. Download the `.tegraflash-tar.zst` package whose `MACHINE` matches your hardware (see the [Supported images](#supported-images) table). Save it to `~/Downloads` and **leave the filename unchanged**.
 
 ## Step 2: Unpack the flash tarball
 
@@ -341,11 +336,11 @@ The reference image requires the `overlayfs` distro feature. For OTA workflows, 
 
 ## References & Next Steps
 
-- [JetPack SDK downloads](https://developer.nvidia.com/embedded/jetpack/downloads): JetPack 7.2.1 / Jetson Linux R39.2.1 and Yocto image availability
+- [JetPack SDK downloads](https://developer.nvidia.com/embedded/jetpack/downloads): JetPack 7.2.1 / Jetson Linux R39.2.1, including the Yocto images
 - [OE4T Flashing Basics (`wrynose`)](https://oe4t.github.io/wrynose/Flashing.html): the upstream flashing reference
 - [OE4T `tegra-demo-distro` `wrynose` branch](https://github.com/OE4T/tegra-demo-distro/tree/wrynose) and [`meta-tegra` `wrynose` machine configs](https://github.com/OE4T/meta-tegra/tree/wrynose/conf/machine)
-- [NVIDIA Jetson Linux R39.2: Flashing Support](https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/SD/FlashingSupport.html) and [Quick Start](https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/IN/QuickStart.html)
-- [Yocto on Jetson: NVIDIA Jetson Linux Developer Guide](https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/AR/YoctoOnJetson.html): the official overview of NVIDIA's Yocto support
+- [NVIDIA Jetson Linux R39.2.1: Flashing Support](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/FlashingSupport.html) and [Quick Start](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/IN/QuickStart.html)
+- [Yocto on Jetson: NVIDIA Jetson Linux Developer Guide](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/AR/YoctoOnJetson.html): the official overview of NVIDIA's Yocto support
 
 ## Run your first AI workload
 
