@@ -2,7 +2,26 @@
 import Layout from '../../layouts/Layout.astro';
 import {
   installTargets,
+  jetsonSkills,
+  skillCategories,
 } from '../../data/jetson-agent-skills';
+
+const visibleSkillCategories = skillCategories.filter((category) => category.id !== 'all');
+const defaultSkillCategory = visibleSkillCategories[0]?.id ?? 'system';
+const nvidiaCatalogCommands = [
+  {
+    label: 'Open the NVIDIA catalog',
+    command: 'npx skills@latest add nvidia/skills',
+  },
+  {
+    label: 'Browse without installing',
+    command: 'npx skills@latest add nvidia/skills --list',
+  },
+  {
+    label: 'Install one skill for Cursor',
+    command: 'npx skills@latest add nvidia/skills --skill jetson-diagnostic --agent cursor --yes',
+  },
+] as const;
 ---
 
 <Layout
@@ -16,15 +35,20 @@ import {
       <div class="shell hero-layout">
         <div class="hero-copy">
           <a class="back-link" href="/tutorials/">← Jetson AI Lab</a>
-          <p class="kicker"><span></span>NVIDIA Jetson developer tools</p>
+          <p class="kicker"><span></span>NVIDIA Jetson Agent Skills</p>
           <h1>Give your coding agent<br /><strong>Jetson instincts.</strong></h1>
           <p class="hero-lede">
-            Reusable, NVIDIA-verified workflows help AI coding agents inspect the real device,
-            choose compatible software, run measured experiments, and customize the platform.
+            Build, optimize, and deploy NVIDIA Jetson applications with AI coding agents
+            guided by Jetson Device Skills and Jetson BSP Skills.
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#install">Install Device Skills</a>
-            <a class="button button-secondary" href="#choose">Choose a skill family</a>
+            <a class="button button-secondary" href="#catalog">Browse skill capabilities</a>
+          </div>
+          <div class="hero-repositories" aria-label="Jetson Agent Skills GitHub repositories">
+            <span>GitHub repositories:</span>
+            <a href="https://github.com/NVIDIA-AI-IOT/jetson-device-skills" target="_blank" rel="noopener noreferrer">Jetson Device Skills ↗</a>
+            <a href="https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills" target="_blank" rel="noopener noreferrer">Jetson BSP Skills ↗</a>
           </div>
         </div>
       </div>
@@ -32,25 +56,30 @@ import {
 
     <nav class="page-nav" aria-label="On this page">
       <div class="shell nav-inner">
-        <a href="#why">Why skills</a>
-        <a href="#choose">Choose a path</a>
-        <a href="#workflow">How it works</a>
-        <a href="#install">Install</a>
+        <a href="#why">Why skills <span aria-hidden="true">↓</span></a>
+        <a href="#choose">Choose the Skills <span aria-hidden="true">↓</span></a>
+        <a href="#catalog">Skill catalog <span aria-hidden="true">↓</span></a>
+        <a href="#nvidia-catalog">NVIDIA catalog <span aria-hidden="true">↓</span></a>
+        <a href="#workflow">How it works <span aria-hidden="true">↓</span></a>
+        <a href="#install">Install <span aria-hidden="true">↓</span></a>
       </div>
     </nav>
 
     <section id="why" class="section section-light">
       <div class="shell">
-        <div class="section-heading heading-split">
+        <div class="section-heading">
           <div>
-            <p class="kicker dark"><span></span>The missing platform layer</p>
-            <h2>From general-purpose agent<br />to Jetson collaborator.</h2>
+            <h2>From general-purpose agent to Jetson collaborator.</h2>
           </div>
-          <p>
-            A coding agent knows software. A Jetson skill adds the platform-specific procedure,
-            live context, and boundaries needed to act usefully on edge AI hardware.
-          </p>
         </div>
+        <a class="context-link" href="/tutorials/ai-assisted-development-on-jetson/">
+          Begin with the AI-assisted development overview <span aria-hidden="true">→</span>
+        </a>
+        <p class="foundation-copy">
+          More than a decade of Jetson engineering knowledge now helps coding agents support
+          development on Jetson. Agent Skills organize that foundation into reusable workflows
+          and combine it with live context such as JetPack, memory, power mode, and the selected BSP target.
+        </p>
         <div class="capability-rail">
           {[
             ['01', 'Inspect', 'Read the actual module, release, memory, thermals, and services.'],
@@ -71,9 +100,11 @@ import {
     <section id="choose" class="section section-graphite">
       <div class="shell">
         <div class="section-heading">
-          <p class="kicker"><span></span>Choose your operating surface</p>
-          <h2>One platform. Two skill families.</h2>
-          <p>Start with the live device. Add BSP Skills only when your work begins before boot.</p>
+          <h2>Choose the Skills You Need</h2>
+          <p>
+            Most developers should start with Jetson Device Skills. Add Jetson BSP Skills only
+            if you customize or flash the Board Support Package.
+          </p>
         </div>
 
         <div class="family-grid">
@@ -83,11 +114,7 @@ import {
               <span class="family-count">Application workflows</span>
             </div>
             <div class="family-icon" aria-hidden="true">
-              <svg viewBox="0 0 96 96" fill="none">
-                <rect x="18" y="18" width="60" height="60" rx="3"></rect>
-                <rect x="30" y="30" width="36" height="36" rx="2"></rect>
-                <path d="M6 32h12M6 48h12M6 64h12M78 32h12M78 48h12M78 64h12M32 6v12M48 6v12M64 6v12M32 78v12M48 78v12M64 78v12"></path>
-              </svg>
+              <img src="/images/hero/jetson-family-line_50pcnt.png" alt="" />
             </div>
             <p class="family-tag">Recommended for most developers</p>
             <h3>Jetson Device Skills</h3>
@@ -109,11 +136,7 @@ import {
               <span class="family-count">Platform workflows</span>
             </div>
             <div class="family-icon family-icon-bsp" aria-hidden="true">
-              <svg viewBox="0 0 96 96" fill="none">
-                <path d="M17 23h62v50H17z"></path>
-                <path d="M28 34h40v28H28zM8 31h9M8 47h9M8 63h9M79 31h9M79 47h9M79 63h9"></path>
-                <circle cx="34" cy="48" r="5"></circle><path d="M45 43h14M45 50h14M45 57h9"></path>
-              </svg>
+              <img src="/images/hero/bsp-workstation.png" alt="" />
             </div>
             <p class="family-tag">For custom hardware and production bring-up</p>
             <h3>Jetson BSP Skills</h3>
@@ -132,11 +155,94 @@ import {
       </div>
     </section>
 
+    <section id="catalog" class="section section-light">
+      <div class="shell">
+        <div class="section-heading catalog-heading">
+          <div>
+            <h2>See what each skill adds.</h2>
+          </div>
+        </div>
+
+        <div class="filter-bar" role="toolbar" aria-label="Choose a skill category">
+          {visibleSkillCategories.map((category) => {
+            const active = category.id === defaultSkillCategory;
+            return (
+              <button
+                type="button"
+                class:list={['filter-button', { active }]}
+                data-skill-filter={category.id}
+                aria-pressed={active ? 'true' : 'false'}
+              >
+                {category.id === 'inference' ? 'LLM / Inference' : category.id === 'video' ? 'VideoSDK' : category.label}
+              </button>
+            );
+          })}
+          <span class="filter-count" aria-live="polite">
+            {jetsonSkills.filter((skill) => skill.category === defaultSkillCategory).length} shown
+          </span>
+        </div>
+
+        <div class="skill-list">
+          {jetsonSkills.map((skill, index) => (
+            <article
+              class="skill-row"
+              data-skill
+              data-category={skill.category}
+              hidden={skill.category !== defaultSkillCategory}
+            >
+              <span class="skill-number">{String(index + 1).padStart(2, '0')}</span>
+              <div>
+                <div class="skill-name-line">
+                  <h3>{skill.name}</h3>
+                  <span class:list={['family-pill', skill.family]}>
+                    {skill.family === 'device' ? 'DEVICE' : 'BSP'}
+                  </span>
+                </div>
+                <p>{skill.description}</p>
+              </div>
+              <span class="skill-category">{skill.category}</span>
+            </article>
+          ))}
+        </div>
+        <p class="catalog-note">
+          Need the source? <a href="https://github.com/NVIDIA-AI-IOT/jetson-device-skills" target="_blank" rel="noopener noreferrer">Device Skills ↗</a>
+          {' · '}
+          <a href="https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills" target="_blank" rel="noopener noreferrer">BSP Skills ↗</a>
+        </p>
+      </div>
+    </section>
+
+    <section id="nvidia-catalog" class="section section-catalog-install">
+      <div class="shell catalog-install-layout">
+        <div class="section-heading">
+          <h2>Install from the NVIDIA Skill Catalog.</h2>
+          <p>
+            Discover and install selected Jetson skills from the official NVIDIA Agent Skills
+            catalog. The source repositories remain available when you want the complete collection.
+          </p>
+          <a class="catalog-source-link" href="https://github.com/NVIDIA-AI-IOT/skills" target="_blank" rel="noopener noreferrer">
+            Browse the NVIDIA Skills catalog on GitHub ↗
+          </a>
+        </div>
+
+        <div class="catalog-command-list">
+          {nvidiaCatalogCommands.map((item) => (
+            <article class="catalog-command">
+              <div>
+                <p>{item.label}</p>
+                <button type="button" data-copy-value={item.command}>COPY</button>
+              </div>
+              <pre><code>{item.command}</code></pre>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
     <section id="workflow" class="section section-signal">
       <div class="shell workflow-layout">
         <div class="section-heading">
-          <p class="kicker dark"><span></span>The operating model</p>
-          <h2>Reason broadly.<br />Act with device context.</h2>
+          <h2>Reason broadly. Act with device context.</h2>
           <p>
             Skills do not replace the agent or NVIDIA documentation. They connect reasoning
             to verified Jetson procedures and live measurements.
@@ -167,16 +273,11 @@ import {
     <section id="install" class="section section-install">
       <div class="shell install-layout">
         <div class="section-heading">
-          <p class="kicker"><span></span>Start on the live device</p>
-          <h2>Install once.<br />Use from every project.</h2>
+          <h2>Install once. Use from every project.</h2>
           <p>
             Run this on your Jetson. The installer links the complete Device Skills catalog
             into the location your selected coding agent reads.
           </p>
-          <div class="trust-note">
-            <span>!</span>
-            <p><strong>You stay in control.</strong> Review commands, downloads, service changes, and reboots before approval. NVIDIA documentation remains authoritative.</p>
-          </div>
         </div>
 
         <div class="install-console">
@@ -238,28 +339,16 @@ import {
     --fog: #edf0ed;
     --paper: #f7f8f5;
   }
-  #agent-skills-page { color: var(--ink); background: var(--paper); }
-  .shell { width: min(100% - 2rem, 80rem); margin-inline: auto; }
+  .shell { margin-inline: auto; }
   .hero { position: relative; overflow: hidden; color: white; background: var(--ink); }
-  .hero::after { position: absolute; inset: auto -8rem -12rem auto; width: 34rem; height: 34rem; border: 1px solid rgba(118,185,0,.3); border-radius: 50%; box-shadow: 0 0 0 5rem rgba(118,185,0,.025), 0 0 0 10rem rgba(118,185,0,.02); content: ''; }
-  .hero-grid { position: absolute; inset: 0; opacity: .14; background-image: linear-gradient(rgba(255,255,255,.16) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.16) 1px, transparent 1px); background-size: 64px 64px; mask-image: linear-gradient(to right, black, transparent 78%); }
-  .hero-layout { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; min-height: 720px; align-items: center; gap: clamp(3rem, 7vw, 7rem); padding-block: 5rem; }
+  .hero-grid { position: absolute; inset: 0; }
+  .hero-layout { position: relative; z-index: 1; }
   .hero-layout > *, .workflow-layout > *, .install-layout > * { min-width: 0; }
-  .back-link { display: inline-block; margin-bottom: 4.5rem; color: #b7beb9; font: 600 .75rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; }
-  .back-link:hover { color: white; }
-  .kicker { display: flex; align-items: center; gap: .7rem; color: #d7ddd8; font: 700 .7rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .15em; text-transform: uppercase; }
-  .kicker span { width: 1.75rem; height: 2px; background: var(--signal); }
-  .kicker.dark { color: #506057; }
+  .back-link { display: inline-block; }
+  .kicker { display: flex; align-items: center; gap: .7rem; text-transform: uppercase; }
   h1, h2, h3, p { margin: 0; }
-  h1 { margin-top: 1.25rem; font-size: clamp(3rem, 5.9vw, 5.75rem); font-weight: 300; line-height: .98; letter-spacing: -.065em; text-wrap: balance; }
-  h1 strong { color: var(--signal-bright); font-weight: 750; }
-  .hero-lede { max-width: 39rem; margin-top: 2rem; color: #b8c1bc; font-size: clamp(1.05rem, 1.5vw, 1.25rem); line-height: 1.7; }
-  .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2.25rem; }
-  .button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; padding: .75rem 1.2rem; font-size: .85rem; font-weight: 750; text-decoration: none; }
-  .button-primary { color: #071006; background: var(--signal-bright); }
-  .button-primary:hover { background: white; }
-  .button-secondary { color: white; border: 1px solid #53605a; background: rgba(255,255,255,.03); }
-  .button-secondary:hover { border-color: white; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+  .button { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
   .signal-row { display: flex; flex-wrap: wrap; gap: 1.25rem 2rem; margin: 3.5rem 0 0; padding: 0; color: #9ca7a1; font: 600 .68rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; list-style: none; }
   .signal-row li { display: flex; gap: .6rem; }
   .signal-row span { color: var(--signal-bright); }
@@ -281,26 +370,13 @@ import {
   .device-readout dd { margin: .25rem 0 0; color: #e6ece8; }
   .terminal-result { padding: .8rem; color: #b7c2bc; border: 1px solid rgba(118,185,0,.24); background: rgba(118,185,0,.06); }
   .terminal-result span { margin-right: .7rem; color: var(--signal-bright); font-weight: 800; }
-  .page-nav { position: sticky; top: 4rem; z-index: 30; border-bottom: 1px solid #dce2dd; background: rgba(247,248,245,.94); backdrop-filter: blur(12px); }
+  .page-nav { position: sticky; top: 4rem; z-index: 30; backdrop-filter: blur(12px); }
   .nav-inner { display: flex; overflow-x: auto; }
-  .nav-inner a { flex: 0 0 auto; padding: 1rem 1.25rem; color: #4d5952; border-left: 1px solid #dce2dd; font: 700 .68rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
-  .nav-inner a:last-child { border-right: 1px solid #dce2dd; }
-  .nav-inner a:hover { color: #0b0f0d; background: #e9f2e1; }
-  .section { padding-block: clamp(5rem, 9vw, 8rem); scroll-margin-top: 8rem; }
-  .section-light { background: var(--paper); }
-  .section-graphite { color: white; background: var(--graphite); }
+  .nav-inner a { flex: 0 0 auto; }
   .section-heading { max-width: 46rem; }
-  .section-heading h2 { margin-top: 1.1rem; font-size: clamp(2.4rem, 4.5vw, 4.4rem); font-weight: 350; line-height: 1.02; letter-spacing: -.055em; text-wrap: balance; }
-  .section-heading > p:last-child { max-width: 38rem; margin-top: 1.5rem; color: #66726c; font-size: 1.05rem; line-height: 1.75; }
-  .section-graphite .section-heading > p:last-child, .section-install .section-heading > p:last-child { color: #aab4ae; }
   .heading-split { display: grid; grid-template-columns: 1.2fr .8fr; max-width: none; align-items: end; gap: 4rem; }
   .heading-split > p:last-child { margin: 0; }
-  .capability-rail { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 5rem; border-top: 1px solid #ccd3ce; border-bottom: 1px solid #ccd3ce; }
-  .capability-rail article { min-height: 270px; padding: 1.5rem; border-left: 1px solid #ccd3ce; }
-  .capability-rail article:last-child { border-right: 1px solid #ccd3ce; }
-  .capability-rail span { color: #728078; font: 700 .7rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; }
-  .capability-rail h3 { margin-top: 4.5rem; font-size: 1.65rem; letter-spacing: -.03em; }
-  .capability-rail p { margin-top: 1rem; color: #66726c; font-size: .9rem; line-height: 1.65; }
+  .capability-rail { display: grid; grid-template-columns: repeat(4, 1fr); }
   .family-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 4rem; background: #3c4641; }
   .family-card { position: relative; padding: clamp(1.5rem, 4vw, 3rem); background: #181e1b; }
   .family-card::after { position: absolute; inset: 0; border: 1px solid transparent; pointer-events: none; content: ''; transition: border-color .2s; }
@@ -360,10 +436,6 @@ import {
   .prompt-chip:hover .prompt-text { text-decoration: underline; text-underline-offset: 4px; }
   .section-install { color: white; background: var(--ink); }
   .install-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(3rem, 8vw, 8rem); align-items: center; }
-  .trust-note { display: grid; grid-template-columns: 2rem 1fr; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #343d38; }
-  .trust-note > span { display: grid; width: 1.5rem; height: 1.5rem; place-items: center; color: var(--ink); background: var(--signal-bright); font: 800 .75rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; }
-  .trust-note p { color: #909b95; font-size: .78rem; line-height: 1.6; }
-  .trust-note strong { color: #cbd3ce; }
   .install-console { width: 100%; min-width: 0; border: 1px solid #3b453f; background: #101512; box-shadow: 18px 18px 0 rgba(118,185,0,.1); }
   .install-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid #3b453f; }
   .install-tabs button { flex: 1 0 auto; min-height: 52px; padding: .85rem 1rem; color: #89948e; border: 0; border-right: 1px solid #3b453f; background: transparent; font: 700 .68rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .07em; cursor: pointer; }
@@ -387,7 +459,7 @@ import {
   .section-light button:focus-visible { outline-color: var(--signal); }
 
   @media (max-width: 900px) {
-    .hero-layout, .heading-split, .workflow-layout, .install-layout { grid-template-columns: 1fr; }
+    .hero-layout, .heading-split, .workflow-layout, .install-layout, .catalog-install-layout { grid-template-columns: 1fr; }
     .hero-layout { padding-block: 3rem 5rem; }
     .back-link { margin-bottom: 3rem; }
     .terminal-wrap { max-width: 40rem; }
@@ -424,9 +496,6 @@ import {
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
   }
-</style>
-
-<style>
   /* Match the visual language of the AI-assisted development landing page. */
   #agent-skills-page {
     --signal: #76b900;
@@ -445,16 +514,9 @@ import {
 
   .hero {
     color: white;
-    background: linear-gradient(to bottom right, #020617, #064e3b, #0f172a);
+    background: linear-gradient(135deg, #020617 0%, #06251c 48%, #020617 100%);
   }
-  .hero-grid {
-    opacity: .15;
-    background-image:
-      linear-gradient(rgba(118,185,0,.3) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(118,185,0,.3) 1px, transparent 1px);
-    background-size: 48px 48px;
-    mask-image: none;
-  }
+  .hero-grid { display: none; }
   .hero::after { display: none; }
   .hero-layout {
     display: block;
@@ -495,6 +557,10 @@ import {
     line-height: 1.625;
   }
   .hero-actions { margin-top: 2rem; }
+  .hero-repositories { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: 1.5rem; color: #cbd5e1; font-size: .875rem; }
+  .hero-repositories span { font-weight: 600; }
+  .hero-repositories a { color: #bef264; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+  .hero-repositories a:hover { color: white; }
   .button {
     min-height: 48px;
     padding: .75rem 1.25rem;
@@ -513,6 +579,9 @@ import {
   }
   .nav-inner { gap: .5rem; padding-block: .75rem; }
   .nav-inner a {
+    display: inline-flex;
+    align-items: center;
+    gap: .75rem;
     min-height: 44px;
     padding: .625rem .875rem;
     color: #334155;
@@ -524,6 +593,7 @@ import {
     letter-spacing: 0;
     text-transform: none;
   }
+  .nav-inner a span { color: #4d7c0f; }
   .nav-inner a:last-child { border-right: 1px solid #cbd5e1; }
   .nav-inner a:hover { color: #365314; border-color: #76b900; background: #f0f7e7; }
 
@@ -548,6 +618,10 @@ import {
     margin-top: 3rem;
     border: 0;
   }
+  .context-link { display: inline-flex; align-items: center; gap: .6rem; margin-top: 1.5rem; color: #166534; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+  .context-link span { color: #76b900; transition: transform .2s; }
+  .context-link:hover span { transform: translateX(.25rem); }
+  .foundation-copy { max-width: 62rem; margin-top: 1.5rem; padding-left: 1.25rem; color: #475569; border-left: 3px solid #76b900; font-size: 1.05rem; line-height: 1.75; }
   .capability-rail article {
     min-height: 0;
     padding: 1.5rem;
@@ -574,7 +648,9 @@ import {
   .family-card:hover { border-color: #76b900; }
   .family-primary { background: #111c18; }
   .family-header { color: #94a3b8; font-size: .75rem; letter-spacing: .08em; }
-  .family-icon { margin: 2.5rem 0 2rem; }
+  .family-icon { display: flex; width: 100%; height: 11rem; align-items: center; margin: 2rem 0 1.75rem; }
+  .family-icon img { width: auto; max-width: 100%; max-height: 100%; object-fit: contain; object-position: left center; }
+  .family-icon-bsp img { filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .28)); }
   .family-tag { color: #bef264; font-size: .75rem; }
   .family-card h3 { font-size: 1.75rem; font-weight: 700; letter-spacing: -.025em; }
   .family-description { color: #cbd5e1; line-height: 1.7; }
@@ -607,6 +683,17 @@ import {
   .skill-row p { color: #475569; font-size: .9rem; }
   .catalog-note a { color: #166534; }
 
+  .section-catalog-install { border-block: 1px solid #e2e8f0; background: #f8fafc; }
+  .catalog-install-layout { display: grid; grid-template-columns: .85fr 1.15fr; gap: clamp(3rem, 7vw, 7rem); align-items: start; }
+  .catalog-source-link { display: inline-flex; margin-top: 1.5rem; color: #166534; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+  .catalog-command-list { display: grid; gap: 1rem; }
+  .catalog-command { overflow: hidden; border: 1px solid #334155; border-radius: .75rem; background: #0f172a; }
+  .catalog-command > div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1.1rem; border-bottom: 1px solid #334155; }
+  .catalog-command > div p { color: #cbd5e1; font-size: .8rem; font-weight: 700; }
+  .catalog-command button { padding: .3rem; color: #bef264; border: 0; background: transparent; font-size: .72rem; font-weight: 700; cursor: pointer; }
+  .catalog-command pre { overflow-x: auto; margin: 0; padding: 1.15rem; color: #e2e8f0; font: .78rem/1.7 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }
+  .catalog-command pre::before { color: #76b900; content: '$ '; }
+
   #agent-skills-page .section-signal {
     color: #0f172a;
     border-block: 1px solid #e2e8f0;
@@ -630,8 +717,6 @@ import {
 
   .section-install { background: #020617; }
   .section-install .section-heading > p:last-child { color: #cbd5e1; }
-  .trust-note { border-color: #334155; }
-  .trust-note > span { border-radius: 50%; background: #76b900; }
   .install-console {
     overflow: hidden;
     border-color: #334155;
@@ -673,7 +758,7 @@ import {
 
   @media (min-width: 1024px) {
     .shell { width: min(100% - 4rem, 80rem); }
-    .hero-layout { padding-block: 6rem; }
+    .hero-layout { padding-block: 5rem; }
   }
   @media (max-width: 900px) {
     .hero-layout { padding-block: 4rem; }
@@ -694,6 +779,29 @@ import {
     const root = document.querySelector('#agent-skills-page');
     if (!(root instanceof HTMLElement) || root.dataset.ready === 'true') return;
     root.dataset.ready = 'true';
+
+    const filterButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-skill-filter]'));
+    const skillRows = Array.from(root.querySelectorAll<HTMLElement>('[data-skill]'));
+    const filterCount = root.querySelector<HTMLElement>('.filter-count');
+
+    filterButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const category = button.dataset.skillFilter;
+        filterButtons.forEach((item) => {
+          const active = item === button;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+
+        let visible = 0;
+        skillRows.forEach((row) => {
+          const show = row.dataset.category === category;
+          row.hidden = !show;
+          if (show) visible += 1;
+        });
+        if (filterCount) filterCount.textContent = `${visible} shown`;
+      });
+    });
 
     const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-install-tab]'));
     const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-install-panel]'));
