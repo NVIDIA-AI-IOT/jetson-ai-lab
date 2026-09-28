@@ -8,6 +8,9 @@ import {
 
 const visibleSkillCategories = skillCategories.filter((category) => category.id !== 'all');
 const defaultSkillCategory = visibleSkillCategories[0]?.id ?? 'system';
+const baseUrl = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
 const nvidiaCatalogCommands = [
   {
     label: 'Open the NVIDIA catalog',
@@ -114,7 +117,7 @@ const nvidiaCatalogCommands = [
               <span class="family-count">Application workflows</span>
             </div>
             <div class="family-icon" aria-hidden="true">
-              <img src="/images/hero/jetson-family-line_50pcnt.png" alt="" />
+              <img src={`${baseUrl}images/hero/jetson-family-line_50pcnt.png`} alt="" />
             </div>
             <p class="family-tag">Recommended for most developers</p>
             <h3>Jetson Device Skills</h3>
@@ -136,7 +139,7 @@ const nvidiaCatalogCommands = [
               <span class="family-count">Platform workflows</span>
             </div>
             <div class="family-icon family-icon-bsp" aria-hidden="true">
-              <img src="/images/hero/bsp-workstation.png" alt="" />
+              <img src={`${baseUrl}images/hero/bsp-workstation.png`} alt="" />
             </div>
             <p class="family-tag">For custom hardware and production bring-up</p>
             <h3>Jetson BSP Skills</h3>
