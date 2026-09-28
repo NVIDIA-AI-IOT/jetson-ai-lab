@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-design": {
+      "source": "microsoft/agent-academy",
+      "sourceType": "github",
+      "skillPath": ".github/skills/frontend-design/SKILL.md",
+      "computedHash": "d31ebb0cbe897636913cb978f2b969ae843cb1221f8d75b4e4c0b9738a571921"
+    }
+  }
+}
