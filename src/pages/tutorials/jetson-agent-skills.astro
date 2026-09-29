@@ -1,5 +1,904 @@
 ---
-import TutorialLayout from '../../layouts/TutorialLayout.astro';
+import Layout from '../../layouts/Layout.astro';
+import {
+  installTargets,
+  jetsonSkills,
+  skillCategories,
+} from '../../data/jetson-agent-skills';
+
+const visibleSkillCategories = skillCategories.filter((category) => category.id !== 'all');
+const defaultSkillCategory = visibleSkillCategories[0]?.id ?? 'system';
+const baseUrl = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const nvidiaCatalogCommands = [
+  {
+    label: 'Open the NVIDIA catalog',
+    command: 'npx skills@latest add nvidia/skills',
+  },
+  {
+    label: 'Browse without installing',
+    command: 'npx skills@latest add nvidia/skills --list',
+  },
+  {
+    label: 'Install one skill for Cursor',
+    command: 'npx skills@latest add nvidia/skills --skill jetson-diagnostic --agent cursor --yes',
+  },
+] as const;
 ---
 
-<TutorialLayout tutorialId="jetson-agent-skills" />
+<Layout
+  title="Jetson Agent Skills"
+  description="Give AI coding agents Jetson-specific workflows for diagnostics, inference, video, optimization, and BSP development."
+  image="/images/hero/jetson-family-line_50pcnt.png"
+>
+  <div id="agent-skills-page">
+    <section class="hero">
+      <div class="hero-grid" aria-hidden="true"></div>
+      <div class="shell hero-layout">
+        <div class="hero-copy">
+          <a class="back-link" href="/tutorials/">← Jetson AI Lab</a>
+          <p class="kicker"><span></span>NVIDIA Jetson Agent Skills</p>
+          <h1>Give your coding agent<br /><strong>Jetson instincts.</strong></h1>
+          <p class="hero-lede">
+            Build, optimize, and deploy NVIDIA Jetson applications with AI coding agents
+            guided by Jetson Device Skills and Jetson BSP Skills.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#install">Install Device Skills</a>
+            <a class="button button-secondary" href="#catalog">Browse skill capabilities</a>
+          </div>
+          <div class="hero-repositories" aria-label="Jetson Agent Skills GitHub repositories">
+            <span>GitHub repositories:</span>
+            <a href="https://github.com/NVIDIA-AI-IOT/jetson-device-skills" target="_blank" rel="noopener noreferrer">Jetson Device Skills ↗</a>
+            <a href="https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills" target="_blank" rel="noopener noreferrer">Jetson BSP Skills ↗</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="page-nav" aria-label="On this page">
+      <div class="shell nav-inner">
+        <a href="#why">Why skills <span aria-hidden="true">↓</span></a>
+        <a href="#choose">Choose the Skills <span aria-hidden="true">↓</span></a>
+        <a href="#catalog">Skill catalog <span aria-hidden="true">↓</span></a>
+        <a href="#nvidia-catalog">NVIDIA catalog <span aria-hidden="true">↓</span></a>
+        <a href="#workflow">How it works <span aria-hidden="true">↓</span></a>
+        <a href="#install">Install <span aria-hidden="true">↓</span></a>
+      </div>
+    </nav>
+
+    <section id="why" class="section section-light">
+      <div class="shell">
+        <div class="section-heading">
+          <div>
+            <h2>From general-purpose agent to Jetson collaborator.</h2>
+          </div>
+        </div>
+        <a class="context-link" href="/tutorials/ai-assisted-development-on-jetson/">
+          Begin with the AI-assisted development overview <span aria-hidden="true">→</span>
+        </a>
+        <p class="foundation-copy">
+          More than a decade of Jetson engineering knowledge now helps coding agents support
+          development on Jetson. Agent Skills organize that foundation into reusable workflows
+          and combine it with live context such as JetPack, memory, power mode, and the selected BSP target.
+        </p>
+        <div class="capability-rail">
+          {[
+            ['01', 'Inspect', 'Read the actual module, release, memory, thermals, and services.'],
+            ['02', 'Decide', 'Match runtimes, packages, and settings to the device in front of you.'],
+            ['03', 'Execute', 'Use repeatable helpers for serving, benchmarking, video, and BSP work.'],
+            ['04', 'Verify', 'Measure the result instead of assuming that a change worked.'],
+          ].map(([number, title, description]) => (
+            <article>
+              <span>{number}</span>
+              <h3>{title}</h3>
+              <p>{description}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section id="choose" class="section section-graphite">
+      <div class="shell">
+        <div class="section-heading">
+          <h2>Choose the Skills You Need</h2>
+          <p>
+            Most developers should start with Jetson Device Skills. Add Jetson BSP Skills only
+            if you customize or flash the Board Support Package.
+          </p>
+        </div>
+
+        <div class="family-grid">
+          <article class="family-card family-primary">
+            <div class="family-header">
+              <span class="family-index">A / LIVE DEVICE</span>
+              <span class="family-count">Application workflows</span>
+            </div>
+            <div class="family-icon" aria-hidden="true">
+              <img src={`${baseUrl}images/hero/jetson-family-line_50pcnt.png`} alt="" />
+            </div>
+            <p class="family-tag">Recommended for most developers</p>
+            <h3>Jetson Device Skills</h3>
+            <p class="family-description">
+              Run on a booted Jetson. Diagnose the system, recover memory, select packages,
+              serve and benchmark models, and build accelerated video pipelines.
+            </p>
+            <dl class="family-facts">
+              <div><dt>RUNS ON</dt><dd>Your Jetson</dd></div>
+              <div><dt>BEST FOR</dt><dd>Application development</dd></div>
+              <div><dt>AGENTS</dt><dd>Cursor · Codex · Claude · OpenClaw</dd></div>
+            </dl>
+            <a href="#install">Install Device Skills <span>→</span></a>
+          </article>
+
+          <article class="family-card">
+            <div class="family-header">
+              <span class="family-index">B / PRE-FLASH</span>
+              <span class="family-count">Platform workflows</span>
+            </div>
+            <div class="family-icon family-icon-bsp" aria-hidden="true">
+              <img src={`${baseUrl}images/hero/bsp-workstation.png`} alt="" />
+            </div>
+            <p class="family-tag">For custom hardware and production bring-up</p>
+            <h3>Jetson BSP Skills</h3>
+            <p class="family-description">
+              Run on a host workstation against a Linux_for_Tegra tree. Configure pinmux,
+              PCIe, UPHY, cameras, power, memory, builds, flashing, and validation.
+            </p>
+            <dl class="family-facts">
+              <div><dt>RUNS ON</dt><dd>Host workstation</dd></div>
+              <div><dt>BEST FOR</dt><dd>Platform customization</dd></div>
+              <div><dt>AGENTS</dt><dd>Cursor · Codex · Claude</dd></div>
+            </dl>
+            <a href="https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills" target="_blank" rel="noopener noreferrer">Open BSP repository <span>↗</span></a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="catalog" class="section section-light">
+      <div class="shell">
+        <div class="section-heading catalog-heading">
+          <div>
+            <h2>See what each skill adds.</h2>
+          </div>
+        </div>
+
+        <div class="filter-bar" role="toolbar" aria-label="Choose a skill category">
+          {visibleSkillCategories.map((category) => {
+            const active = category.id === defaultSkillCategory;
+            return (
+              <button
+                type="button"
+                class:list={['filter-button', { active }]}
+                data-skill-filter={category.id}
+                aria-pressed={active ? 'true' : 'false'}
+              >
+                {category.id === 'inference' ? 'LLM / Inference' : category.id === 'video' ? 'VideoSDK' : category.label}
+              </button>
+            );
+          })}
+          <span class="filter-count" aria-live="polite">
+            {jetsonSkills.filter((skill) => skill.category === defaultSkillCategory).length} shown
+          </span>
+        </div>
+
+        <div class="skill-list">
+          {jetsonSkills.map((skill, index) => (
+            <article
+              class="skill-row"
+              data-skill
+              data-category={skill.category}
+              hidden={skill.category !== defaultSkillCategory}
+            >
+              <span class="skill-number">{String(index + 1).padStart(2, '0')}</span>
+              <div>
+                <div class="skill-name-line">
+                  <h3>{skill.name}</h3>
+                  <span class:list={['family-pill', skill.family]}>
+                    {skill.family === 'device' ? 'DEVICE' : 'BSP'}
+                  </span>
+                </div>
+                <p>{skill.description}</p>
+              </div>
+              <span class="skill-category">{skill.category}</span>
+            </article>
+          ))}
+        </div>
+        <p class="catalog-note">
+          Need the source? <a href="https://github.com/NVIDIA-AI-IOT/jetson-device-skills" target="_blank" rel="noopener noreferrer">Device Skills ↗</a>
+          {' · '}
+          <a href="https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills" target="_blank" rel="noopener noreferrer">BSP Skills ↗</a>
+        </p>
+      </div>
+    </section>
+
+    <section id="nvidia-catalog" class="section section-catalog-install">
+      <div class="shell catalog-install-layout">
+        <div class="section-heading">
+          <h2>Install from the NVIDIA Skill Catalog.</h2>
+          <p>
+            Discover and install selected Jetson skills from the official NVIDIA Agent Skills
+            catalog. The source repositories remain available when you want the complete collection.
+          </p>
+          <a class="catalog-source-link" href="https://github.com/NVIDIA-AI-IOT/skills" target="_blank" rel="noopener noreferrer">
+            Browse the NVIDIA Skills catalog on GitHub ↗
+          </a>
+        </div>
+
+        <div class="catalog-command-list">
+          {nvidiaCatalogCommands.map((item) => (
+            <article class="catalog-command">
+              <div>
+                <p>{item.label}</p>
+                <button type="button" data-copy-value={item.command}>COPY</button>
+              </div>
+              <pre><code>{item.command}</code></pre>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section id="workflow" class="section section-signal">
+      <div class="shell workflow-layout">
+        <div class="section-heading">
+          <h2>Reason broadly. Act with device context.</h2>
+          <p>
+            Skills do not replace the agent or NVIDIA documentation. They connect reasoning
+            to verified Jetson procedures and live measurements.
+          </p>
+        </div>
+        <ol class="workflow-track">
+          <li>
+            <span class="workflow-number">01</span>
+            <div><p class="workflow-label">YOU</p><h3>Describe the outcome</h3><p>Use natural language. Set boundaries and approve material changes.</p></div>
+          </li>
+          <li>
+            <span class="workflow-number">02</span>
+            <div><p class="workflow-label">CODING AGENT</p><h3>Plans and orchestrates</h3><p>Cursor, Codex, or Claude inspects the project and selects relevant skills.</p></div>
+          </li>
+          <li>
+            <span class="workflow-number">03</span>
+            <div><p class="workflow-label">JETSON SKILL</p><h3>Applies platform procedure</h3><p>Instructions and helpers gather live facts and execute bounded workflows.</p></div>
+          </li>
+          <li>
+            <span class="workflow-number">04</span>
+            <div><p class="workflow-label">MEASURED RESULT</p><h3>Returns evidence</h3><p>Review output from the target hardware before deciding what comes next.</p></div>
+          </li>
+        </ol>
+      </div>
+
+    </section>
+
+    <section id="install" class="section section-install">
+      <div class="shell install-layout">
+        <div class="section-heading">
+          <h2>Install once. Use from every project.</h2>
+          <p>
+            Run this on your Jetson. The installer links the complete Device Skills catalog
+            into the location your selected coding agent reads.
+          </p>
+        </div>
+
+        <div class="install-console">
+          <ol class="install-setup" aria-label="Prepare the installer">
+            <li>
+              <span class="install-step-number">01</span>
+              <div>
+                <span class="install-step-label">Clone the skills</span>
+                <code>git clone https://github.com/NVIDIA-AI-IOT/jetson-device-skills.git</code>
+              </div>
+            </li>
+            <li>
+              <span class="install-step-number">02</span>
+              <div>
+                <span class="install-step-label">Open the directory</span>
+                <code>cd jetson-device-skills</code>
+              </div>
+            </li>
+          </ol>
+
+          <div class="install-target-heading">
+            <span class="install-step-number">03</span>
+            <div>
+              <span class="install-step-label">Choose a target</span>
+            </div>
+          </div>
+
+          <div class="install-tabs" role="tablist" aria-label="Choose installation target">
+            {installTargets.map((target, index) => (
+              <button
+                type="button"
+                role="tab"
+                id={`install-tab-${target.id}`}
+                aria-selected={index === 0 ? 'true' : 'false'}
+                aria-controls={`install-panel-${target.id}`}
+                tabindex={index === 0 ? 0 : -1}
+                data-install-tab={target.id}
+              >
+                {target.label}
+              </button>
+            ))}
+          </div>
+          {installTargets.map((target, index) => (
+            <div
+              class="install-panel"
+              id={`install-panel-${target.id}`}
+              role="tabpanel"
+              aria-labelledby={`install-tab-${target.id}`}
+              hidden={index !== 0}
+              data-install-panel={target.id}
+            >
+              <div class="console-meta">
+                <span>RUN ON JETSON · {target.label.toUpperCase()}</span>
+                <button type="button" data-copy-value={target.command}>COPY ALL STEPS</button>
+              </div>
+              <pre><code>{target.installCommand}</code></pre>
+            </div>
+          ))}
+          <div class="install-footer">
+            <a href="https://github.com/NVIDIA-AI-IOT/jetson-device-skills" target="_blank" rel="noopener noreferrer">Source repository ↗</a>
+            <span>Restart the agent after installation.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-links" aria-label="Related pages">
+      <div class="shell cta-links-inner">
+        <div class="cta-heading">
+          <span>NEXT STEPS</span>
+          <h2>Put the skills to work.</h2>
+        </div>
+        <div class="cta-grid">
+          <a class="cta-link" href="/tutorials/ai-assisted-development-on-jetson/">
+            <span class="cta-kicker">DEVELOPMENT GUIDE</span>
+            <strong>Build with AI assistance on Jetson</strong>
+            <span class="cta-arrow" aria-hidden="true">→</span>
+          </a>
+          <a class="cta-link" href="/tutorials/reachy-mini-jetson-assistant/">
+            <span class="cta-kicker">PROJECT STORY</span>
+            <strong>See how the Reachy Mini assistant was built</strong>
+            <span class="cta-arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </div>
+</Layout>
+
+<style>
+  :root {
+    --signal: #76b900;
+    --signal-bright: #a7ef1f;
+    --ink: #090c0b;
+    --graphite: #111614;
+    --steel: #9ba49f;
+    --fog: #edf0ed;
+    --paper: #f7f8f5;
+  }
+  .shell { margin-inline: auto; }
+  .hero { position: relative; overflow: hidden; color: white; background: var(--ink); }
+  .hero-grid { position: absolute; inset: 0; }
+  .hero-layout { position: relative; z-index: 1; }
+  .hero-layout > *, .workflow-layout > *, .install-layout > * { min-width: 0; }
+  .back-link { display: inline-block; }
+  .kicker { display: flex; align-items: center; gap: .7rem; text-transform: uppercase; }
+  h1, h2, h3, p { margin: 0; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+  .button { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+  .signal-row { display: flex; flex-wrap: wrap; gap: 1.25rem 2rem; margin: 3.5rem 0 0; padding: 0; color: #9ca7a1; font: 600 .68rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; list-style: none; }
+  .signal-row li { display: flex; gap: .6rem; }
+  .signal-row span { color: var(--signal-bright); }
+  .terminal-wrap { position: relative; border: 1px solid #39423e; background: rgba(9, 13, 11, .84); box-shadow: 24px 24px 0 rgba(118,185,0,.08); backdrop-filter: blur(12px); }
+  .terminal-wrap::before { position: absolute; top: -1px; left: -1px; width: 4px; height: 42%; background: var(--signal); content: ''; }
+  .terminal-top { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #313a35; color: #9aa49f; font: 700 .64rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .09em; }
+  .live-indicator { display: flex; align-items: center; gap: .5rem; color: #d6e6d3; }
+  .live-indicator i { width: 6px; height: 6px; border-radius: 50%; background: var(--signal-bright); box-shadow: 0 0 0 4px rgba(167,239,31,.12); }
+  .terminal-body { padding: clamp(1.25rem, 3vw, 2rem); font: .78rem/1.7 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  .terminal-muted { color: #6f7a74; }
+  .terminal-prompt { margin-top: .5rem; color: #eef5f0; font-size: .88rem; }
+  .terminal-rule { height: 1px; margin: 1.5rem 0; background: #26302b; }
+  .terminal-line { margin-top: .45rem; color: #aab5af; }
+  .terminal-line span { color: var(--signal-bright); }
+  .terminal-line b { color: white; font-weight: 500; }
+  .device-readout { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin: 1.5rem 0; background: #2b342f; }
+  .device-readout div { padding: .9rem; background: #111713; }
+  .device-readout dt { color: #66726b; font-size: .62rem; letter-spacing: .1em; }
+  .device-readout dd { margin: .25rem 0 0; color: #e6ece8; }
+  .terminal-result { padding: .8rem; color: #b7c2bc; border: 1px solid rgba(118,185,0,.24); background: rgba(118,185,0,.06); }
+  .terminal-result span { margin-right: .7rem; color: var(--signal-bright); font-weight: 800; }
+  .page-nav { position: sticky; top: 4rem; z-index: 30; backdrop-filter: blur(12px); }
+  .nav-inner { display: flex; overflow-x: auto; }
+  .nav-inner a { flex: 0 0 auto; }
+  .section-heading { max-width: 46rem; }
+  .heading-split { display: grid; grid-template-columns: 1.2fr .8fr; max-width: none; align-items: end; gap: 4rem; }
+  .heading-split > p:last-child { margin: 0; }
+  .capability-rail { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .family-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 4rem; background: #3c4641; }
+  .family-card { position: relative; padding: clamp(1.5rem, 4vw, 3rem); background: #181e1b; }
+  .family-card::after { position: absolute; inset: 0; border: 1px solid transparent; pointer-events: none; content: ''; transition: border-color .2s; }
+  .family-card:hover::after { border-color: #65716b; }
+  .family-primary { background: #1b241c; }
+  .family-primary::before { position: absolute; inset: 0 auto auto 0; width: 42%; height: 3px; background: var(--signal-bright); content: ''; }
+  .family-header { display: flex; justify-content: space-between; gap: 1rem; color: #85918b; font: 700 .66rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .1em; }
+  .family-count { color: #c1cbc5; }
+  .family-icon { width: 6rem; margin: 3.5rem 0 2.5rem; color: var(--signal-bright); }
+  .family-icon svg { width: 100%; stroke: currentColor; stroke-width: 1.3; }
+  .family-icon-bsp { color: #dbe2dd; }
+  .family-tag { color: var(--signal-bright); font: 700 .68rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+  .family-card h3 { margin-top: .75rem; font-size: clamp(1.8rem, 3vw, 2.6rem); letter-spacing: -.045em; }
+  .family-description { max-width: 34rem; min-height: 6.5rem; margin-top: 1.25rem; color: #aab4ae; line-height: 1.7; }
+  .family-facts { margin: 2rem 0; border-top: 1px solid #36403b; }
+  .family-facts div { display: grid; grid-template-columns: 7rem 1fr; padding: .8rem 0; border-bottom: 1px solid #303934; }
+  .family-facts dt { color: #77837c; font: 700 .64rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
+  .family-facts dd { margin: 0; color: #d6ded9; font-size: .82rem; }
+  .family-card > a { display: inline-flex; gap: 1rem; color: white; font-size: .85rem; font-weight: 750; }
+  .family-card > a span { color: var(--signal-bright); }
+  .catalog-heading { align-items: center; }
+  .filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 4rem; padding: .75rem; border: 1px solid #ccd3ce; background: #eef1ed; }
+  .filter-button { min-height: 40px; padding: .65rem .9rem; color: #4d5952; border: 0; background: transparent; font: 700 .7rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; text-transform: uppercase; cursor: pointer; }
+  .filter-button:hover { color: #0a0d0b; background: #dde4de; }
+  .filter-button.active { color: white; background: var(--ink); }
+  .filter-count { margin-left: auto; padding: .5rem; color: #607067; font: 700 .68rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  .skill-list { margin-top: 1.25rem; border-top: 1px solid #bcc5bf; }
+  .skill-row { display: grid; grid-template-columns: 3rem minmax(0, 1fr) 6rem; gap: 1rem; align-items: start; padding: 1.25rem 1rem; border-bottom: 1px solid #ccd3ce; transition: background .15s, padding-left .15s; }
+  .skill-row:hover { padding-left: 1.35rem; background: white; }
+  .skill-row[hidden] { display: none; }
+  .skill-number { color: #8b968f; font: 700 .65rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  .skill-name-line { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+  .skill-name-line h3 { font: 700 .9rem/1.3 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  .skill-row p { max-width: 48rem; margin-top: .45rem; color: #66726c; font-size: .85rem; line-height: 1.55; }
+  .family-pill { padding: .25rem .45rem; color: #536059; border: 1px solid #bdc6c0; font: 700 .55rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
+  .family-pill.device { color: #365e18; border-color: #a9c990; background: #edf7e5; }
+  .skill-category { justify-self: end; color: #6c7871; font: 700 .6rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+  .catalog-note { margin-top: 1.25rem; color: #69756e; font-size: .82rem; text-align: right; }
+  .catalog-note a { color: #315d11; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+  .section-signal { overflow: hidden; background: var(--signal); }
+  .workflow-layout { display: grid; grid-template-columns: .85fr 1.15fr; gap: clamp(3rem, 8vw, 8rem); align-items: start; }
+  .section-signal .section-heading > p:last-child { color: #1e3a0d; }
+  .workflow-track { position: relative; margin: 0; padding: 0; list-style: none; }
+  .workflow-track::before { position: absolute; top: 1.4rem; bottom: 1.4rem; left: 1.4rem; width: 1px; background: rgba(7,16,6,.35); content: ''; }
+  .workflow-track li { position: relative; display: grid; grid-template-columns: 3rem 1fr; gap: 1.25rem; padding-bottom: 2rem; }
+  .workflow-number { position: relative; z-index: 1; display: grid; width: 2.8rem; height: 2.8rem; place-items: center; color: white; background: var(--ink); font: 700 .68rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  .workflow-label { color: #315416; font: 800 .62rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .1em; }
+  .workflow-track h3 { margin-top: .35rem; font-size: 1.25rem; letter-spacing: -.02em; }
+  .workflow-track div > p:last-child { max-width: 30rem; margin-top: .5rem; color: #25430f; font-size: .86rem; line-height: 1.55; }
+  .prompt-strip { margin-top: 5rem; border-top: 1px solid rgba(8,17,7,.3); }
+  .prompt-strip-label { padding: 1rem 0; color: #24410f; font: 800 .65rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .12em; }
+  .prompt-list { border-top: 1px solid rgba(8,17,7,.3); }
+  .prompt-chip { display: grid; width: 100%; grid-template-columns: 2.5rem 1fr 4rem; gap: 1rem; padding: 1.25rem 0; color: var(--ink); border: 0; border-bottom: 1px solid rgba(8,17,7,.3); background: transparent; text-align: left; cursor: pointer; }
+  .prompt-chip > span:first-child, .copy-mark { font: 800 .65rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  .prompt-text { font-weight: 650; }
+  .copy-mark { justify-self: end; }
+  .prompt-chip:hover .prompt-text { text-decoration: underline; text-underline-offset: 4px; }
+  .section-install { color: white; background: var(--ink); }
+  .install-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(3rem, 8vw, 8rem); align-items: center; }
+  .install-console { width: 100%; min-width: 0; border: 1px solid #3b453f; background: #101512; box-shadow: 18px 18px 0 rgba(118,185,0,.1); }
+  .install-setup { margin: 0; padding: 0; list-style: none; }
+  .install-setup li { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: .75rem; padding: .85rem 1.25rem; border-bottom: 1px solid #303934; }
+  .install-step-number { padding-top: .12rem; color: var(--signal-bright); font: 800 .62rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
+  .install-step-label { display: block; margin-bottom: .35rem; color: #737e78; font: 700 .62rem/1.3 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+  .install-setup code { display: block; overflow-x: auto; color: #dce6df; font: .72rem/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+  .install-target-heading { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: .75rem; padding: .85rem 1.25rem .5rem; }
+  .install-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid #3b453f; }
+  .install-tabs button { flex: 1 0 auto; min-height: 48px; padding: .75rem .9rem; color: #89948e; border: 0; border-right: 1px solid #3b453f; background: transparent; font: 700 .68rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .04em; cursor: pointer; }
+  .install-tabs button[aria-selected="true"] { color: var(--signal-bright); background: #171e1a; box-shadow: inset 0 -2px var(--signal-bright); }
+  .install-panel { min-height: 135px; }
+  .console-meta { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; color: #66716b; font: 700 .62rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
+  .console-meta button { padding: 0; color: var(--signal-bright); border: 0; background: transparent; font: inherit; cursor: pointer; }
+  .install-panel pre { overflow-x: auto; margin: 0; padding: 1.5rem; color: #dce6df; font: .78rem/1.8 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }
+  .install-panel pre::before { color: var(--signal-bright); content: '$ '; }
+  .install-footer { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; color: #737e78; border-top: 1px solid #303934; font-size: .72rem; }
+  .install-footer a { color: #aab5af; font-weight: 700; }
+  .closing { color: var(--ink); background: var(--signal-bright); }
+  .closing-inner { display: grid; grid-template-columns: .5fr 1.2fr .8fr; gap: 2rem; align-items: end; min-height: 360px; padding-block: 4rem; }
+  .closing-index { align-self: start; font: 800 .62rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
+  .closing h2 { font-size: clamp(2.5rem, 5vw, 5rem); font-weight: 350; line-height: .98; letter-spacing: -.06em; }
+  .closing-inner > div { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .button-dark { color: white; background: var(--ink); }
+  .button-dark:hover { background: #273029; }
+  .text-link { color: var(--ink); font-size: .82rem; font-weight: 750; }
+  #agent-skills-page :global(a:focus-visible), #agent-skills-page button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+  .section-light button:focus-visible { outline-color: var(--signal); }
+
+  @media (max-width: 900px) {
+    .hero-layout, .heading-split, .workflow-layout, .install-layout, .catalog-install-layout { grid-template-columns: 1fr; }
+    .hero-layout { padding-block: 3rem 5rem; }
+    .back-link { margin-bottom: 3rem; }
+    .terminal-wrap { max-width: 40rem; }
+    .heading-split { align-items: start; gap: 1.5rem; }
+    .capability-rail { grid-template-columns: 1fr 1fr; }
+    .capability-rail article:nth-child(3) { border-top: 1px solid #ccd3ce; }
+    .capability-rail article:nth-child(4) { border-top: 1px solid #ccd3ce; border-right: 1px solid #ccd3ce; }
+    .family-grid { grid-template-columns: 1fr; }
+    .family-description { min-height: 0; }
+    .closing-inner { grid-template-columns: 1fr; min-height: 0; }
+    .closing-index { margin-bottom: 3rem; }
+  }
+  @media (max-width: 560px) {
+    .shell { width: min(100% - 1.25rem, 80rem); }
+    .hero { min-height: auto; }
+    .hero::after { display: none; }
+    h1 { font-size: clamp(2.7rem, 14vw, 4rem); }
+    .hero-actions { align-items: stretch; flex-direction: column; }
+    .device-readout { grid-template-columns: 1fr; }
+    .terminal-top { align-items: flex-start; flex-direction: column; }
+    .capability-rail { grid-template-columns: 1fr; }
+    .capability-rail article { min-height: 220px; border-right: 1px solid #ccd3ce; border-bottom: 1px solid #ccd3ce; }
+    .capability-rail article + article { border-top: 0; }
+    .capability-rail h3 { margin-top: 3rem; }
+    .family-card { padding: 1.5rem; }
+    .family-facts div { grid-template-columns: 5.5rem 1fr; }
+    .skill-row { grid-template-columns: 2rem minmax(0, 1fr); }
+    .skill-category { display: none; }
+    .filter-count { width: 100%; margin-left: 0; }
+    .prompt-chip { grid-template-columns: 2rem 1fr; }
+    .copy-mark { display: none; }
+    .install-footer { flex-direction: column; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  }
+  /* Match the visual language of the AI-assisted development landing page. */
+  #agent-skills-page {
+    --signal: #76b900;
+    --signal-bright: #a3e635;
+    --ink: #0f172a;
+    --graphite: #020617;
+    --steel: #64748b;
+    --fog: #e2e8f0;
+    --paper: #ffffff;
+    color: #0f172a;
+    background: white;
+    font-family: inherit;
+  }
+  #agent-skills-page :is(h1, h2, h3, p, a, button, dt, dd, li) { font-family: inherit; }
+  .shell { width: min(100% - 3rem, 80rem); }
+
+  .hero {
+    color: white;
+    background: linear-gradient(135deg, #020617 0%, #06251c 48%, #020617 100%);
+  }
+  .hero-grid { display: none; }
+  .hero::after { display: none; }
+  .hero-layout {
+    display: block;
+    min-height: auto;
+    padding-block: 4rem;
+  }
+  .hero-copy { max-width: 56rem; }
+  .back-link {
+    margin-bottom: 2rem;
+    color: #bef264;
+    font-size: .875rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .back-link:hover { color: white; }
+  .kicker {
+    color: #bef264;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .13em;
+  }
+  .kicker span { display: none; }
+  .kicker.dark { color: #166534; }
+  h1 {
+    margin-top: 1.25rem;
+    font-size: clamp(2.5rem, 5vw, 3.75rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -.025em;
+  }
+  h1 strong { color: #76b900; font-weight: 700; }
+  .hero-lede {
+    max-width: 44rem;
+    margin-top: 1.5rem;
+    color: #e2e8f0;
+    font-size: 1.25rem;
+    line-height: 1.625;
+  }
+  .hero-actions { margin-top: 2rem; }
+  .hero-repositories { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: 1.5rem; color: #cbd5e1; font-size: .875rem; }
+  .hero-repositories span { font-weight: 600; }
+  .hero-repositories a { color: #bef264; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+  .hero-repositories a:hover { color: white; }
+  .button {
+    min-height: 48px;
+    padding: .75rem 1.25rem;
+    border-radius: .5rem;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .button-primary { color: #0f172a; background: #76b900; }
+  .button-primary:hover { background: #a3e635; }
+  .button-secondary { border-color: rgba(255,255,255,.3); border-radius: .5rem; }
+  .button-secondary:hover { background: rgba(255,255,255,.1); }
+  .page-nav {
+    top: 4rem;
+    border-color: #e2e8f0;
+    background: rgba(255,255,255,.95);
+  }
+  .nav-inner { gap: .5rem; padding-block: .75rem; }
+  .nav-inner a {
+    display: inline-flex;
+    align-items: center;
+    gap: .75rem;
+    min-height: 44px;
+    padding: .625rem .875rem;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    border-radius: .375rem;
+    background: #f8fafc;
+    font-size: .875rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .nav-inner a span { color: #4d7c0f; }
+  .nav-inner a:last-child { border-right: 1px solid #cbd5e1; }
+  .nav-inner a:hover { color: #365314; border-color: #76b900; background: #f0f7e7; }
+
+  .section { padding-block: 5rem; scroll-margin-top: 10rem; }
+  .section-light { background: white; }
+  .section-heading h2 {
+    margin-top: .75rem;
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    font-weight: 700;
+    line-height: 1.18;
+    letter-spacing: -.025em;
+  }
+  .section-heading > p:last-child {
+    margin-top: 1.25rem;
+    color: #475569;
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+  .heading-split { gap: 3rem; }
+  .capability-rail {
+    gap: 1.25rem;
+    margin-top: 3rem;
+    border: 0;
+  }
+  .context-link { display: inline-flex; align-items: center; gap: .6rem; margin-top: 1.5rem; color: #166534; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+  .context-link span { color: #76b900; transition: transform .2s; }
+  .context-link:hover span { transform: translateX(.25rem); }
+  .foundation-copy { max-width: 62rem; margin-top: 1.5rem; padding-left: 1.25rem; color: #475569; border-left: 3px solid #76b900; font-size: 1.05rem; line-height: 1.75; }
+  .capability-rail article {
+    min-height: 0;
+    padding: 1.5rem;
+    border: 0;
+    border-left: 3px solid #76b900;
+    border-radius: 0 .75rem .75rem 0;
+    background: #f8fafc;
+  }
+  .capability-rail article:last-child { border-right: 0; }
+  .capability-rail span { color: #166534; font-family: inherit; }
+  .capability-rail h3 { margin-top: 2rem; font-size: 1.2rem; font-weight: 700; }
+  .capability-rail p { color: #475569; font-size: 1rem; line-height: 1.7; }
+
+  .section-graphite { color: white; background: #020617; }
+  .section-graphite .section-heading > p:last-child { color: #cbd5e1; }
+  .family-grid { gap: 1.25rem; margin-top: 3rem; background: transparent; }
+  .family-card {
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    border: 1px solid #334155;
+    border-radius: .75rem;
+    background: #0f172a;
+  }
+  .family-card::after, .family-primary::before { display: none; }
+  .family-card:hover { border-color: #76b900; }
+  .family-primary { background: #111c18; }
+  .family-header { color: #94a3b8; font-size: .75rem; letter-spacing: .08em; }
+  .family-icon { display: flex; width: 100%; height: 11rem; align-items: center; margin: 2rem 0 1.75rem; }
+  .family-icon img { width: auto; max-width: 100%; max-height: 100%; object-fit: contain; object-position: left center; }
+  .family-icon-bsp img { filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .28)); }
+  .family-tag { color: #bef264; font-size: .75rem; }
+  .family-card h3 { font-size: 1.75rem; font-weight: 700; letter-spacing: -.025em; }
+  .family-description { color: #cbd5e1; line-height: 1.7; }
+  .family-facts { border-color: #334155; }
+  .family-facts div { border-color: #334155; }
+  .family-facts dt { color: #94a3b8; }
+  .family-card > a { color: #bef264; }
+
+  .catalog-heading { align-items: end; }
+  .filter-bar {
+    margin-top: 3rem;
+    border-color: #cbd5e1;
+    border-radius: .75rem;
+    background: #f8fafc;
+  }
+  .filter-button {
+    border-radius: .375rem;
+    font-family: inherit;
+    font-size: .875rem;
+    font-weight: 600;
+    text-transform: none;
+  }
+  .filter-button.active { color: white; background: #166534; }
+  .filter-count { color: #475569; font-family: inherit; font-size: .8rem; }
+  .skill-list { border-color: #cbd5e1; }
+  .skill-row { border-color: #e2e8f0; border-radius: .375rem; }
+  .skill-row:hover { background: #f8fafc; }
+  .skill-number { color: #166534; }
+  .skill-name-line h3 { font-family: inherit; font-size: 1rem; }
+  .skill-row p { color: #475569; font-size: .9rem; }
+  .catalog-note a { color: #166534; }
+
+  .section-catalog-install { border-block: 1px solid #e2e8f0; background: #f8fafc; }
+  .catalog-install-layout { display: grid; grid-template-columns: .85fr 1.15fr; gap: clamp(3rem, 7vw, 7rem); align-items: start; }
+  .catalog-source-link { display: inline-flex; margin-top: 1.5rem; color: #166534; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+  .catalog-command-list { display: grid; gap: 1rem; }
+  .catalog-command { overflow: hidden; border: 1px solid #334155; border-radius: .75rem; background: #0f172a; }
+  .catalog-command > div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1.1rem; border-bottom: 1px solid #334155; }
+  .catalog-command > div p { color: #cbd5e1; font-size: .8rem; font-weight: 700; }
+  .catalog-command button { padding: .3rem; color: #bef264; border: 0; background: transparent; font-size: .72rem; font-weight: 700; cursor: pointer; }
+  .catalog-command pre { overflow-x: auto; margin: 0; padding: 1.15rem; color: #e2e8f0; font: .78rem/1.7 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }
+  .catalog-command pre::before { color: #76b900; content: '$ '; }
+
+  #agent-skills-page .section-signal {
+    color: #0f172a;
+    border-block: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+  .section-signal .section-heading > p:last-child { color: #475569; }
+  .workflow-track::before { background: #cbd5e1; }
+  .workflow-number {
+    color: #0f172a;
+    border-radius: 50%;
+    background: #76b900;
+  }
+  .workflow-label { color: #166534; }
+  .workflow-track h3 { color: #0f172a; font-weight: 700; }
+  .workflow-track div > p:last-child { color: #475569; }
+  .prompt-strip { border-color: #cbd5e1; }
+  .prompt-strip-label { color: #166534; }
+  .prompt-list, .prompt-chip { border-color: #cbd5e1; }
+  .prompt-chip { border-radius: .375rem; }
+  .prompt-chip:hover { background: #f0f7e7; }
+
+  .section-install { background: #020617; }
+  .section-install .section-heading > p:last-child { color: #cbd5e1; }
+  .install-console {
+    overflow: hidden;
+    border-color: #334155;
+    border-radius: .75rem;
+    background: #0f172a;
+    box-shadow: none;
+  }
+  .install-tabs { border-color: #334155; }
+  .install-setup li, .install-footer { border-color: #334155; }
+  .install-tabs button {
+    border-color: #334155;
+    font-family: inherit;
+    font-size: .875rem;
+    font-weight: 600;
+  }
+  .install-tabs button[aria-selected="true"] { color: #bef264; background: #111827; }
+  .console-meta { font-family: inherit; }
+  .console-meta button { color: #bef264; font-family: inherit; }
+
+  .closing { color: #0f172a; background: #76b900; }
+  .closing-inner {
+    display: flex;
+    min-height: 0;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1.5rem;
+    padding-block: 2rem;
+  }
+  .closing-index { display: none; }
+  .closing h2 {
+    font-size: clamp(1.75rem, 3vw, 3rem);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -.025em;
+  }
+  .button-dark { border-radius: .5rem; background: #020617; }
+  .cta-links { background: #76b900; }
+  .cta-links-inner { display: grid; grid-template-columns: .55fr 1.45fr; gap: clamp(2rem, 6vw, 6rem); align-items: center; padding-block: 3.5rem; }
+  .cta-heading > span { color: #17210a; font-size: .68rem; font-weight: 800; letter-spacing: .12em; }
+  .cta-heading h2 { margin-top: .65rem; color: #020617; font-size: clamp(1.6rem, 3vw, 2.35rem); line-height: 1.1; letter-spacing: -.035em; }
+  .cta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .cta-link { position: relative; display: grid; min-height: 150px; padding: 1.4rem 3.5rem 1.4rem 1.4rem; color: white; border: 1px solid #334155; border-radius: .75rem; background: #0f172a; text-decoration: none; transition: border-color .2s, transform .2s, background .2s; }
+  .cta-link:hover { color: white; border-color: #76b900; background: #111c2e; transform: translateY(-2px); }
+  .cta-kicker { align-self: start; color: #94a3b8; font-size: .62rem; font-weight: 800; letter-spacing: .1em; }
+  .cta-link strong { align-self: end; max-width: 17rem; font-size: 1.05rem; line-height: 1.35; }
+  .cta-arrow { position: absolute; right: 1.4rem; bottom: 1.35rem; color: #bef264; font-size: 1.4rem; transition: transform .2s; }
+  .cta-link:hover .cta-arrow { transform: translateX(4px); }
+
+  @media (min-width: 1024px) {
+    .shell { width: min(100% - 4rem, 80rem); }
+    .hero-layout { padding-block: 5rem; }
+  }
+  @media (max-width: 900px) {
+    .hero-layout { padding-block: 4rem; }
+    .capability-rail article:nth-child(3),
+    .capability-rail article:nth-child(4) { border-top: 0; }
+    .closing-inner { align-items: flex-start; flex-direction: column; }
+  }
+  @media (max-width: 639px) {
+    .shell { width: min(100% - 2rem, 80rem); }
+    .section { padding-block: 3rem; }
+    .capability-rail article { border-right: 0; border-bottom: 0; }
+    .cta-links-inner, .cta-grid { grid-template-columns: 1fr; }
+    .cta-links-inner { gap: 2rem; }
+    .cta-link { min-height: 130px; }
+  }
+</style>
+
+<script>
+  function initializeAgentSkillsPage() {
+    const root = document.querySelector('#agent-skills-page');
+    if (!(root instanceof HTMLElement) || root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+
+    const filterButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-skill-filter]'));
+    const skillRows = Array.from(root.querySelectorAll<HTMLElement>('[data-skill]'));
+    const filterCount = root.querySelector<HTMLElement>('.filter-count');
+
+    filterButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const category = button.dataset.skillFilter;
+        filterButtons.forEach((item) => {
+          const active = item === button;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+
+        let visible = 0;
+        skillRows.forEach((row) => {
+          const show = row.dataset.category === category;
+          row.hidden = !show;
+          if (show) visible += 1;
+        });
+        if (filterCount) filterCount.textContent = `${visible} shown`;
+      });
+    });
+
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-install-tab]'));
+    const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-install-panel]'));
+    function activateTab(next: number) {
+      tabs.forEach((tab, index) => {
+        const active = index === next;
+        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        tab.tabIndex = active ? 0 : -1;
+      });
+      panels.forEach((panel, index) => { panel.hidden = index !== next; });
+    }
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => activateTab(index));
+      tab.addEventListener('keydown', (event) => {
+        let next = index;
+        if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+        else if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = tabs.length - 1;
+        else return;
+        event.preventDefault();
+        activateTab(next);
+        tabs[next].focus();
+      });
+    });
+
+    root.querySelectorAll<HTMLButtonElement>('[data-copy-value]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const value = button.dataset.copyValue || '';
+        await navigator.clipboard.writeText(value);
+        const status = button.matches('.prompt-chip') ? button.querySelector<HTMLElement>('.copy-mark') : button;
+        if (!status) return;
+        const original = status.textContent || '';
+        status.textContent = 'COPIED';
+        window.setTimeout(() => { status.textContent = original; }, 1400);
+      });
+    });
+  }
+
+  initializeAgentSkillsPage();
+  document.addEventListener('astro:page-load', initializeAgentSkillsPage);
+</script>

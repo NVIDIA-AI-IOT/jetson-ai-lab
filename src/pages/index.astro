@@ -8,6 +8,8 @@ const activeKeys = new Set(allTutorials.map(t => t.data.category));
 const sortedCategories = Object.entries(categoryConfig)
   .filter(([key]) => activeKeys.has(key))
   .sort(([, a], [, b]) => a.order - b.order);
+const categorySlug = (category: string) =>
+  category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 // Get featured community projects
 const allProjects = await getCollection('projects');
@@ -56,6 +58,38 @@ const sourceColors: Record<string, { bg: string; text: string }> = {
       </div>
       <div class="flex-1 flex justify-center lg:justify-end w-full">
         <img src="/images/hero/jetson-family-line_50pcnt.png" alt="NVIDIA Jetson AI Illustration" class="w-full md:max-w-md lg:max-w-xl h-auto" />
+      </div>
+    </div>
+  </section>
+
+  <!-- AI-assisted development -->
+  <section class="border-y border-nvidia-gray-200 bg-nvidia-white py-14">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mb-8">
+        <p class="mb-2 text-sm font-bold uppercase tracking-wider text-green-800">Build with a coding agent</p>
+        <h2 class="text-3xl font-bold text-nvidia-black">AI-assisted development on Jetson</h2>
+      </div>
+      <div class="grid gap-6 md:grid-cols-2">
+        <a href="/tutorials/ai-assisted-development-on-jetson/" class="group rounded-xl border border-nvidia-gray-200 bg-nvidia-gray-50 p-7 transition-all duration-200 hover:border-nvidia-green hover:shadow-md">
+          <div class="flex items-start justify-between gap-5">
+            <div>
+              <p class="mb-2 text-sm font-semibold text-green-800">Start here</p>
+              <h3 class="text-2xl font-bold text-nvidia-black transition-colors group-hover:text-green-800">A New Way to Build Edge AI</h3>
+              <p class="mt-3 leading-relaxed text-nvidia-gray-600">See how coding agents work alongside real Jetson hardware to inspect, prototype, benchmark, and optimize.</p>
+            </div>
+            <span class="text-2xl font-bold text-nvidia-green transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+          </div>
+        </a>
+        <a href="/tutorials/jetson-agent-skills/" class="group rounded-xl border border-nvidia-gray-200 bg-nvidia-gray-50 p-7 transition-all duration-200 hover:border-nvidia-green hover:shadow-md">
+          <div class="flex items-start justify-between gap-5">
+            <div>
+              <p class="mb-2 text-sm font-semibold text-green-800">Add Jetson knowledge</p>
+              <h3 class="text-2xl font-bold text-nvidia-black transition-colors group-hover:text-green-800">Jetson Agent Skills</h3>
+              <p class="mt-3 leading-relaxed text-nvidia-gray-600">Give coding agents NVIDIA-provided Jetson knowledge and reusable workflows. Your agent can find and use the relevant skills for the task.</p>
+            </div>
+            <span class="text-2xl font-bold text-nvidia-green transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+          </div>
+        </a>
       </div>
     </div>
   </section>
@@ -124,7 +158,7 @@ const sourceColors: Record<string, { bg: string; text: string }> = {
           const bgClass = cat.colorClass.split(' ')[0];
           const textClass = cat.colorClass.split(' ')[1];
           return (
-            <a href={`/tutorials#section-${key.toLowerCase()}`} class="group bg-nvidia-white rounded-xl p-6 border border-nvidia-gray-200 hover:border-nvidia-green hover:shadow-md transition-all duration-200">
+            <a href={`/tutorials/#section-${categorySlug(key)}`} class="group bg-nvidia-white rounded-xl p-6 border border-nvidia-gray-200 hover:border-nvidia-green hover:shadow-md transition-all duration-200">
               <div class={`w-12 h-12 ${bgClass} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                 <span class="text-2xl">{cat.icon}</span>
               </div>

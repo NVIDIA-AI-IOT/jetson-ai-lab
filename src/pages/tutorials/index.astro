@@ -21,9 +21,19 @@ const activeCategories = Object.keys(tutorialsByCategory)
   .filter(cat => tutorialsByCategory[cat].length > 0)
   .sort((a, b) => (categoryConfig[a]?.order || 99) - (categoryConfig[b]?.order || 99));
 
-// Count totals
-const totalTutorials = allTutorials.length;
-const featuredCount = allTutorials.filter(t => t.data.featured).length;
+const categorySlug = (category: string) =>
+  category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+const tutorialSearchIndex = allTutorials.map((tutorial) => ({
+  title: tutorial.data.title,
+  description: tutorial.data.description,
+  category: tutorial.data.category,
+  section: tutorial.data.section || '',
+  tags: tutorial.data.tags,
+  model: tutorial.data.model || '',
+  authors: (tutorial.data.authors || []).map((author) => author.name),
+  href: '/tutorials/' + (tutorial.slug.includes('/') ? tutorial.slug.split('/').pop() : tutorial.slug),
+}));
 ---
 
 <Layout title="Tutorials - Jetson AI Lab" description="Master Generative AI on NVIDIA Jetson with our step-by-step guides and tutorials.">
@@ -75,27 +85,36 @@ const featuredCount = allTutorials.filter(t => t.data.featured).length;
   <!-- Main Content -->
   <section id="all-tutorials" class="py-12 bg-nvidia-white min-h-screen scroll-mt-16">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mb-10 rounded-2xl border border-nvidia-gray-200 bg-nvidia-gray-50 p-4 sm:p-6">
+        <label for="tutorial-search" class="mb-3 block font-bold text-nvidia-black">Search tutorials</label>
+        <div class="relative">
+          <svg class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-nvidia-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <input
+            id="tutorial-search"
+            type="search"
+            placeholder="Search tutorials"
+            autocomplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="search-results"
+            aria-expanded="false"
+            class="w-full rounded-xl border border-nvidia-gray-300 bg-white py-4 pl-12 pr-12 text-base text-nvidia-black shadow-sm outline-none transition-all placeholder:text-nvidia-gray-400 focus:border-transparent focus:ring-2 focus:ring-nvidia-green"
+          />
+          <button id="search-reset" type="button" class="absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md px-2 py-1 text-sm font-semibold text-nvidia-gray-500 hover:bg-nvidia-gray-100 hover:text-nvidia-black" aria-label="Clear tutorial search">
+            Clear
+          </button>
+        </div>
+        <div id="search-status" class="mt-3 hidden text-sm text-nvidia-gray-600" aria-live="polite"></div>
+        <div id="search-results" class="mt-3 hidden max-h-[36rem] overflow-y-auto rounded-xl border border-nvidia-gray-200 bg-white shadow-lg" role="listbox" aria-label="Tutorial search results"></div>
+      </div>
+
       <div class="flex flex-col lg:flex-row gap-8">
         
         <!-- Sidebar Navigation -->
         <aside class="lg:w-64 flex-shrink-0">
           <div class="lg:sticky lg:top-24">
-            <!-- Search -->
-            <div class="mb-6">
-              <div class="relative">
-                <input 
-                  id="tutorial-search" 
-                  type="text" 
-                  placeholder="Search tutorials..." 
-                  class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-nvidia-gray-200 bg-nvidia-white focus:ring-2 focus:ring-nvidia-green focus:border-transparent transition-all outline-none text-sm"
-                />
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nvidia-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-              </div>
-              <div id="search-results" class="hidden mt-2 bg-nvidia-white rounded-lg border border-nvidia-gray-200 shadow-lg max-h-80 overflow-y-auto"></div>
-            </div>
-            
             <!-- Category Quick Links -->
             <nav class="bg-nvidia-gray-50 rounded-xl border border-nvidia-gray-200 overflow-hidden">
               <div class="px-4 py-3 bg-nvidia-gray-100 border-b border-nvidia-gray-200">
@@ -104,7 +123,7 @@ const featuredCount = allTutorials.filter(t => t.data.featured).length;
               <div class="p-2">
                 {activeCategories.map(cat => (
                   <a 
-                    href={`#section-${cat.toLowerCase()}`}
+                    href={`#section-${categorySlug(cat)}`}
                     class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-nvidia-gray-100 transition-colors group"
                     data-category={cat}
                   >
@@ -155,12 +174,12 @@ const featuredCount = allTutorials.filter(t => t.data.featured).length;
         <main class="flex-1 min-w-0">
           <div class="space-y-4" id="tutorial-sections">
             {activeCategories.map((cat, index) => (
-              <div id={`section-${cat.toLowerCase()}`} class="scroll-mt-24">
+              <div id={`section-${categorySlug(cat)}`} class="scroll-mt-24">
                 <TutorialSection 
                   title={categoryConfig[cat]?.title || cat}
                   icon={categoryConfig[cat]?.icon || '📄'}
                   tutorials={tutorialsByCategory[cat]}
-                  sectionId={cat.toLowerCase()}
+                  sectionId={categorySlug(cat)}
                   colorClass={categoryConfig[cat]?.colorClass || 'bg-nvidia-gray-100 text-nvidia-gray-600'}
                   defaultOpen={index === 0}
                 />
@@ -186,101 +205,275 @@ const featuredCount = allTutorials.filter(t => t.data.featured).length;
     </div>
   </section>
 
+<script id="tutorial-search-index" type="application/json" set:html={JSON.stringify(tutorialSearchIndex)}></script>
+
 <script is:inline>
   (() => {
     const searchInput = document.getElementById('tutorial-search');
     const searchResults = document.getElementById('search-results');
+    const searchStatus = document.getElementById('search-status');
+    const searchReset = document.getElementById('search-reset');
+    const searchIndex = document.getElementById('tutorial-search-index');
     const sections = document.getElementById('tutorial-sections');
     const noResults = document.getElementById('no-results');
     const clearBtn = document.getElementById('clear-search');
-    
-    // Collect all tutorials for search
-    const tutorials = [];
-    document.querySelectorAll('.tutorial-item').forEach(item => {
-      const title = item.querySelector('.font-medium')?.textContent || '';
-      const desc = item.querySelector('.text-nvidia-gray-600')?.textContent || '';
-      const href = item.getAttribute('href') || '';
-      const section = item.closest('.tutorial-section')?.dataset.section || '';
-      tutorials.push({ title, desc, href, section, element: item });
-    });
-    
+    const sidebar = document.querySelector('#all-tutorials aside');
+    const tutorials = JSON.parse(searchIndex?.textContent || '[]');
+    const aliases = {
+      llm: ['language model', 'text generation'],
+      vlm: ['vision language', 'multimodal', 'vision'],
+      vla: ['vision language action', 'robotics'],
+      setup: ['install', 'installation', 'getting started'],
+      install: ['setup', 'getting started'],
+      finetune: ['fine tune', 'fine tuning', 'training'],
+      camera: ['vision', 'video'],
+      agent: ['coding agent', 'codex', 'cursor', 'claude', 'skills'],
+      optimize: ['optimization', 'performance', 'memory'],
+      benchmark: ['performance', 'latency', 'throughput'],
+    };
+
+    const normalize = (value) => String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+    const editDistance = (left, right) => {
+      if (left === right) return 0;
+      if (!left.length) return right.length;
+      if (!right.length) return left.length;
+      let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+      for (let i = 1; i <= left.length; i += 1) {
+        const current = [i];
+        for (let j = 1; j <= right.length; j += 1) {
+          current[j] = Math.min(
+            current[j - 1] + 1,
+            previous[j] + 1,
+            previous[j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1),
+          );
+        }
+        previous = current;
+      }
+      return previous[right.length];
+    };
+
+    const termScore = (term, value, weight) => {
+      const text = normalize(value);
+      if (!text) return 0;
+      if (text === term) return weight * 1.5;
+      if (text.startsWith(term)) return weight * 1.25;
+      if (text.includes(term)) return weight;
+      const words = text.split(' ');
+      let best = 0;
+      for (const word of words) {
+        if (word.startsWith(term) || term.startsWith(word)) best = Math.max(best, weight * .8);
+        if (term.length >= 4 && word.length >= 4) {
+          const similarity = 1 - editDistance(term, word) / Math.max(term.length, word.length);
+          if (similarity >= .72) best = Math.max(best, weight * similarity * .75);
+        }
+      }
+      return best;
+    };
+
+    const scoreTutorial = (tutorial, rawQuery) => {
+      const query = normalize(rawQuery);
+      const terms = [...new Set(query.split(' ').filter(Boolean))];
+      if (!terms.length) return 0;
+      const title = normalize(tutorial.title);
+      const description = normalize(tutorial.description);
+      let score = title.includes(query) ? 120 : 0;
+      if (description.includes(query)) score += 25;
+      let matchedTerms = 0;
+
+      for (const term of terms) {
+        const alternatives = [term, ...(aliases[term] || [])];
+        let best = 0;
+        alternatives.forEach((alternative, index) => {
+          const normalizedAlternative = normalize(alternative);
+          const aliasFactor = index === 0 ? 1 : .72;
+          best = Math.max(
+            best,
+            termScore(normalizedAlternative, tutorial.title, 45) * aliasFactor,
+            termScore(normalizedAlternative, tutorial.model, 42) * aliasFactor,
+            termScore(normalizedAlternative, tutorial.tags.join(' '), 36) * aliasFactor,
+            termScore(normalizedAlternative, tutorial.section, 24) * aliasFactor,
+            termScore(normalizedAlternative, tutorial.category, 20) * aliasFactor,
+            termScore(normalizedAlternative, tutorial.description, 12) * aliasFactor,
+            termScore(normalizedAlternative, tutorial.authors.join(' '), 10) * aliasFactor,
+          );
+        });
+        if (best > 0) {
+          matchedTerms += 1;
+          score += best;
+        }
+      }
+
+      const minimumMatches = terms.length <= 2 ? terms.length : Math.ceil(terms.length * .67);
+      return matchedTerms >= minimumMatches ? score + matchedTerms * 5 : 0;
+    };
+
+    const makeResult = (tutorial, index) => {
+      const link = document.createElement('a');
+      link.href = tutorial.href;
+      link.id = `tutorial-result-${index}`;
+      link.setAttribute('role', 'option');
+      link.setAttribute('aria-selected', 'false');
+      link.className = 'tutorial-search-result flex items-center gap-4 border-b border-nvidia-gray-100 p-4 transition-colors last:border-0 hover:bg-nvidia-gray-50 focus:bg-nvidia-green/5 focus:outline-none';
+
+      const content = document.createElement('div');
+      content.className = 'min-w-0 flex-1';
+      const meta = document.createElement('div');
+      meta.className = 'mb-1 flex flex-wrap items-center gap-2';
+      const category = document.createElement('span');
+      category.className = 'rounded-full bg-nvidia-green/10 px-2 py-0.5 text-xs font-semibold text-green-800';
+      category.textContent = tutorial.category;
+      meta.appendChild(category);
+      if (tutorial.section) {
+        const section = document.createElement('span');
+        section.className = 'text-xs text-nvidia-gray-500';
+        section.textContent = tutorial.section;
+        meta.appendChild(section);
+      }
+      const title = document.createElement('div');
+      title.className = 'truncate font-bold text-nvidia-black';
+      title.textContent = tutorial.title;
+      const description = document.createElement('div');
+      description.className = 'mt-1 truncate text-sm text-nvidia-gray-600';
+      description.textContent = tutorial.description;
+      content.append(meta, title, description);
+
+      const arrow = document.createElement('span');
+      arrow.className = 'flex-shrink-0 text-xl font-bold text-nvidia-green';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+      link.append(content, arrow);
+      return link;
+    };
+
+    let activeResult = -1;
     let searchTimeout;
-    
-    searchInput?.addEventListener('input', (e) => {
+
+    const resetSearch = () => {
+      if (searchInput) {
+        searchInput.value = '';
+        searchInput.setAttribute('aria-expanded', 'false');
+        searchInput.removeAttribute('aria-activedescendant');
+      }
+      searchReset?.classList.add('hidden');
+      searchStatus?.classList.add('hidden');
+      searchResults?.classList.add('hidden');
+      searchResults?.replaceChildren();
+      sections?.classList.remove('hidden');
+      sidebar?.classList.remove('hidden');
+      noResults?.classList.add('hidden');
+      activeResult = -1;
+    };
+
+    const setActiveResult = (next) => {
+      const results = [...document.querySelectorAll('.tutorial-search-result')];
+      if (!results.length) return;
+      activeResult = (next + results.length) % results.length;
+      results.forEach((result, index) => result.setAttribute('aria-selected', index === activeResult ? 'true' : 'false'));
+      const active = results[activeResult];
+      searchInput?.setAttribute('aria-activedescendant', active.id);
+      active.scrollIntoView({ block: 'nearest' });
+    };
+
+    searchInput?.addEventListener('input', (event) => {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
-        const query = e.target.value.toLowerCase().trim();
-        
-        if (query.length === 0) {
-          // Reset view
-          searchResults?.classList.add('hidden');
-          sections?.classList.remove('hidden');
-          noResults?.classList.add('hidden');
-          return;
-        }
-        
-        // Filter tutorials
-        const matches = tutorials.filter(t => 
-          t.title.toLowerCase().includes(query) || 
-          t.desc.toLowerCase().includes(query)
-        );
-        
+        const query = event.target.value.trim();
+        if (!query) return resetSearch();
+        const matches = tutorials
+          .map((tutorial) => ({ tutorial, score: scoreTutorial(tutorial, query) }))
+          .filter((result) => result.score > 0)
+          .sort((left, right) => right.score - left.score || left.tutorial.title.localeCompare(right.tutorial.title))
+          .slice(0, 12);
+
+        searchReset?.classList.remove('hidden');
+        sections?.classList.add('hidden');
+        sidebar?.classList.add('hidden');
+        searchResults?.replaceChildren();
+        activeResult = -1;
         if (matches.length === 0) {
           searchResults?.classList.add('hidden');
-          sections?.classList.add('hidden');
           noResults?.classList.remove('hidden');
+          searchStatus.textContent = `No tutorials found for “${query}”`;
+          searchStatus?.classList.remove('hidden');
+          searchInput.setAttribute('aria-expanded', 'false');
         } else {
-          // Show results
-          sections?.classList.add('hidden');
           noResults?.classList.add('hidden');
           searchResults?.classList.remove('hidden');
-          
-          searchResults.innerHTML = matches.map(t => `
-            <a href="${t.href}" class="flex items-center gap-3 p-3 hover:bg-nvidia-gray-50 transition-colors border-b border-nvidia-gray-100 last:border-0">
-              <div class="w-1.5 h-1.5 rounded-full bg-nvidia-green flex-shrink-0"></div>
-              <div class="flex-1 min-w-0">
-                <div class="font-medium text-nvidia-black truncate">${t.title}</div>
-                <div class="text-sm text-nvidia-gray-600 truncate">${t.desc}</div>
-              </div>
-              <svg class="w-4 h-4 text-nvidia-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-            </a>
-          `).join('');
+          matches.forEach(({ tutorial }, index) => searchResults.appendChild(makeResult(tutorial, index)));
+          searchStatus.textContent = `${matches.length} best ${matches.length === 1 ? 'match' : 'matches'} for “${query}”`;
+          searchStatus?.classList.remove('hidden');
+          searchInput.setAttribute('aria-expanded', 'true');
         }
-      }, 200);
+      }, 120);
     });
-    
-    clearBtn?.addEventListener('click', () => {
-      if (searchInput) searchInput.value = '';
-      searchResults?.classList.add('hidden');
-      sections?.classList.remove('hidden');
-      noResults?.classList.add('hidden');
+
+    searchInput?.addEventListener('keydown', (event) => {
+      const results = [...document.querySelectorAll('.tutorial-search-result')];
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setActiveResult(activeResult + 1);
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setActiveResult(activeResult - 1);
+      } else if (event.key === 'Enter' && activeResult >= 0 && results[activeResult]) {
+        event.preventDefault();
+        results[activeResult].click();
+      } else if (event.key === 'Escape') {
+        resetSearch();
+      }
     });
+
+    [clearBtn, searchReset].forEach((button) => button?.addEventListener('click', () => {
+      resetSearch();
+      searchInput?.focus();
+    }));
     
+    const expandTutorialSection = (target) => {
+      const header = target.querySelector('.section-header');
+      const content = target.querySelector('.section-content');
+      if (!header || !content || header.getAttribute('aria-expanded') === 'true') return;
+
+      header.setAttribute('aria-expanded', 'true');
+      content.classList.add('expanded');
+      content.style.maxHeight = `${content.scrollHeight}px`;
+    };
+
     // Smooth scroll for nav links
     document.querySelectorAll('.nav-link').forEach(link => {
       link.addEventListener('click', (e) => {
         const href = link.getAttribute('href');
         if (href?.startsWith('#')) {
           e.preventDefault();
-          const target = document.querySelector(href);
+          const target = document.getElementById(decodeURIComponent(href.slice(1)));
           if (target) {
-            // Expand the section if collapsed
-            const section = target.querySelector('.tutorial-section');
-            const header = section?.querySelector('.section-header');
-            const content = section?.querySelector('.section-content');
-            
-            if (header?.getAttribute('aria-expanded') === 'false') {
-              header.click();
-            }
-            
-            // Scroll to section
+            expandTutorialSection(target);
+            history.replaceState(null, '', href);
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         }
       });
     });
+
+    const openSectionFromHash = (smooth = false) => {
+      if (!window.location.hash) return;
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      const normalizedId = id.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+      const target = document.getElementById(id) || document.getElementById(normalizedId);
+      if (!target) return;
+      expandTutorialSection(target);
+      window.requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+      });
+    };
+
+    openSectionFromHash();
+    window.addEventListener('hashchange', () => openSectionFromHash(true));
     
     // Highlight active section on scroll
     const observerOptions = {
@@ -342,6 +535,11 @@ const featuredCount = allTutorials.filter(t => t.data.featured).length;
   
   #search-results::-webkit-scrollbar-thumb:hover {
     background: #b4b4b4;
+  }
+
+  .tutorial-search-result[aria-selected="true"] {
+    background: rgba(118, 185, 0, 0.08);
+    box-shadow: inset 3px 0 #76b900;
   }
   
   /* Hide scrollbar for Chrome, Safari and Opera */
