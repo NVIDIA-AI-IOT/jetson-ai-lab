@@ -14,10 +14,9 @@ const rows = [
 ] as const;
 ---
 
-<figure class="impact-comparison mt-10" aria-labelledby="impact-chart-title" aria-describedby="impact-caption">
+<figure class="impact-comparison mt-10" aria-labelledby="impact-chart-title">
   <div class="comparison-heading">
     <h3 id="impact-chart-title">Compress the repetitive work. Preserve human judgment.</h3>
-    <span>Conceptual comparison</span>
   </div>
   <p class="scroll-hint">Scroll horizontally to compare the full development cycle →</p>
   <div class="comparison-scroll" tabindex="0" role="region" aria-label="Development time comparison; scroll horizontally on smaller screens">
@@ -44,14 +43,12 @@ const rows = [
     </div>
   </div>
   <div class="judgment-note"><span class="protected-key" aria-hidden="true"></span><p><strong>Time protected for product development and quality.</strong> Agents can assist throughout; you guide the design, implementation, and release.</p></div>
-  <figcaption id="impact-caption">Illustrative workflow, not measured results or guaranteed time savings.</figcaption>
 </figure>
 
 <style>
   .impact-comparison { overflow: hidden; border: 1px solid #cbd5e1; border-radius: 1rem; background: white; box-shadow: 0 4px 16px #0f172a06; }
   .comparison-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem; align-items: center; padding: 1.5rem 2rem; border-bottom: 1px solid #e2e8f0; }
   .comparison-heading h3 { color: #0f172a; font-size: 1.125rem; font-weight: 700; }
-  .comparison-heading > span { font-size: .75rem; color: #64748b; background: #f1f5f9; border-radius: 2rem; padding: .3rem .75rem; }
   .comparison-scroll { overflow-x: auto; padding: 2rem; }
   .comparison-scroll:focus-visible { outline: 3px solid #76b900; outline-offset: -3px; }
   .comparison-chart { min-width: 960px; }
@@ -76,10 +73,9 @@ const rows = [
   .comparison-axis { display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; margin-top: 1.5rem; padding-top: .6rem; color: #64748b; font-size: .7rem; }
   .judgment-note { display: flex; align-items: baseline; gap: .75rem; padding: 1.25rem 2rem; background: #f8fafc; color: #475569; font-size: .85rem; line-height: 1.65; }
   .protected-key { flex-shrink: 0; width: .65rem; height: .65rem; border-radius: 2px; background: #334155; }
-  figcaption { padding: 1rem 2rem; border-top: 1px solid #e2e8f0; color: #64748b; font-size: .75rem; line-height: 1.6; }
   .scroll-hint { display: none; padding: 1rem 1.25rem 0; color: #64748b; font-size: .75rem; }
   @media (max-width: 1100px) { .scroll-hint { display: block; } }
   @media (max-width: 767px) {
-    .comparison-heading, .comparison-scroll, .judgment-note, figcaption { padding: 1.25rem; }
+    .comparison-heading, .comparison-scroll, .judgment-note { padding: 1.25rem; }
   }
 </style>

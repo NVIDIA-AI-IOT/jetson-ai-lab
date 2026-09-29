@@ -26,7 +26,9 @@ try {
   assert.deepEqual(await before.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label'))),
     await after.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label'))));
   assert.equal(await page.locator('.impact-research a').count(), 3);
-  assert((await page.locator('#impact-caption').textContent()).includes('not measured results or guaranteed time savings'));
+  assert.equal(await page.locator('#impact-caption').count(), 0);
+  assert(!/Conceptual comparison|not measured results or guaranteed time savings/.test(await page.locator('.impact-comparison').textContent()));
+  assert.equal(await page.locator('.impact-comparison').getAttribute('aria-describedby'), null);
   assert.deepEqual(await page.locator('iframe').evaluateAll((frames) => frames.map((frame) => frame.src)), [
     'https://www.youtube-nocookie.com/embed/fWYZMA1mddE',
     'https://www.youtube-nocookie.com/embed/uXZI3Y2ASVg',
