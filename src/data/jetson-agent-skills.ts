@@ -187,6 +187,7 @@ export const installTargets = [
   {
     id: 'cursor',
     label: 'Cursor',
+    installCommand: './install.sh --targets cursor',
     command: `git clone https://github.com/NVIDIA-AI-IOT/jetson-device-skills.git
 cd jetson-device-skills
 ./install.sh --targets cursor`,
@@ -194,6 +195,7 @@ cd jetson-device-skills
   {
     id: 'codex',
     label: 'Codex',
+    installCommand: './install.sh --targets codex',
     command: `git clone https://github.com/NVIDIA-AI-IOT/jetson-device-skills.git
 cd jetson-device-skills
 ./install.sh --targets codex`,
@@ -201,8 +203,25 @@ cd jetson-device-skills
   {
     id: 'claude',
     label: 'Claude Code',
+    installCommand: './install.sh --targets claude',
     command: `git clone https://github.com/NVIDIA-AI-IOT/jetson-device-skills.git
 cd jetson-device-skills
 ./install.sh --targets claude`,
+  },
+  {
+    id: 'cursor-project',
+    label: 'Cursor project',
+    installCommand: './install.sh --targets cursor-project --project /path/to/project',
+    command: `git clone https://github.com/NVIDIA-AI-IOT/jetson-device-skills.git
+cd jetson-device-skills
+./install.sh --targets cursor-project --project /path/to/project`,
+  },
+  {
+    id: 'nemoclaw',
+    label: 'OpenClaw',
+    installCommand: './install.sh --targets nemoclaw --nemoclaw-sandbox jetson-skills',
+    command: `git clone https://github.com/NVIDIA-AI-IOT/jetson-device-skills.git
+cd jetson-device-skills
+./install.sh --targets nemoclaw --nemoclaw-sandbox jetson-skills`,
   },
 ] as const;

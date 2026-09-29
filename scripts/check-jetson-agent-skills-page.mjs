@@ -35,13 +35,14 @@ try {
   assert.deepEqual(missingAnchors, [], 'Broken on-page links');
 
   const tabs = page.locator('[data-install-tab]');
-  assert.equal(await tabs.count(), 3);
+  assert.equal(await tabs.count(), 5);
   await tabs.nth(0).focus();
   await page.keyboard.press('ArrowRight');
   assert.equal(await tabs.nth(1).getAttribute('aria-selected'), 'true');
   assert.equal(await page.locator('[data-install-panel="codex"]').isVisible(), true);
   await page.keyboard.press('End');
-  assert.equal(await tabs.nth(2).getAttribute('aria-selected'), 'true');
+  assert.equal(await tabs.nth(4).getAttribute('aria-selected'), 'true');
+  assert.equal(await page.locator('[data-install-panel="nemoclaw"]').isVisible(), true);
 
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'clipboard', {
@@ -54,6 +55,7 @@ try {
   await page.locator('#nvidia-catalog [data-copy-value]').first().click();
   assert.equal(await page.evaluate(() => window.__copiedSkillCommand), 'npx skills@latest add nvidia/skills');
 
+  await tabs.nth(2).click();
   await page.locator('[data-install-panel="claude"] [data-copy-value]').click();
   assert((await page.evaluate(() => window.__copiedSkillCommand)).includes('./install.sh --targets claude'));
   assert.equal(await page.locator('[data-install-panel="claude"] [data-copy-value]').textContent(), 'COPIED');

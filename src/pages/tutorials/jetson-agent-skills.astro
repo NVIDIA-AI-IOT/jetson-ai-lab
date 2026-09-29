@@ -284,7 +284,31 @@ const nvidiaCatalogCommands = [
         </div>
 
         <div class="install-console">
-          <div class="install-tabs" role="tablist" aria-label="Choose coding agent">
+          <ol class="install-setup" aria-label="Prepare the installer">
+            <li>
+              <span class="install-step-number">01</span>
+              <div>
+                <span class="install-step-label">Clone the skills</span>
+                <code>git clone https://github.com/NVIDIA-AI-IOT/jetson-device-skills.git</code>
+              </div>
+            </li>
+            <li>
+              <span class="install-step-number">02</span>
+              <div>
+                <span class="install-step-label">Open the directory</span>
+                <code>cd jetson-device-skills</code>
+              </div>
+            </li>
+          </ol>
+
+          <div class="install-target-heading">
+            <span class="install-step-number">03</span>
+            <div>
+              <span class="install-step-label">Choose a target</span>
+            </div>
+          </div>
+
+          <div class="install-tabs" role="tablist" aria-label="Choose installation target">
             {installTargets.map((target, index) => (
               <button
                 type="button"
@@ -309,10 +333,10 @@ const nvidiaCatalogCommands = [
               data-install-panel={target.id}
             >
               <div class="console-meta">
-                <span>RUN ON JETSON</span>
-                <button type="button" data-copy-value={target.command}>COPY COMMAND</button>
+                <span>RUN ON JETSON · {target.label.toUpperCase()}</span>
+                <button type="button" data-copy-value={target.command}>COPY ALL STEPS</button>
               </div>
-              <pre><code>{target.command}</code></pre>
+              <pre><code>{target.installCommand}</code></pre>
             </div>
           ))}
           <div class="install-footer">
@@ -325,8 +349,22 @@ const nvidiaCatalogCommands = [
 
     <section class="cta-links" aria-label="Related pages">
       <div class="shell cta-links-inner">
-        <a class="cta-link" href="/tutorials/ai-assisted-development-on-jetson/">See AI-assisted development →</a>
-        <a class="cta-link" href="/tutorials/reachy-mini-jetson-assistant/">See how the Reachy Mini Jetson Assistant app was built →</a>
+        <div class="cta-heading">
+          <span>NEXT STEPS</span>
+          <h2>Put the skills to work.</h2>
+        </div>
+        <div class="cta-grid">
+          <a class="cta-link" href="/tutorials/ai-assisted-development-on-jetson/">
+            <span class="cta-kicker">DEVELOPMENT GUIDE</span>
+            <strong>Build with AI assistance on Jetson</strong>
+            <span class="cta-arrow" aria-hidden="true">→</span>
+          </a>
+          <a class="cta-link" href="/tutorials/reachy-mini-jetson-assistant/">
+            <span class="cta-kicker">PROJECT STORY</span>
+            <strong>See how the Reachy Mini assistant was built</strong>
+            <span class="cta-arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
       </div>
     </section>
   </div>
@@ -440,10 +478,16 @@ const nvidiaCatalogCommands = [
   .section-install { color: white; background: var(--ink); }
   .install-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(3rem, 8vw, 8rem); align-items: center; }
   .install-console { width: 100%; min-width: 0; border: 1px solid #3b453f; background: #101512; box-shadow: 18px 18px 0 rgba(118,185,0,.1); }
+  .install-setup { margin: 0; padding: 0; list-style: none; }
+  .install-setup li { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: .75rem; padding: .85rem 1.25rem; border-bottom: 1px solid #303934; }
+  .install-step-number { padding-top: .12rem; color: var(--signal-bright); font: 800 .62rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
+  .install-step-label { display: block; margin-bottom: .35rem; color: #737e78; font: 700 .62rem/1.3 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+  .install-setup code { display: block; overflow-x: auto; color: #dce6df; font: .72rem/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+  .install-target-heading { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: .75rem; padding: .85rem 1.25rem .5rem; }
   .install-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid #3b453f; }
-  .install-tabs button { flex: 1 0 auto; min-height: 52px; padding: .85rem 1rem; color: #89948e; border: 0; border-right: 1px solid #3b453f; background: transparent; font: 700 .68rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .07em; cursor: pointer; }
+  .install-tabs button { flex: 1 0 auto; min-height: 48px; padding: .75rem .9rem; color: #89948e; border: 0; border-right: 1px solid #3b453f; background: transparent; font: 700 .68rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .04em; cursor: pointer; }
   .install-tabs button[aria-selected="true"] { color: var(--signal-bright); background: #171e1a; box-shadow: inset 0 -2px var(--signal-bright); }
-  .install-panel { min-height: 250px; }
+  .install-panel { min-height: 135px; }
   .console-meta { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; color: #66716b; font: 700 .62rem/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
   .console-meta button { padding: 0; color: var(--signal-bright); border: 0; background: transparent; font: inherit; cursor: pointer; }
   .install-panel pre { overflow-x: auto; margin: 0; padding: 1.5rem; color: #dce6df; font: .78rem/1.8 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }
@@ -727,8 +771,10 @@ const nvidiaCatalogCommands = [
     background: #0f172a;
     box-shadow: none;
   }
-  .install-tabs, .install-tabs button, .install-footer { border-color: #334155; }
+  .install-tabs { border-color: #334155; }
+  .install-setup li, .install-footer { border-color: #334155; }
   .install-tabs button {
+    border-color: #334155;
     font-family: inherit;
     font-size: .875rem;
     font-weight: 600;
@@ -755,9 +801,16 @@ const nvidiaCatalogCommands = [
   }
   .button-dark { border-radius: .5rem; background: #020617; }
   .cta-links { background: #76b900; }
-  .cta-links-inner { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding-block: 2.5rem; }
-  .cta-link { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; padding: .75rem 1.25rem; color: white; border: 1px solid #020617; border-radius: .5rem; background: #020617; font-size: .9rem; font-weight: 700; }
-  .cta-link:hover { color: white; border-color: #1e293b; background: #1e293b; }
+  .cta-links-inner { display: grid; grid-template-columns: .55fr 1.45fr; gap: clamp(2rem, 6vw, 6rem); align-items: center; padding-block: 3.5rem; }
+  .cta-heading > span { color: #17210a; font-size: .68rem; font-weight: 800; letter-spacing: .12em; }
+  .cta-heading h2 { margin-top: .65rem; color: #020617; font-size: clamp(1.6rem, 3vw, 2.35rem); line-height: 1.1; letter-spacing: -.035em; }
+  .cta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .cta-link { position: relative; display: grid; min-height: 150px; padding: 1.4rem 3.5rem 1.4rem 1.4rem; color: white; border: 1px solid #334155; border-radius: .75rem; background: #0f172a; text-decoration: none; transition: border-color .2s, transform .2s, background .2s; }
+  .cta-link:hover { color: white; border-color: #76b900; background: #111c2e; transform: translateY(-2px); }
+  .cta-kicker { align-self: start; color: #94a3b8; font-size: .62rem; font-weight: 800; letter-spacing: .1em; }
+  .cta-link strong { align-self: end; max-width: 17rem; font-size: 1.05rem; line-height: 1.35; }
+  .cta-arrow { position: absolute; right: 1.4rem; bottom: 1.35rem; color: #bef264; font-size: 1.4rem; transition: transform .2s; }
+  .cta-link:hover .cta-arrow { transform: translateX(4px); }
 
   @media (min-width: 1024px) {
     .shell { width: min(100% - 4rem, 80rem); }
@@ -773,7 +826,9 @@ const nvidiaCatalogCommands = [
     .shell { width: min(100% - 2rem, 80rem); }
     .section { padding-block: 3rem; }
     .capability-rail article { border-right: 0; border-bottom: 0; }
-    .cta-links-inner { align-items: stretch; flex-direction: column; }
+    .cta-links-inner, .cta-grid { grid-template-columns: 1fr; }
+    .cta-links-inner { gap: 2rem; }
+    .cta-link { min-height: 130px; }
   }
 </style>
 

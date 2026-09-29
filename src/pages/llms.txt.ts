@@ -63,7 +63,8 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 ## Getting Started
 
 - [Getting Started with Jetson](${SITE}/tutorials/getting-started-with-jetson/): Official developer kit user guides and remote SSH setup with VS Code or Cursor
-- [Jetson Agent Skills](${SITE}/tutorials/jetson-agent-skills/): Install Jetson Device Skills and Jetson BSP Skills so Cursor, Claude Code, or Codex can inspect a live Jetson and customize a Jetson Linux BSP
+- [A New Way to Build Edge AI](${SITE}/tutorials/ai-assisted-development-on-jetson/): Use AI coding agents directly on Jetson with practical prompts, guided workflows, and on-device validation
+- [Jetson Agent Skills](${SITE}/tutorials/jetson-agent-skills/): Install Jetson Device Skills and Jetson BSP Skills for Cursor, Claude Code, Codex, Cursor projects, or OpenClaw
 - [SSD + Docker Setup](${SITE}/tutorials/ssd-docker-setup/): Set up NVMe SSD storage and configure Docker on Jetson for optimal performance with AI containers
 - [RAM Optimization](${SITE}/tutorials/ram-optimization/): Optimize system RAM by disabling desktop GUI, unnecessary services, and mounting swap for large model workloads
 
@@ -81,6 +82,7 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 
 ## Applications
 
+- [Reachy Mini Jetson Assistant](${SITE}/tutorials/reachy-mini-jetson-assistant/): Build a fully local, memory-optimized voice and vision robot assistant on Jetson Orin Nano using Jetson agent skills
 - [Multi-Modal AI Studio on Jetson](${SITE}/tutorials/multi-modal-ai-studio/): Run a conversational AI pipeline on Jetson Thor with on-device ASR, LLM/VLM, and TTS
 - [Live VLM WebUI](${SITE}/tutorials/live-vlm-webui/): Real-time Vision Language Model interface with WebRTC webcam streaming, OpenAI-compatible API, and interactive prompt editor
 - [OpenClaw on Jetson](${SITE}/tutorials/openclaw/): Fully local AI personal assistant on Jetson with OpenClaw and WhatsApp, no cloud APIs needed
