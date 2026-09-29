@@ -12,7 +12,7 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
 
 <Layout
   title="A New Way to Build Edge AI"
-  description="AI-assisted development on NVIDIA Jetson. Explore the development impact, watch Codex walkthroughs, and use practical prompts to build a standalone VLM demo."
+  description="AI-assisted development on NVIDIA Jetson. Get your device ready, then explore two examples: build a new application or turn an existing app into a standalone kiosk."
   image="/images/hero/jetson-family-line_50pcnt.png"
 >
   <div id="ai-development">
@@ -40,7 +40,7 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
         <a href="#why">Why AI-assisted development <span aria-hidden="true">↓</span></a>
         <a href="#impact">Development impact <span aria-hidden="true">↓</span></a>
         <a href="#choose-an-agent">Choose your agent <span aria-hidden="true">↓</span></a>
-        <a href="#prompts">Prompt examples <span aria-hidden="true">↓</span></a>
+        <a href="#prompts">Setup prompts <span aria-hidden="true">↓</span></a>
         <a href="#examples">Built with AI assistance <span aria-hidden="true">↓</span></a>
       </div>
     </nav>
@@ -95,8 +95,8 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
           <div class="nv-tab-panel active">
             <div class="grid items-start gap-8 lg:grid-cols-2">
               <div class="text-slate-900">
-                <p class="eyebrow text-green-800">Walkthrough 01 · Setup · Steps 1–7</p>
-                <h3 class="mt-3 text-2xl font-bold">From a USB cable to a ready-to-build Jetson.</h3>
+                <p class="eyebrow text-green-800">Codex Jetson Setup · 7 steps</p>
+                <h3 class="mt-3 text-2xl font-bold">Get your Jetson ready.</h3>
                 <p class="mt-4 leading-relaxed text-slate-600">Watch a Mac connect to a Jetson Orin Nano Developer Kit, prepare Codex, install Jetson Device Skills, and finish GPU container setup.</p>
                 <p class="mt-3 text-sm leading-relaxed text-slate-600">Before the first prompt, install the <a class="font-semibold text-green-800 underline" href="https://learn.chatgpt.com/docs/app" target="_blank" rel="noopener noreferrer">ChatGPT desktop app</a> on your host and sign in with Codex access. The recording uses macOS; UI and connection details may differ on other hosts.</p>
                 <ol class="mt-5 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-slate-700">
@@ -104,7 +104,10 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
                   <li>Install Codex CLI on Jetson and register its remote project.</li>
                   <li>Inspect the device, add Skills, and prepare Docker with approval.</li>
                 </ol>
-                <a href="#setup-prompts" class="mt-6 inline-block font-bold text-green-800 underline underline-offset-4">Follow the setup prompts ↓</a>
+                <div class="mt-6 flex flex-wrap gap-x-5 gap-y-3 font-bold text-green-800">
+                  <a href="#setup-prompts" class="underline underline-offset-4">Try the 7 setup prompts ↓</a>
+                  <a href="#examples" class="underline underline-offset-4">Already set up? Explore the examples ↓</a>
+                </div>
               </div>
               <WalkthroughVideo {...walkthroughVideos.setup} />
             </div>
@@ -139,9 +142,9 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
 
     <section id="prompts" class="section-space bg-slate-50">
       <div class="page-width">
-        <p class="eyebrow text-green-800">Prompt examples</p>
-        <h2 class="section-title">Start with an outcome. Let the agent help with the steps.</h2>
-        <p class="section-intro">These public prompts preserve the intent of the two recorded walkthroughs. Adapt the user name, connection, and model to your device. They are starting points, not unattended scripts.</p>
+        <p class="eyebrow text-green-800">Try it yourself · Codex Jetson Setup</p>
+        <h2 class="section-title">Ask your agent to help with the setup.</h2>
+        <p class="section-intro">These seven prompts accompany the setup video. Adapt the user name and connection to your device. They are starting points, not unattended scripts.</p>
 
         <details class="mt-8 rounded-xl border border-slate-300 bg-white p-5">
           <summary class="cursor-pointer font-bold text-slate-900">Before you start: device, access, and approval checklist</summary>
@@ -162,59 +165,66 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
           <a href="/tutorials/getting-started-with-jetson/" class="mt-4 inline-block text-sm font-semibold text-green-800 underline">Need to set up your developer kit first?</a>
         </details>
 
-        <div id="setup-prompts" class="mt-12 scroll-mt-40">
+        <details id="setup-prompts" class="mt-8 scroll-mt-40 rounded-xl border border-slate-300 bg-white p-5">
+          <summary class="cursor-pointer text-lg font-bold text-slate-900">Try it yourself: 7 setup steps</summary>
           <span id="first-prompt" class="scroll-mt-40" aria-hidden="true"></span>
-          <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div><p class="eyebrow text-green-800">Part 01 · Steps 1–7</p><h3 class="mt-2 text-2xl font-bold text-slate-900">Connect and prepare your Jetson</h3></div>
+          <div class="my-5 flex flex-wrap items-end justify-between gap-3">
+            <h3 class="text-xl font-bold text-slate-900">Connect and prepare your Jetson</h3>
             <span class="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Same host-side setup task</span>
           </div>
           <div class="space-y-3">{setupPrompts.map((prompt, index) => <AgentPrompt {...prompt} step={index + 1} />)}</div>
-        </div>
+        </details>
 
         <aside id="skills" class="mt-7 scroll-mt-40 rounded-xl border border-green-800/20 bg-green-50 p-6">
           <h3 class="text-lg font-bold text-slate-900">Skills turn device knowledge into reusable procedures.</h3>
-          <p class="mt-2 max-w-4xl leading-relaxed text-slate-700">Jetson Device Skills cover on-device workflows. BSP Skills cover host-side BSP customization. Keep this page as your starting point, and use the <a class="font-semibold text-green-800 underline" href="/tutorials/jetson-agent-skills/">Jetson Agent Skills guide</a> for installation, supported assistants, and the complete catalog.</p>
+          <p class="mt-2 max-w-4xl leading-relaxed text-slate-700">Ask your agent to help find and install the relevant Skills, as in the setup prompts. Explore the <a class="font-semibold text-green-800 underline" href="/tutorials/jetson-agent-skills/">Jetson Agent Skills guide</a> to understand the available workflows and supported assistants.</p>
         </aside>
-
-        <div id="demo-prompts" class="mt-12 scroll-mt-40">
-          <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div><p class="eyebrow text-green-800">Part 02 · Steps 8–10</p><h3 class="mt-2 text-2xl font-bold text-slate-900">Build a live VLM demo</h3></div>
-            <span class="rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-900">New task in the Jetson remote project</span>
-          </div>
-          <p class="mb-5 leading-relaxed text-slate-600">Already have a prepared Jetson? Start here. Connect the webcam and display to Jetson, verify GPU container access in the new session, and keep these three prompts in the same task.</p>
-          <div class="space-y-3">{demoPrompts.map((prompt, index) => <AgentPrompt {...prompt} step={setupPrompts.length + index + 1} />)}</div>
-        </div>
       </div>
     </section>
 
     <section id="examples" class="section-space border-t border-slate-200 bg-white">
       <div class="page-width">
         <p class="eyebrow text-green-800">Built with AI assistance</p>
-        <h2 class="section-title">From a request to a standalone camera demo.</h2>
-        <p class="section-intro">A worked example, not a blank-sheet rebuild: use Codex to assemble and configure existing software, then validate the result on a Jetson Orin Nano Developer Kit.</p>
-        <div class="mt-10 grid items-start gap-9 lg:grid-cols-2">
-          <WalkthroughVideo {...walkthroughVideos.kiosk} />
-          <div>
-            <p class="eyebrow text-green-800">Walkthrough 02 · Application · Steps 8–10</p>
-            <h3 class="mt-3 text-2xl font-bold text-slate-900">Live VLM WebUI kiosk</h3>
-            <p class="mt-4 leading-relaxed text-slate-600">A USB camera supplies live images to a local vision-language model. The Jetson displays fresh descriptions in its own browser, then starts the demo automatically after boot.</p>
-            <dl class="mt-6 space-y-4 text-sm">
-              <div><dt class="font-bold text-slate-900">Reused building blocks</dt><dd class="mt-1 text-slate-600">Live VLM WebUI, a Gemma4 E2B inference runtime, prebuilt containers, and upstream kiosk support.</dd></div>
-              <div><dt class="font-bold text-slate-900">Agent-assisted work</dt><dd class="mt-1 text-slate-600">Select a compatible setup, configure services, connect the camera, check resource use, and prepare automatic startup.</dd></div>
-              <div><dt class="font-bold text-slate-900">Human validation</dt><dd class="mt-1 text-slate-600">Review the plan, change the camera scene, check fresh captions, and verify reboot and offline startup. A demo is not production certification.</dd></div>
-            </dl>
+        <h2 class="section-title">Bring your ideas to life on Jetson.</h2>
+        <p class="section-intro">Build a new application with a coding agent, or turn an existing application into a standalone Jetson demo. These are two independent examples; choose the outcome you want to explore.</p>
+        <div class="mt-10 grid items-start gap-6 lg:grid-cols-2">
+          <article id="build-an-application" class="example-card scroll-mt-40 border-t-4 border-t-nvidia-green" aria-labelledby="application-title">
+            <header class="example-heading">
+              <p class="eyebrow text-green-800">Build a new application</p>
+              <h3 id="application-title" class="mt-3 text-2xl font-bold text-slate-900">Build something new.</h3>
+              <p class="mt-4 leading-relaxed text-slate-600">Watch Codex help build a YOLO + Gemma4 demo on Jetson Orin Nano using existing models and tools.</p>
+            </header>
+            <WalkthroughVideo {...walkthroughVideos.application} />
+            <div class="mt-6 rounded-lg bg-green-50 p-5">
+              <h4 class="font-bold text-slate-900">From an idea to an application</h4>
+              <p class="mt-2 text-sm leading-relaxed text-slate-700">Focus on application development: describe the behavior you want, work with the agent on the implementation, and review the result on real hardware.</p>
+            </div>
+            <p class="mt-5 text-sm leading-relaxed text-slate-600">Explore the build process in the video. The standalone example alongside it uses a different application; it is not a required next step.</p>
+          </article>
+          <article id="standalone-demo" class="example-card scroll-mt-40 border-t-4 border-t-slate-300" aria-labelledby="kiosk-title">
+            <header class="example-heading">
+              <p class="eyebrow text-green-800">Run standalone</p>
+              <h3 id="kiosk-title" class="mt-3 text-2xl font-bold text-slate-900">Make it run standalone.</h3>
+              <p class="mt-4 leading-relaxed text-slate-600">Use Codex to deploy Live VLM WebUI, connect a USB camera, and make the Jetson start its fullscreen demo on boot, without the host PC.</p>
+            </header>
+            <WalkthroughVideo {...walkthroughVideos.kiosk} />
+            <div class="mt-6 rounded-lg bg-slate-100 p-5">
+              <h4 class="font-bold text-slate-900">From an existing app to a standalone device</h4>
+              <p class="mt-2 text-sm leading-relaxed text-slate-700">Reuse prebuilt containers, a local Gemma4 E2B runtime, and upstream kiosk support. The finished demo runs independently of the host-side coding session.</p>
+            </div>
+            <details id="demo-prompts" class="mt-6 scroll-mt-40 rounded-xl border border-slate-300 bg-white p-4">
+              <summary class="cursor-pointer font-bold text-slate-900">Try it yourself: 3 kiosk steps</summary>
+              <p class="mt-4 text-sm font-semibold text-green-800">Codex Kiosk Demo Build · New task in the Jetson remote project</p>
+              <p class="my-4 text-sm leading-relaxed text-slate-600">Start with a prepared Jetson. Connect its webcam and display, verify GPU container access in the new session, and keep these three prompts in the same task.</p>
+              <div class="space-y-3">{demoPrompts.map((prompt, index) => <AgentPrompt {...prompt} step={index + 1} />)}</div>
+              <p class="mt-4 text-sm leading-relaxed text-slate-600">Review the plan, check fresh captions, and verify reboot and offline startup. A working demo still needs product-specific validation before deployment.</p>
+            </details>
             <div class="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-green-800">
               <a href="/tutorials/live-vlm-webui/">Live VLM WebUI guide →</a>
               <a href="/models/gemma4-e2b/">Gemma4 E2B setup →</a>
               <a href="https://github.com/NVIDIA-AI-IOT/live-vlm-webui/blob/main/docs/setup/kiosk.md" target="_blank" rel="noopener noreferrer">Upstream kiosk guide ↗</a>
             </div>
-          </div>
-        </div>
-        <div class="mt-10 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center sm:grid-cols-4" aria-label="Demo data flow">
-          <div><p class="font-mono text-xs text-green-800">01</p><p class="mt-2 font-bold text-slate-900">USB camera</p><p class="mt-1 text-sm text-slate-600">Real scene</p></div>
-          <div><p class="font-mono text-xs text-green-800">02</p><p class="mt-2 font-bold text-slate-900">Local VLM</p><p class="mt-1 text-sm text-slate-600">Inference on Jetson</p></div>
-          <div><p class="font-mono text-xs text-green-800">03</p><p class="mt-2 font-bold text-slate-900">Live WebUI</p><p class="mt-1 text-sm text-slate-600">Fresh captions</p></div>
-          <div><p class="font-mono text-xs text-green-800">04</p><p class="mt-2 font-bold text-slate-900">Standalone kiosk</p><p class="mt-1 text-sm text-slate-600">No laptop after setup</p></div>
+          </article>
         </div>
       </div>
     </section>
@@ -242,6 +252,9 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
   #impact > .page-width > .section-intro { max-width: none; }
   .primary-link { display: inline-block; border-radius: .5rem; background: #76b900; padding: .75rem 1.25rem; color: #0f172a; font-weight: 700; }
   .primary-link:hover { background: #a3e635; }
+  .example-card { min-width: 0; padding: 1.5rem; border-inline: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; border-radius: .75rem; background: #f8fafc; }
+  .example-heading { margin-bottom: 1.5rem; }
+  @media (min-width: 1024px) { .example-heading { min-height: 12rem; } }
   .device-insight-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: center; gap: 2.5rem; }
   .device-insight-copy > .section-intro { margin-top: 0; margin-bottom: 2rem; }
   .device-insight-steps { display: grid; gap: 2rem; padding: 0; list-style: none; }
@@ -300,8 +313,13 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
   document.addEventListener('astro:page-load', enhanceAgentTabs);
   function revealPromptFromHash() {
     const target = document.getElementById(location.hash.slice(1));
-    if (target instanceof HTMLDetailsElement && target.classList.contains('agent-prompt')) {
-      target.open = true;
+    if (target && target.closest('#ai-development')) {
+      // Preserve direct links to prompts now nested inside walkthrough accordions.
+      let ancestor: HTMLElement | null = target;
+      while (ancestor) {
+        if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
+        ancestor = ancestor.parentElement;
+      }
       target.scrollIntoView({ block: 'start' });
     }
   }
