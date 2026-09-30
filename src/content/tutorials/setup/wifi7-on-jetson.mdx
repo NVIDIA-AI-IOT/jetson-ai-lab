@@ -75,9 +75,9 @@ lspci -nnk
 
 | Bus | Numeric ID (VID:PID) | Underlying Silicon | Upstream Driver | JetPack 7.2 Action Required |
 | :--- | :--- | :--- | :--- | :--- |
-| **USB** | `0bda:1a2b` | Realtek Multi-State | `usb-storage` (trap) | Add `usb_storage.conf` quirk (suppress storage binding), then run `usb_modeswitch -v 0bda -p 1a2b` to switch to network ID |
-| **USB** | `0bda:8912` | Realtek RTL8912AU | `rtw89_8922au` | Build out-of-tree `morrownr/rtw89`, then decompress firmware |
-| **USB** | `0bda:8922` | Realtek RTL8922AU | `rtw89_8922au` | Build out-of-tree `morrownr/rtw89`, then decompress firmware |
+| **USB** | `0bda:1a2b` | Realtek Multi-State | `usb-storage` (trap) | Add `usb_storage.conf` quirk (suppress storage binding), install `usb-modeswitch`, then run `usb_modeswitch -K -v 0bda -p 1a2b` to switch to network ID |
+| **USB** | `0bda:8912` | Realtek RTL8912AU | `rtw89_8922au_git` | Build out-of-tree `morrownr/rtw89`, then decompress firmware |
+| **USB** | `0bda:8922` | Realtek RTL8922AU | `rtw89_8922au_git` | Build out-of-tree `morrownr/rtw89`, then decompress firmware |
 | **USB** | `0bda:c852` | Realtek RTL8852CU | `rtl8852cu` | Build out-of-tree `morrownr/rtl8852cu` |
 | **USB** | `0e8d:7925` | MediaTek MT7925 | `mt7925u` | Built into kernel 6.8, decompress firmware if needed |
 | **PCIe** | `8086:2725` | Intel AX210 | `iwlwifi` | In-kernel driver; decompress BOTH `/lib/firmware/iwlwifi-ty-a0-gf-a0.pnvm` and the matching `iwlwifi-ty-a0-gf-a0-*.ucode` from their `.zst` copies |
@@ -177,20 +177,21 @@ Follow this verified sequence to bring up a representative BE6500 USB adapter (t
 
 ### Step 1: Handle multi-state CD-ROM trap (if needed)
 
-If `lsusb` shows `0bda:1a2b`, force `usb-storage` to ignore the installer virtual disc:
+If `lsusb` shows `0bda:1a2b`, install `usb-modeswitch` and force `usb-storage` to ignore the installer virtual disc:
 
 ```bash
+sudo apt-get install -y usb-modeswitch
 echo "options usb-storage quirks=0bda:1a2b:i" | sudo tee /etc/modprobe.d/usb_storage.conf
 sudo update-initramfs -u
 ```
 
-Unplug and reconnect the adapter. The quirk suppresses the storage claim; the adapter still needs the mode switch itself:
+Unplug and reconnect the adapter. The quirk suppresses the storage claim; the adapter still needs the mode switch itself. Pass `-K` (`--realtek-mode`) so `usb_modeswitch` sends the Realtek vendor control message to trigger switching to the network product ID:
 
 ```bash
-sudo usb_modeswitch -v 0bda -p 1a2b
+sudo usb_modeswitch -K -v 0bda -p 1a2b
 ```
 
-`lsusb` should now display `0bda:8912`. Confirm the re-enumeration in `dmesg` (look for the disconnect/reconnect pair).
+`lsusb` should now display `0bda:8912` (or `0bda:8922`). Confirm the re-enumeration in `dmesg` (look for the disconnect/reconnect pair).
 
 ### Step 2: Install toolchain and headers
 
@@ -207,6 +208,8 @@ ls -ld /lib/modules/$(uname -r)/build
 ```
 
 ### Step 3: Clone and compile morrownr/rtw89
+
+The `morrownr/rtw89` driver tree builds out-of-tree modules with a `_git` suffix (such as `rtw89_8922au_git.ko`) to avoid colliding with in-tree kernel drivers:
 
 ```bash
 git clone https://github.com/morrownr/rtw89.git
@@ -258,20 +261,20 @@ sudo sh -c 'cd /lib/firmware/rtw89 && for f in rtw8922a_fw-4.bin rtw8922a_fw-3.b
 Load the module:
 
 ```bash
-sudo modprobe rtw89_8922au
+sudo modprobe rtw89_8922au_git
 ```
 
 Verify in kernel logs:
 
 ```bash
-sudo dmesg | grep -i rtw
+journalctl -k --no-pager | grep rtw89_8922au_git | head -5
 ```
 
 The output should confirm successful initialization:
 
 ```text
-rtw89_8922au 1-2:1.0: firmware: direct-loading firmware rtw89/rtw8922a_fw-4.bin
-rtw89_8922au 1-2:1.0: Broadcom/Realtek WiFi 7 Controller initialized
+kernel: rtw89_8922au_git 2-1.2:1.0: firmware: direct-loading firmware rtw89/rtw8922a_fw-4.bin
+kernel: rtw89_8922au_git 2-1.2:1.0: Broadcom/Realtek WiFi 7 Controller initialized
 ```
 
 ### Step 6: Connect and resolve headless Polkit authorization
@@ -352,16 +355,16 @@ To bench the SuperSpeed-anchored state with the AP at 160 MHz, re-run the two-ho
 
 | Bus anchoring | Negotiated PHY | TCP TX | TCP RX | Dominant bottleneck |
 | :--- | :--- | :--- | :--- | :--- |
-| USB 2.0 (Bus 001, 480M) @ 160 MHz | ~400 Mbit/s host cap | 70–92 Mbit/s | 145–170 Mbit/s* | USB 2.0 bus ceiling |
+| USB 2.0 (Bus 001, 480M) @ 160 MHz | ~400 Mbit/s host cap | 70–92 Mbit/s | Not measured | USB 2.0 bus ceiling |
 | SuperSpeed (Bus 002, 5000M) @ 160 MHz | 1733.3 Mbit/s TX / 1560.0 Mbit/s RX | 236–262 Mbit/s | 145–170 Mbit/s | two-hop shared airtime |
 
-*The USB-2.0 row's TCP RX number was not recorded for that configuration; the SuperSpeed row is the verified comparison. Either way the 160 MHz/SuperSpeed combination lifts TX throughput ~2.8× over the USB-2.0 TX baseline, and the remaining ceiling is airtime, not the bus.
+The SuperSpeed row is the verified comparison: re-anchoring to Bus 002 lifts TX throughput ~2.8× over the USB-2.0 TX baseline; the remaining ceiling is two-hop shared airtime, not the bus.
 
 ### Step 8: Module persistence options
 
 Following manual verification, choose a persistence strategy:
 
-1. **DKMS registration**: Run `sudo ./install-driver.sh` from the repository root.
+1. **DKMS registration**: From the cloned `rtw89` directory, run `sudo dkms install "$PWD"` — the command the driver README documents. If DKMS stops at the module signing step (see the signing section above), fall back to the manual `make install` path already completed in Step 4.
 2. **Manual module maintenance**: Retain the module in `/lib/modules/6.8.12-1021-tegra/extra/rtw89/`. If you hold kernel packages with `sudo apt-mark hold nvidia-l4t-* linux-image-* linux-headers-*`, the kernel ABI remains stable across reboots without recompilation.
 
 ### Step 9: Automated benchmark script (reference implementation)
@@ -370,7 +373,7 @@ To automate the Step 7 socket-binding benchmark across nodes, the companion [jet
 
 The script automates the full methodology:
 - Starts the `iperf3` server on the peer host over SSH (propagating `SUDO_USER` so root never encounters missing SSH key traps).
-- Measures bidirectional throughput (upload and reverse download) on each WiFi interface using `-B` device bindings without disconnecting any interfaces.
+- Measures bidirectional throughput (upload and reverse download) on each WiFi interface using `-B` source-IP binding and `--bind-dev` interface pinning (`SO_BINDTODEVICE`) without disconnecting any interfaces.
 - Inspects and records live PHY link rates and signal quality.
 - Emits timestamped console logs via `tee`.
 
@@ -394,7 +397,7 @@ bash host/wifi-bench.sh
 
 | Symptom | Root Cause | Technical Remedy |
 | :--- | :--- | :--- |
-| `lsusb` shows `0bda:1a2b` (CD-ROM) | Multi-state USB hardware mode trap | Add `options usb-storage quirks=0bda:1a2b:i` to `/etc/modprobe.d/usb_storage.conf` (suppress storage binding), replug, then run `sudo usb_modeswitch -v 0bda -p 1a2b` (the actual mode switch). |
+| `lsusb` shows `0bda:1a2b` (CD-ROM) | Multi-state USB hardware mode trap | Add `options usb-storage quirks=0bda:1a2b:i` to `/etc/modprobe.d/usb_storage.conf` (suppress storage binding), replug, then run `sudo usb_modeswitch -K -v 0bda -p 1a2b` (using `-K` for Realtek mode). |
 | `Direct firmware load ... failed with error -2` | Kernel lacks `.zst` decompression support | Locate `.zst` file in `/lib/firmware/` and decompress to `.bin` using `zstd -d`. |
 | `Invalid module format` on `insmod` | Module vermagic does not match kernel ABI | Rebuild modules against active headers: `/lib/modules/$(uname -r)/build`. |
 | `Key was rejected by service` | Signature enforcement rejected the module (CONFIG_MODULE_SIG_FORCE set, or signed with an untrusted key) | Read enforcement first: `zcat /proc/config.gz \| grep CONFIG_MODULE_SIG`. With `CONFIG_MODULE_SIG_FORCE=y` no taint state waives the check — sign the `.ko` with a trusted key (`/lib/modules/$(uname -r)/build/scripts/sign-file sha512 ...`) and load again. |
