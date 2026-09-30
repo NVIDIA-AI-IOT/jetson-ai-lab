@@ -325,14 +325,15 @@ Instead, pin client traffic per interface using socket-level device binding. `ip
 iperf3 -s
 
 # On the Jetson under test:
-# Substitute your actual iperf3 server IP (e.g. 192.168.1.50)
-# and each local interface IP (e.g. 192.168.1.100 for PCIe wlan0, 192.168.1.102 for USB wlan1)
+# Example values only - substitute your bench's IPs and interface names.
+# Substitute your actual iperf3 server IP (e.g. 192.0.2.50)
+# and each local interface IP (e.g. 192.0.2.100 for PCIe wlan0, 192.0.2.102 for USB wlan1)
 
 # Benchmark the PCIe interface:
-iperf3 -c 192.168.1.50 -B 192.168.1.100 --bind-dev wlP1p1s0 -t 10
+iperf3 -c 192.0.2.50 -B 192.0.2.100 --bind-dev wlP1p1s0 -t 10
 
 # Benchmark the USB WiFi 7 interface:
-iperf3 -c 192.168.1.50 -B 192.168.1.102 --bind-dev wlx90de80e635f0 -t 10
+iperf3 -c 192.0.2.50 -B 192.0.2.102 --bind-dev wlan1 -t 10
 
 # Confirm the binding landed on the intended interface, not merely the right source address:
 ip -s link show wlP1p1s0
@@ -385,9 +386,9 @@ git clone https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-
 cd jetson-uefi-rescue-toolkit
 
 # Run the automated benchmark against your local peer
-PEER_HOST=192.168.100.2 PEER_WIFI_IP=192.168.1.87 \
-PCIE_IF=wlP1p1s0 USB_IF=wlx90de80e635f0 \
-PCIE_IP=192.168.1.100 USB_IP=192.168.1.102 \
+PEER_HOST=192.0.2.2 PEER_WIFI_IP=192.0.2.87 \
+PCIE_IF=wlP1p1s0 USB_IF=wlan1 \
+PCIE_IP=192.0.2.100 USB_IP=192.0.2.102 \
 bash host/wifi-bench.sh
 ```
 
