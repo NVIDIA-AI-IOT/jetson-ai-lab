@@ -127,7 +127,7 @@ When the driver calls `request_firmware(&fw, "rtw89/rtw8922a_fw-4.bin", dev)`, t
 
 ```text
 Direct firmware load for rtw89/rtw8922a_fw-4.bin failed with error -2
-rtw89_8922au 1-2:1.0: failed to setup chip information
+rtw89_8922au_git 1-2:1.0: failed to setup chip information
 ```
 
 To fix this, decompress the binary manually:
@@ -345,7 +345,7 @@ Testing between two nodes over a local wireless access point yielded the followi
 | Interface & Driver | Sender Throughput | Receiver Throughput | Retransmits | Negotiated PHY Link Rate |
 | :--- | :--- | :--- | :--- | :--- |
 | **PCIe RTL8822CE** (`rtl88x2ce`) | 212 Mbit/s | 209 Mbit/s | 0 | 526.6 Mbit/s (VHT MCS7 80 MHz 2×2) |
-| **USB RTL8912AU** (`rtw89_8922au`) | 188 Mbit/s | 185 Mbit/s | 40 | 1080.6 Mbit/s (HE MCS10 80 MHz 2×2) |
+| **USB RTL8912AU** (`rtw89_8922au_git`) | 188 Mbit/s | 185 Mbit/s | 40 | 1080.6 Mbit/s (HE MCS10 80 MHz 2×2) |
 
 Both interfaces deliver equivalent throughput (~185 to 212 Mbit/s) because of the **two-hop hairpin penalty**: in a client-to-client test through one AP, every frame is transmitted twice over the same half-duplex channel (A → AP → B), halving usable airtime before TCP overhead is counted. The negotiated PHY rate describes *one* crossing by *one* radio — not the end-to-end achievable rate.
 
