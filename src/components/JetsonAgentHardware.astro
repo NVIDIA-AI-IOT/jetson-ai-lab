@@ -1,68 +1,47 @@
----
-import IsometricCamera from './IsometricCamera.astro';
-import IsometricSensor from './IsometricSensor.astro';
----
-
 <figure class="hardware-figure" aria-labelledby="hardware-figure-caption">
-  <svg viewBox="0 0 760 533" role="img" aria-labelledby="hardware-title hardware-description">
+  <svg viewBox="0 0 960 600" role="img" aria-labelledby="hardware-title hardware-description">
     <title id="hardware-title">A coding agent working with real Jetson hardware</title>
-    <desc id="hardware-description">The coding agent harness runs on the Jetson alongside project files and device tools. It can read a connected camera and sensors, and issue approved commands to actuators through device software. Measurements feed the next experiment.</desc>
-    <defs>
-      <marker id="hardware-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1l7 4-7 4" fill="none" stroke="#4d7c0f" stroke-width="1.5" /></marker>
-    </defs>
-    <rect x="194" y="38" width="372" height="457" rx="26" fill="#f0f7e7" stroke="#a3c96a" stroke-dasharray="5 6" />
-    <text x="218" y="68" class="eyebrow">RUNNING ON JETSON</text>
+    <desc id="hardware-description">A coding agent, project files, and device tools run on the Jetson, shown together in one pale green region. Separate lines with green dots represent connections to a camera, a distance sensor, and a robot arm. These are schematic device connections, not physical cable routing.</desc>
 
-    <rect x="218" y="88" width="324" height="126" rx="14" fill="#0f172a" />
-    <g fill="none" stroke="#bef264" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M239 112l7 6-7 6m13 0h10" /></g>
-    <text x="276" y="124" class="agent-title">Coding agent harness</text>
-    <text x="240" y="150" class="agent-subtitle">Project files + terminal + device tools</text>
-    <path d="M240 165h280" stroke="#334155" />
-    <text x="380" y="193" text-anchor="middle" class="agent-loop">Inspect → Run → Measure</text>
+    <!-- Shared containment means software runs on Jetson. No device-style
+         connector joins the software card to the board. -->
+    <rect x="275" y="24" width="400" height="514" rx="26" fill="#f0f5e9" />
+    <rect x="297" y="48" width="356" height="112" rx="14" fill="#202925" />
+    <text x="475" y="94" text-anchor="middle" class="agent-title">Coding agent on Jetson</text>
+    <text x="475" y="132" text-anchor="middle" class="agent-subtitle">Project + device tools</text>
 
-    <path d="M365 220v30" class="connection" marker-end="url(#hardware-arrow)" />
-    <path d="M397 251v-30" class="connection" marker-end="url(#hardware-arrow)" />
-    <image href="/images/hero/isometric_jon-devkit.png" x="220" y="257" width="325" height="227" />
-
-    <path d="M164 231h18v90h54" class="connection" marker-end="url(#hardware-arrow)" />
-    <path d="M164 414h38v-43h34" class="connection" marker-end="url(#hardware-arrow)" />
-    <path d="M527 356h60v-9h17" class="connection" marker-end="url(#hardware-arrow)" />
-
-    <g transform="translate(20 166)">
-      <rect width="144" height="126" rx="16" class="peripheral" />
-      <IsometricCamera />
-      <text x="72" y="106" text-anchor="middle" class="device-label">Camera</text>
+    <!-- Device links are schematic, not a claim about specific ports/protocols. -->
+    <g class="device-connections" aria-hidden="true">
+      <path d="M228 252H251V341H311" />
+      <path d="M200 459H248V412H311" />
+      <path d="M641 390H707V440H754" />
     </g>
-    <g transform="translate(20 350)">
-      <rect width="144" height="126" rx="16" class="peripheral" />
-      <IsometricSensor />
-      <text x="72" y="110" text-anchor="middle" class="device-label">Sensors</text>
+    <g fill="#76b900" aria-hidden="true">
+      <circle cx="251" cy="296" r="5" />
+      <circle cx="248" cy="438" r="5" />
+      <circle cx="707" cy="415" r="5" />
     </g>
-    <g transform="translate(604 280)">
-      <rect width="136" height="144" rx="16" class="peripheral" />
-      <g transform="translate(7 0) scale(.9)" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M32 86l33-18 37 18-33 19z" fill="#e2e8f0" />
-        <path d="M32 86v11l37 20v-12z" fill="#cbd5e1" />
-        <path d="M69 105l33-19v11l-33 20z" fill="#94a3b8" />
-        <path d="M66 84V62L48 44l24-23 22 14" stroke-width="9" stroke="#64748b" />
-        <circle cx="66" cy="62" r="6" fill="#76b900" /><circle cx="48" cy="44" r="6" fill="#76b900" /><circle cx="72" cy="21" r="6" fill="#76b900" />
-        <path d="M89 30l11 3 3 12m-12-5l-3 10 9 7" />
-      </g>
-      <text x="68" y="132" text-anchor="middle" class="device-label">Actuators</text>
-    </g>
+
+    <image href="/images/hero/isometric_jon-devkit.png" x="291" y="219" width="372" height="260" />
+    <image href="/images/ai-assisted-development/isometric-camera.svg" x="22" y="155" width="212" height="171" />
+    <image href="/images/ai-assisted-development/isometric-distance-sensor.svg" x="70" y="384" width="121" height="123" />
+    <image href="/images/ai-assisted-development/isometric-robot-arm.svg" x="734" y="168" width="209" height="337" />
+
+    <text x="128" y="362" text-anchor="middle" class="device-label">Camera</text>
+    <text x="131" y="551" text-anchor="middle" class="device-label">Distance sensor</text>
+    <text x="837" y="551" text-anchor="middle" class="device-label">Robot arm</text>
+    <text x="475" y="508" text-anchor="middle" class="agent-loop">Inspect → Run → Measure</text>
   </svg>
   <figcaption id="hardware-figure-caption">Agent tools run on Jetson. AI models can run locally or in the cloud.</figcaption>
 </figure>
 
 <style>
-  .hardware-figure { border: 1px solid #e2e8f0; border-radius: 1.25rem; background: linear-gradient(145deg, #f8fafc, white); overflow: hidden; }
+  .hardware-figure { border: 1px solid #e2e8f0; border-radius: 1.25rem; background: #fbfcfa; overflow: hidden; }
   svg { display: block; width: 100%; height: auto; font-family: inherit; }
-  .eyebrow { fill: #3f6212; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; }
-  .agent-title { fill: white; font-size: 19px; font-weight: 700; }
-  .agent-subtitle { fill: #cbd5e1; font-size: 14px; }
-  .agent-loop { fill: #bef264; font-size: 17px; font-weight: 600; }
-  .connection { fill: none; stroke: #4d7c0f; stroke-width: 2; stroke-linejoin: round; }
-  .peripheral { fill: white; stroke: #cbd5e1; }
-  .device-label { fill: #334155; font-size: 17px; font-weight: 600; }
+  .agent-title { fill: white; font-size: 28px; font-weight: 700; }
+  .agent-subtitle { fill: #c8d4cb; font-size: 24px; }
+  .agent-loop { fill: #34592a; font-size: 26px; font-weight: 600; }
+  .device-connections { fill: none; stroke: #9cae9f; stroke-width: 2.5; stroke-linejoin: round; }
+  .device-label { fill: #273a30; font-size: 28px; font-weight: 600; }
   figcaption { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; color: #64748b; font-size: .75rem; line-height: 1.65; }
 </style>
