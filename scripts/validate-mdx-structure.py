@@ -59,12 +59,17 @@ def validate(path):
             defects.append(f"<{tag}> open({o}) != close({c})")
 
     # 5. nested code fences inside admonitions (common silent-trap: a ``` inside <div> is jsx-text, not code)
-    inside_admon = 0
+    # Track full div depth: an inner <div>...</div> pair must not knock the
+    # counter out of the admonition (nested-div false negative).
+    div_depth = 0
+    in_admonition = False
     for i,l in enumerate(lines):
-        if re.search(r'<div\s+class="admonition', l): inside_admon += 1
-        if re.search(r'</div>', l) and inside_admon > 0: inside_admon -= 1
-        if inside_admon > 0 and l.strip().startswith('```'):
+        div_depth += len(re.findall(r'<div[\s>]', l)) - len(re.findall(r'</div>', l))
+        if div_depth < 0: div_depth = 0
+        if re.search(r'<div\s+class="admonition', l): in_admonition = True
+        if in_admonition and div_depth > 0 and l.strip().startswith('```'):
             defects.append(f"fence inside admonition at line {i+1}: {l[:60]}... (MDX treats raw ``` as text)")
+        if div_depth == 0: in_admonition = False
 
     # 6. duplicate consecutive non-empty lines (my step-6 bug pattern)
     for i in range(1, len(lines)):
