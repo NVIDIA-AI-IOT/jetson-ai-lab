@@ -139,6 +139,14 @@ sudo zstd -d /lib/firmware/rtw89/rtw8922a_fw-4.bin.zst -o /lib/firmware/rtw89/rt
 
 Seeed Studio's official JetPack 7.2 WiFi repair script (`fix_wifi.sh`) contains an identical decompression pass across `/lib/firmware/`, independently confirming that this is an L4T platform-wide limitation affecting both USB and PCIe cards.
 
+Intel cards follow the same two-file rule: `iwlwifi` rejects an AX210/AX200 unless **both** the `.pnvm` and the matching `.ucode` are present, so decompress both from their `.zst` copies:
+
+```bash
+cd /lib/firmware
+sudo zstd -d iwlwifi-ty-a0-gf-a0.pnvm.zst
+sudo zstd -d iwlwifi-ty-a0-gf-a0-*.ucode.zst
+```
+
 ### 2. Clean in-tree driver slate (`CONFIG_RTW89=n`)
 
 On desktop Linux, out-of-tree drivers frequently collide with distribution-provided drivers (`rtw89_core`, `rtw88`). On JetPack 7.2, NVIDIA compiles the Tegra kernel with Realtek wireless disabled (`CONFIG_RTW89=n`). The out-of-tree module binds directly to the device without requiring modprobe blacklist configurations.
