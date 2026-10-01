@@ -8,6 +8,8 @@ won't localize:
   4. Unclosed <details>/<summary> pairs
   5. JSX-style tag soup that MDX would reject on build
   6. Duplicated consecutive lines (insertion artifacts, like the step-6 bug)
+  7. Mis-nested but numerically balanced pairs (counts pass
+     <details><summary></details></summary> — a stack check does not)
 Exits nonzero on any defect; prints precise line numbers.
 """
 import re, sys
@@ -29,16 +31,30 @@ def validate(path):
             if span < 2:
                 defects.append(f"EMPTY code block at lines {a+1}-{b+1}")
 
+    # mask fenced regions and inline code: markup shown as an *example* is not
+    # part of the document's structure (a `<div>` inside a fence must not count)
+    in_fence = False
+    masked = []
+    for l in lines:
+        if l.strip().startswith('```'):
+            in_fence = not in_fence
+            masked.append('')
+            continue
+        masked.append('' if in_fence else re.sub(r'`[^`]*`', '', l))
+    masked_text = '\n'.join(masked)
+
     # 3. div balance (ALL divs — the nv-details content divs also count)
-    opens  = [i+1 for i,l in enumerate(lines) if re.search(r'<div[\s>]', l)]
-    closes = [i+1 for i,l in enumerate(lines) if l.strip() == '</div>']
+    opens  = [i+1 for i,l in enumerate(masked) if re.search(r'<div[\s>]', l)]
+    # substring match: a `</div>` sharing its line with a comment or trailing
+    # markup is still a close (exact equality false-positived those)
+    closes = [i+1 for i,l in enumerate(masked) if re.search(r'</div>', l)]
     if len(opens) != len(closes):
         defects.append(f"total <div> open({len(opens)}) != close({len(closes)})")
 
     # 4. details/summary balance
     for tag in ('details','summary','Tabs'):
-        o = len(re.findall(rf'<{tag}[\s>]', text))
-        c = len(re.findall(rf'</{tag}>', text))
+        o = len(re.findall(rf'<{tag}[\s>]', masked_text))
+        c = len(re.findall(rf'</{tag}>', masked_text))
         if o != c:
             defects.append(f"<{tag}> open({o}) != close({c})")
 
@@ -46,7 +62,7 @@ def validate(path):
     inside_admon = 0
     for i,l in enumerate(lines):
         if re.search(r'<div\s+class="admonition', l): inside_admon += 1
-        if l.strip() == '</div>' and inside_admon > 0: inside_admon -= 1
+        if re.search(r'</div>', l) and inside_admon > 0: inside_admon -= 1
         if inside_admon > 0 and l.strip().startswith('```'):
             defects.append(f"fence inside admonition at line {i+1}: {l[:60]}... (MDX treats raw ``` as text)")
 
@@ -55,6 +71,27 @@ def validate(path):
         a,b = lines[i-1].strip(), lines[i].strip()
         if a and a == b and not a.startswith(('#','|','-','*')) and len(a) > 10:
             defects.append(f"consecutive duplicate lines {i}/{i+1}: {a[:60]}")
+
+    # 7. nesting order for paired tags (fence-aware, inline-code-aware):
+    #    counts alone cannot catch a balanced-but-mis-nested pair
+    tag_re = re.compile(r'<(/?)(details|summary|Tabs|div)\b([^>]*?)(/?)>')
+    stack = []
+    for i, l in enumerate(masked):  # masked already drops fences + inline code
+        for closing, name, _attrs, selfclose in tag_re.findall(l):
+            if selfclose:
+                continue
+            if not closing:
+                stack.append((name, i + 1))
+            elif stack and stack[-1][0] == name:
+                stack.pop()
+            else:
+                top = stack[-1][0] if stack else '(nothing open)'
+                defects.append(
+                    f"MISMATCHED nesting at line {i+1}: </{name}> appears while <{top}> is open"
+                )
+                stack = [s for s in stack if s[0] != name]  # resync
+    for name, ln in stack:
+        defects.append(f"UNCLOSED <{name}> opened at line {ln} (nesting check)")
 
     return defects
 

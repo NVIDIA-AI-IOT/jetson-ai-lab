@@ -155,6 +155,8 @@ zcat /proc/config.gz | grep CONFIG_MODULE_SIG
 - `CONFIG_MODULE_SIG_FORCE=y`: unsigned modules are rejected at load time. Sign them with a trusted key:
 
   ```bash
+  # Template only — each <...> is a placeholder, not a literal path.
+  # Replace all three with your key, your certificate, and the built module.
   /lib/modules/$(uname -r)/build/scripts/sign-file sha512 <signing-key.pem> <signing-cert.der> <module>.ko
   ```
 
@@ -321,7 +323,7 @@ Disconnecting interfaces to isolate traffic introduces two major hazards: it dro
 
 Instead, pin client traffic per interface using socket-level device binding. `iperf3 -B <IP>` alone binds only the socket's *source address* — pass `--bind-dev <interface>` as well for the real `SO_BINDTODEVICE` semantics (requires iperf 3.16+ and `CAP_NET_RAW`, so prefix with `sudo` where needed):
 
-Install `iperf3` on both the Jetson under test and the server host first (Ubuntu 24.04 ships iperf 3.7, which does NOT support `--bind-dev`; on 24.04+ install from source or use the `noble-backports` package if ≥3.16 is required for the binding parameter):
+Install `iperf3` on both the Jetson under test and the server host first — Ubuntu 24.04 (noble) ships iperf 3.16, which includes `--bind-dev`, so the archive package is enough (confirm with `iperf3 --version`):
 
 ```bash
 sudo apt-get install -y iperf3
@@ -384,6 +386,8 @@ The script automates the full methodology:
 - Measures bidirectional throughput (upload and reverse download) on each WiFi interface using `-B` source-IP binding and `--bind-dev` interface pinning (`SO_BINDTODEVICE`) without disconnecting any interfaces.
 - Inspects and records live PHY link rates and signal quality.
 - Emits timestamped console logs via `tee`.
+
+Prerequisites: `iperf3` installed on **both** the Jetson and the peer host, a passwordless SSH key from the Jetson to the peer (`PEER_USER` / `PEER_HOST`), and root on the Jetson (the script invokes `iperf3` with `sudo` so `--bind-dev` gets `CAP_NET_RAW`). Without SSH access the script stops and asks you to start `iperf3 -s` on the peer manually.
 
 All peer hosts, interface names, and IP addresses are environment-overridable:
 
