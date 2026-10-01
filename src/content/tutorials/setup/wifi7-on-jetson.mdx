@@ -133,6 +133,7 @@ rtw89_8922au_git 1-2:1.0: failed to setup chip information
 To fix this, decompress the binary manually:
 
 ```bash
+sudo apt-get install -y zstd
 sudo zstd -d /lib/firmware/rtw89/rtw8922a_fw-4.bin.zst -o /lib/firmware/rtw89/rtw8922a_fw-4.bin
 ```
 
@@ -319,6 +320,12 @@ If your Jetson has an onboard M.2 card (`rtl88x2ce` on `wlan0`), the new USB ada
 Disconnecting interfaces to isolate traffic introduces two major hazards: it drops your routing tables and severs your SSH session if your console connection rides the disconnected interface.
 
 Instead, pin client traffic per interface using socket-level device binding. `iperf3 -B <IP>` alone binds only the socket's *source address* — pass `--bind-dev <interface>` as well for the real `SO_BINDTODEVICE` semantics (requires iperf 3.16+ and `CAP_NET_RAW`, so prefix with `sudo` where needed):
+
+Install `iperf3` on both the Jetson under test and the server host first (Ubuntu 24.04 ships iperf 3.7, which does NOT support `--bind-dev`; on 24.04+ install from source or use the `noble-backports` package if ≥3.16 is required for the binding parameter):
+
+```bash
+sudo apt-get install -y iperf3
+```
 
 ```bash
 # On the target iperf3 server (for example, a wired host or secondary node on the local subnet):
