@@ -1,10 +1,10 @@
 ---
 title: "Multi-Modal AI Studio on Jetson"
-description: "Run a conversational AI pipeline on Jetson Thor with on-device ASR, LLM/VLM, and TTS."
+description: "Build and measure a local conversational AI pipeline on Jetson Orin Nano, AGX Orin, or AGX Thor."
 category: "Applications"
 section: "Conversational AI"
 order: 1
-tags: ["multimodal", "speech-ai", "riva", "asr", "tts", "vlm", "vllm", "cosmos-reason2", "webrtc", "jetson-thor"]
+tags: ["multimodal", "speech-ai", "speaches", "gemma-4", "riva", "asr", "tts", "realtime-api", "vlm", "webrtc", "jetson-orin", "jetson-thor"]
 isNew: true
 authors:
   - name: "Chitoku YATO"
@@ -17,11 +17,146 @@ import Note from '../../../components/admonition/Note.astro';
 import Tip from '../../../components/admonition/Tip.astro';
 import Warning from '../../../components/admonition/Warning.astro';
 
-[Multi-Modal AI Studio](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio) is a conversational AI interface for building and tuning voice AI systems. It supports NVIDIA Riva, OpenAI, and other backends; records sessions with full config snapshots; and provides a real-time timeline and latency analysis (TTFA, turn-taking) to compare and optimize setups.
+[Multi-Modal AI Studio](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio) is a conversational AI workbench for building, comparing, and tuning voice and vision pipelines. It connects independent ASR, LLM/VLM, and TTS services through standard APIs, records sessions with full configuration snapshots, and visualizes time to first audio, turn-taking, barge-in, audio playback, and device utilization.
 
-This tutorial demonstrates one configuration with the **NVIDIA RIVA SDK** for ASR/TTS and **Cosmos-Reason2** on vLLM for reasoning. The application is modular, so you can plug in other compatible ASR, LLM/VLM, or TTS backends that expose the supported APIs.
+The recommended public-preview path now runs on **Jetson Orin Nano, Jetson AGX Orin, and Jetson AGX Thor** without requiring an NGC entitlement or a Riva installation. It combines Faster-Whisper and Kokoro through Speaches with a text-only Gemma 4 E2B LLM. The original Riva and Cosmos-Reason2 voice-and-vision configuration remains available below as an advanced Thor workflow.
 
-## Prerequisites
+<Note title="Public preview">
+  The recommended Speaches Jetson image and this end-to-end configuration are release-candidate software intended for evaluation and demos. They are not a production or GA claim.
+</Note>
+
+## Choose a deployment path
+
+| Path | Devices | ASR | LLM / VLM | TTS | Best for |
+| --- | --- | --- | --- | --- | --- |
+| **Recommended quick start** | Orin Nano, AGX Orin, AGX Thor | Faster-Whisper tiny.en | Gemma 4 E2B | Kokoro | Public setup, hackathons, voice-agent prototypes |
+| **NVIDIA open speech models** | AGX Orin, AGX Thor | Nemotron 3.5 ASR | Any OpenAI-compatible LLM | Magpie | Direct NVIDIA model and REST/Realtime API evaluation |
+| **Riva + Cosmos-Reason2** | AGX Thor | Riva Parakeet | Cosmos-Reason2 VLM | Riva Magpie | Advanced voice + vision and existing Riva deployments |
+
+## Recommended Quick Start: Orin Nano to Thor
+
+The starter pipeline is entirely local:
+
+```text
+browser microphone
+  -> Speaches Faster-Whisper (:18080)
+  -> Gemma 4 E2B llama.cpp (:8080)
+  -> Speaches Kokoro (:18080)
+  -> browser speaker
+```
+
+Speaches exposes OpenAI-compatible speech APIs. Gemma is a separate OpenAI-compatible Chat Completions service, so you can replace the LLM without restarting speech.
+
+### Requirements
+
+- A Jetson Orin or Thor running a Jetson Linux release whose driver supports CUDA 13 containers
+- Docker with the NVIDIA container runtime
+- A Chromium-based browser on the Jetson or another computer on the same trusted network
+- Enough free storage for the two container images and model cache
+
+<Warning title="Orin Nano memory headroom">
+  On an 8 GB Orin Nano, stop unrelated GPU workloads before starting the pipeline. A 16 GB swap file is strongly recommended to absorb transient CPU-side allocations while the models load. Swap does not increase GPU memory; the default tiny ASR model, 2048-token Gemma context, and text-only `--no-mmproj` configuration keep the active pipeline small enough for this device.
+</Warning>
+
+### 1. Install Multi-Modal AI Studio
+
+```bash
+git clone https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio.git
+cd multi_modal_ai_studio
+
+./scripts/setup_dev.sh
+source .venv/bin/activate
+```
+
+Browser audio does not require the optional PyAudio package. Install that extra only when you need a server-connected PyAudio device.
+
+### 2. Start and verify speech
+
+```bash
+./scripts/speaches_speech.sh doctor
+./scripts/speaches_speech.sh start
+./scripts/speaches_speech.sh verify
+```
+
+The launcher pulls the pinned dual-architecture CUDA image and installs these starter models in a persistent Docker volume:
+
+| Stage | Model |
+| --- | --- |
+| ASR | `Systran/faster-whisper-tiny.en` |
+| TTS | `speaches-ai/Kokoro-82M-v1.0-ONNX-fp16` |
+| Default voice | `af_heart` |
+
+`verify` synthesizes a short sample through the TTS API and transcribes it through the ASR API. Do not continue until it prints `Speech API smoke test passed`.
+
+### 3. Start and verify Gemma 4
+
+```bash
+./scripts/gemma4_llm.sh doctor
+./scripts/gemma4_llm.sh start
+./scripts/gemma4_llm.sh verify
+```
+
+The launcher selects the Jetson Orin or Thor llama.cpp image automatically and serves `unsloth/gemma-4-E2B-it-GGUF:Q4_K_S`. It enables Gemma's MTP draft, disables hidden reasoning for lower time to first speech, limits context to 2048 tokens, and skips the multimodal projector because this starter configuration uses Gemma as a text LLM.
+
+### 4. Start the Studio
+
+```bash
+multi-modal-ai-studio --preset speaches-jetson --port 8092
+```
+
+Open the URL printed by the server, normally:
+
+```text
+https://<JETSON_IP>:8092
+```
+
+Accept the local development certificate, allow microphone access, select **Check servers**, and start a session. Try these short prompts:
+
+```text
+Hi, can you hear me?
+What is one plus one?
+Tell me one short safety rule for a home robot.
+```
+
+While the assistant is speaking, test interruption with:
+
+```text
+Stop. What is one plus one?
+```
+
+When you stop the session, select it in the left sidebar to review the transcript, audio waveforms, pipeline timeline, time-to-first-audio measurements, and Jetson system information.
+
+![Multi-Modal AI Studio session timeline](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/raw/main/docs/images/screenshot_example_2.png)
+
+### REST and Realtime speech paths
+
+The default `speaches-jetson` preset uses the portable REST transcription and speech APIs. To evaluate WebSocket endpointing and barge-in with the same models, start MMAS with:
+
+```bash
+multi-modal-ai-studio --preset speaches-realtime-asr-jetson --port 8092
+```
+
+Speaches emits Realtime session and speech-boundary events, then transcribes each completed speech segment with Faster-Whisper. This is not token-by-token model-native Faster-Whisper decoding, so partial transcript deltas may not be available.
+
+### Try NVIDIA open speech models
+
+MMAS also includes reference services for Nemotron 3.5 ASR and Magpie TTS. They can be used through OpenAI-compatible REST or Realtime APIs while keeping Gemma or another independently served LLM:
+
+```bash
+./scripts/nvidia_open_models_speech.sh build
+./scripts/nvidia_open_models_speech.sh start
+./scripts/nvidia_open_models_speech.sh verify
+```
+
+See the [NVIDIA open speech model setup](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_open_models_jetson.md) for model access, presets, and platform notes.
+
+For the complete Speaches lifecycle, model overrides, API endpoints, and troubleshooting, see the [Speaches on Jetson guide](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_speaches_jetson.md).
+
+## Advanced: Riva + Cosmos-Reason2 Voice and Vision on Thor
+
+The following configuration uses the **NVIDIA Riva SDK** for streaming ASR/TTS and **Cosmos-Reason2** on vLLM for visual reasoning. It targets Jetson AGX Thor and preserves the original MMAS voice-and-vision workflow.
+
+### Prerequisites
 
 This tutorial is written for **Jetson AGX Thor** because it uses the **RIVA SDK** and Cosmos-Reason2-8B together on the same device. You can adapt the same application to other model backends if your Jetson has less memory.
 
@@ -43,13 +178,13 @@ This tutorial is written for **Jetson AGX Thor** because it uses the **RIVA SDK*
 </table>
 </div>
 
-## Architecture
+### Advanced architecture
 
 Multi-Modal AI Studio does not run the AI models by itself. It connects to model services through standard APIs, which makes the pipeline easy to swap and tune.
 
 ![Multi-Modal AI Studio architecture](https://raw.githubusercontent.com/NVIDIA-AI-IOT/multi_modal_ai_studio/main/docs/images/MMAS-arch.png)
 
-## Step 1: Start NVIDIA RIVA SDK (ASR + TTS)
+### Step 1: Start NVIDIA RIVA SDK (ASR + TTS)
 
 RIVA provides the ASR and TTS services for the voice pipeline. This tutorial uses **Riva 2.24.0 Embedded (aarch64)**; see the [Riva support matrix](https://docs.nvidia.com/deeplearning/riva/user-guide/docs/support-matrix/support-matrix.html) for platform and model compatibility.
 
@@ -77,7 +212,7 @@ All models loaded successfully
 
 This can take several minutes, especially the first time after boot.
 
-## Step 2: Start vLLM with Cosmos-Reason2
+### Step 2: Start vLLM with Cosmos-Reason2
 
 Next, start the LLM/VLM backend. RIVA uses ports `8000`, `8001`, and `8002`, so this tutorial serves vLLM on **port 8010**.
 
@@ -128,7 +263,7 @@ You should see `nvidia/cosmos-reason2-8b-fp8` in the response.
   Do not use vLLM's default port when RIVA is running. Keep vLLM on `8010` or another unused port, then use the same port in Multi-Modal AI Studio's LLM API base URL.
 </Warning>
 
-## Step 3: Start Multi-Modal AI Studio
+### Step 3: Start Multi-Modal AI Studio
 
 In a **new terminal**, keep RIVA and vLLM running, then clone and install the application:
 
@@ -152,7 +287,7 @@ multi-modal-ai-studio --port 8092 \
   --llm-model nvidia/cosmos-reason2-8b-fp8
 ```
 
-## Step 4: Open the Web Interface
+### Step 4: Open the Web Interface
 
 From your client PC browser, open:
 
@@ -164,7 +299,7 @@ Accept the self-signed certificate by clicking **Advanced** and continuing to th
 
 When prompted, allow microphone and camera permissions.
 
-## Step 5: Configure and Run a Voice + Vision Session
+### Step 5: Configure and Run a Voice + Vision Session
 
 Click **New Voice Chat** to open the configuration panel. First configure the tabs below, then click **Start Session** and speak naturally.
 
@@ -356,6 +491,34 @@ The best settings depend on your model, microphone, room noise, and use case. Th
 ## Troubleshooting
 
 <details>
+<summary>Speaches reports <code>No models found</code></summary>
+
+Confirm the service and installed models, then rerun the idempotent start command if either starter model is missing:
+
+```bash
+./scripts/speaches_speech.sh status
+./scripts/speaches_speech.sh models
+./scripts/speaches_speech.sh start
+```
+
+</details>
+
+<details>
+<summary>Gemma or Kokoro fails to load on an 8 GB Orin Nano</summary>
+
+Stop unrelated GPU containers, keep the default tiny ASR model and 2048-token Gemma context, and confirm that swap is active:
+
+```bash
+docker ps
+free -h
+swapon --show
+```
+
+The recommended configuration was qualified with a 16 GB swap file. Swap helps with transient CPU allocations during loading, but it does not increase GPU memory. If memory pressure continues, use a smaller OpenAI-compatible LLM while keeping the same speech service.
+
+</details>
+
+<details>
 <summary><code>multi-modal-ai-studio: command not found</code></summary>
 
 Activate the Python virtual environment before launching:
@@ -421,6 +584,9 @@ sudo sysctl -w vm.drop_caches=3
 
 - Change the system prompt to create a different assistant personality.
 - Enable barge-in and test interrupting the assistant while it is speaking.
+- Compare REST ASR with the Realtime transcription preset.
+- Try Nemotron 3.5 ASR and Magpie TTS through the NVIDIA open model services.
+- Try another OpenAI-compatible TTS backend, voice, language, or speaking speed.
 - Try a USB camera connected directly to Jetson.
 - Compare latency with vision enabled and disabled.
 - Save your favorite configuration as a preset.
@@ -429,5 +595,8 @@ sudo sysctl -w vm.drop_caches=3
 ## Resources
 
 - [Multi-Modal AI Studio GitHub repository](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio)
+- [Speaches on Jetson quick-start reference](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_speaches_jetson.md)
+- [NVIDIA open speech models on Jetson](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_open_models_jetson.md)
+- [Speech API backend matrix](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/api_backends.md)
 - [Cosmos Reason2 on Jetson](/tutorials/cosmos-reason2-vlm/)
 - [Live VLM WebUI](/tutorials/live-vlm-webui/)
