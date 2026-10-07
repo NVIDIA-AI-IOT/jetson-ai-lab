@@ -3,7 +3,7 @@
 export const walkthroughVideos = {
   setup: { title: 'Set up your Jetson with Codex', youtubeId: 'CLGaG0JeUBI' },
   application: { title: 'Build a new Jetson application with Aditya Sahu', youtubeId: 'uXZI3Y2ASVg' },
-  kiosk: { title: 'Build a standalone VLM kiosk with Codex', youtubeId: 'TJ6hXRGTRgA' },
+  kiosk: { title: 'Build a standalone VLM kiosk with Codex', youtubeId: 'r_VP4E_Y3as' },
 };
 
 export const setupPrompts = [
