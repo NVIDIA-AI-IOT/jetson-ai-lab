@@ -1,5 +1,6 @@
 ---
 title: "d1-omni-600M"
+slug: "d1-omni-600M"
 model_id: "d1-omni-600m"
 short_description: "Liquid AI's compact zero-shot classification model for text, images, and audio, with a guide to running it on Jetson using PyTorch."
 family: "Liquid AI d1"
