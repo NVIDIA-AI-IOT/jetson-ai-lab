@@ -66,6 +66,9 @@ const collectionModels = modelEntries.map(entry => {
 const models = collectionModels.sort((a, b) => a.order - b.order);
 
 const familyOrder: Record<string, number> = {
+  'Liquid AI d1': -5,
+  'Black Forest Labs': -4,
+  'Alibaba Qwen3.8': -3,
   'NVIDIA Nemotron': -2,
   'Meta Muse': -1,
   'Alibaba Qwen3.6': 0,
@@ -106,7 +109,7 @@ const families = Array.from(new Set(models.map(m => m.family)))
         </div>
 
         <div class="relative -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div class="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide justify-center">
+          <div class="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide justify-start">
             {models.filter(m => m.highlighted).map(model => (
               <div
                 class="model-catalog-card w-[280px] sm:w-[300px] md:w-[320px] snap-center flex-shrink-0"

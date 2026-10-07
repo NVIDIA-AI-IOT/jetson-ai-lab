@@ -43,6 +43,10 @@ const MODEL_SECTIONS: { name: string; families: string[] }[] = [
 		name: 'MiniMax Models',
 		families: ['MiniMax M2.7'],
 	},
+	{
+		name: 'Liquid AI Models',
+		families: ['Liquid AI d1'],
+	},
 ];
 
 /**

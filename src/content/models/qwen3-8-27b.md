@@ -4,7 +4,7 @@ model_id: "qwen3-8-27b"
 short_description: "Qwen's dense 27B vision-language model for coding, research, and long-horizon agents with controllable thinking and native speculative decoding through MTP"
 family: "Alibaba Qwen3.8"
 icon: "🔮"
-is_new: true
+is_new: false
 order: -3
 type: "Multimodal"
 vision_capable: true
