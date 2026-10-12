@@ -196,7 +196,7 @@ echo "options usb-storage quirks=0bda:1a2b:i" | sudo tee /etc/modprobe.d/usb_sto
 sudo update-initramfs -u
 ```
 
-Unplug and reconnect the adapter. The quirk suppresses the storage claim; the adapter still needs the mode switch itself. Pass `-K` (`--realtek-mode`) so `usb_modeswitch` sends the Realtek vendor control message to trigger switching to the network product ID:
+Unplug and reconnect the adapter. The quirk suppresses the storage claim; the adapter still needs the mode switch itself. Pass `-K` (`--std-eject`) so `usb_modeswitch` sends a standard eject sequence, which triggers switching to the network product ID on the tested adapter:
 
 ```bash
 sudo usb_modeswitch -K -v 0bda -p 1a2b
@@ -385,39 +385,13 @@ Following manual verification, choose a persistence strategy:
 1. **DKMS registration**: From the cloned `rtw89` directory, run `sudo dkms install "$PWD"` — the command the driver README documents. If DKMS stops at the module signing step (see the signing section above), fall back to the manual `make install` path already completed in Step 4.
 2. **Manual module maintenance**: Retain the module in `/lib/modules/6.8.12-1021-tegra/extra/rtw89/`. If you hold kernel packages with `sudo apt-mark hold nvidia-l4t-* linux-image-* linux-headers-*`, the kernel ABI remains stable across reboots without recompilation.
 
-### Step 9: Automated benchmark script (reference implementation)
-
-To automate the Step 7 socket-binding benchmark across nodes, the companion [jetson-uefi-rescue-toolkit](https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit) repository provides the `host/wifi-bench.sh` reference script.
-
-The script automates the full methodology:
-- Starts the `iperf3` server on the peer host over SSH (propagating `SUDO_USER` so root never encounters missing SSH key traps).
-- Measures bidirectional throughput (upload and reverse download) on each WiFi interface using `-B` source-IP binding and `--bind-dev` interface pinning (`SO_BINDTODEVICE`) without disconnecting any interfaces.
-- Inspects and records live PHY link rates and signal quality.
-- Emits timestamped console logs via `tee`.
-
-Prerequisites: `iperf3` installed on **both** the Jetson and the peer host, a passwordless SSH key from the Jetson to the peer (`PEER_USER` / `PEER_HOST`), and root on the Jetson (the script invokes `iperf3` with `sudo` so `--bind-dev` gets `CAP_NET_RAW`). Without SSH access the script stops and asks you to start `iperf3 -s` on the peer manually.
-
-All peer hosts, interface names, and IP addresses are environment-overridable:
-
-```bash
-# Clone the companion repository
-git clone https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit.git
-cd jetson-uefi-rescue-toolkit
-
-# Run the automated benchmark against your local peer
-PEER_HOST=192.0.2.2 PEER_WIFI_IP=192.0.2.87 \
-PCIE_IF=wlan0 USB_IF=wlan1 \
-PCIE_IP=192.0.2.100 USB_IP=192.0.2.102 \
-bash host/wifi-bench.sh
-```
-
 ---
 
 ## Troubleshooting reference
 
 | Symptom | Root Cause | Technical Remedy |
 | :--- | :--- | :--- |
-| `lsusb` shows `0bda:1a2b` (CD-ROM) | Multi-state USB hardware mode trap | Add `options usb-storage quirks=0bda:1a2b:i` to `/etc/modprobe.d/usb_storage.conf` (suppress storage binding), replug, then run `sudo usb_modeswitch -K -v 0bda -p 1a2b` (using `-K` for Realtek mode). |
+| `lsusb` shows `0bda:1a2b` (CD-ROM) | Multi-state USB hardware mode trap | Add `options usb-storage quirks=0bda:1a2b:i` to `/etc/modprobe.d/usb_storage.conf` (suppress storage binding), replug, then run `sudo usb_modeswitch -K -v 0bda -p 1a2b` (using `-K` for the standard eject sequence). |
 | `Direct firmware load ... failed with error -2` | Kernel lacks `.zst` decompression support | Locate `.zst` file in `/lib/firmware/` and decompress to `.bin` using `zstd -d`. |
 | `Invalid module format` on `insmod` | Module vermagic does not match kernel ABI | Rebuild modules against active headers: `/lib/modules/$(uname -r)/build`. |
 | `Key was rejected by service` | Signature enforcement rejected the module (CONFIG_MODULE_SIG_FORCE set, or signed with an untrusted key) | Read enforcement first: `zcat /proc/config.gz \| grep CONFIG_MODULE_SIG`. With `CONFIG_MODULE_SIG_FORCE=y` no taint state waives the check — sign the `.ko` with a trusted key (`/lib/modules/$(uname -r)/build/scripts/sign-file sha512 ...`) and load again. |
@@ -434,7 +408,6 @@ bash host/wifi-bench.sh
   <a href="https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit/blob/main/docs/wifi7-adapters-jetpack-7-2.md" target="_blank" rel="noopener" class="nv-button">View Deep-Dive Toolkit Reference Guide →</a>
 </p>
 
-- [host/wifi-bench.sh](https://github.com/explicitcontextualunderstanding/jetson-uefi-rescue-toolkit/blob/main/host/wifi-bench.sh): Dual-interface benchmark automation script using SO_BINDTODEVICE socket binding (pass `--bind-dev <iface>` alongside `-B` for iperf 3.16+).
 - [morrownr/rtw89 Driver Repository](https://github.com/morrownr/rtw89): Linux driver source for Realtek 802.11ax and 802.11be wireless adapters.
 - [JetPack 7.2 AX210/AX200 WiFi Setup Guide (Seeed Studio Wiki)](https://wiki.seeedstudio.com/jetpack72_ax210_ax200_wifi_setup_guide/): Documents the platform-wide firmware `.zst` decompression requirement and provides prebuilt M.2 kernel modules.
 - [NVIDIA Jetson Linux Developer Guide (r39.2.1)](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html): Authoritative documentation for the JetPack 7.2.x kernel and firmware environment.
