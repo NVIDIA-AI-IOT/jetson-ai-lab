@@ -146,6 +146,13 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
         <h2 class="section-title">Ask your agent to help with the setup.</h2>
         <p class="section-intro">These seven prompts accompany the setup video. Adapt the user name and connection to your device. They are starting points, not unattended scripts.</p>
 
+        <aside id="mac-usb-recovery" class="mt-7 scroll-mt-40 rounded-xl border border-amber-300 bg-amber-50 p-5 text-slate-900">
+          <h3 class="text-lg font-bold">Mac USB setup: check for the R39.2.1 networking issue</h3>
+          <p class="mt-2 text-sm leading-relaxed">The recorded Jetson Orin Nano setup needed a USB-network workaround before Step 1. With L4T R39.2.1 and <code>nvidia-l4t-usb-service</code> version <code>39.2.1-20260806224157</code>, a Mac may detect “Linux for Tegra” but receive no USB IPv4 address.</p>
+          <p class="mt-2 text-sm leading-relaxed">If you see this symptom, follow <a class="font-semibold text-green-800 underline" href="https://github.com/NVIDIA-AI-IOT/jetson-usb-network-recovery" target="_blank" rel="noopener noreferrer">jetson-usb-network-recovery</a> on your Mac. Run <code>--diagnose</code> first in a local terminal; the tool uses the USB serial console, so working SSH is not required. Apply a repair only if the diagnosis confirms the supported defect.</p>
+          <p class="mt-2 text-sm leading-relaxed">Keep DHCP automatic. Use the repository’s <code>--install</code> instructions if the workaround must survive a reboot, then reboot and run <code>--diagnose</code> again before continuing. This tool restores USB networking; it does not configure SSH keys or Wi-Fi. Other connection failures need separate diagnosis, or you can use Ethernet.</p>
+        </aside>
+
         <details class="mt-8 rounded-xl border border-slate-300 bg-white p-5">
           <summary class="cursor-pointer font-bold text-slate-900">Before you start: device, access, and approval checklist</summary>
           <div class="mt-4 grid gap-6 text-sm leading-relaxed text-slate-600 md:grid-cols-2">
@@ -153,7 +160,7 @@ const futureAgents = ['Claude Code', 'Cursor', 'Devin', 'Local coding LLMs'];
               <li>Complete Jetson's first-run setup and reboot. Keep a local display and keyboard available.</li>
               <li>Use a data-capable cable and the USB device-mode port, or connect by Ethernet/Wi-Fi. Seeing the L4T-README drive does not establish SSH connectivity.</li>
               <li>Keep DHCP automatic. On macOS, allow the USB accessory and check the app's Local Network permission if Terminal can connect but the app cannot.</li>
-              <li>The recorded R39.2.1 setup used a USB-network workaround before recording. If USB networking fails, resolve it first or use Ethernet; the prompts are not a universal USB repair procedure.</li>
+              <li>If the Mac detects the Jetson but receives no USB IPv4 address, check the <a class="font-semibold text-green-800 underline" href="#mac-usb-recovery">R39.2.1 USB-network workaround</a> before Step 1.</li>
             </ul></div>
             <div><h3 class="font-bold text-slate-900">You stay in control</h3><ul class="mt-2 list-disc space-y-2 pl-5">
               <li>Use a least-privilege account. Verify host identity, preserve existing SSH keys, and investigate changed-key warnings.</li>
