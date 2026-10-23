@@ -9,7 +9,7 @@ order: 1
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "8GB RAM"
-precision: "NVFP4 / W4A16 / Q4_K_S GGUF"
+precision: "NVFP4 / W4A16 / Q4_0 GGUF"
 parameters: "2.3B effective (5.1B with embeddings)"
 modalities: ["Text", "Image", "Audio"]
 context_length: "128K"
@@ -40,21 +40,37 @@ serving:
         - orin_nx_16
         - orin_nano_8
       serve_command_orin: |-
-        sudo docker run -it --rm --pull always \
-          --runtime=nvidia --network host \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
-          llama-server -hf unsloth/gemma-4-E2B-it-GGUF:Q4_K_S
+        docker run --rm -it --pull always --runtime nvidia --network host \
+        -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+        ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
+        llama-server \
+        -hf google/gemma-4-E2B-it-qat-q4_0-gguf \
+        --hf-file gemma-4-E2B_q4_0-it.gguf \
+        --host 0.0.0.0 \
+        --port 8000 \
+        --ctx-size 36864 \
+        --parallel 1 \
+        --n-gpu-layers 999 \
+        --jinja \
+        --lazy-mode on \
+        --load-mode mmap \
+        --cache-ram 0
       serve_command_thor: |-
-        sudo docker run -it --rm --pull always \
-          --runtime=nvidia --network host \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
-          llama-server -hf unsloth/gemma-4-E2B-it-GGUF:Q4_K_S
-benchmark_key: "Gemma 4 E2B"
-benchmark_series:
-  - "Gemma 4 26B-A4B"
-  - "Gemma 4 31B"
+        docker run --rm -it --pull always --runtime nvidia --network host \
+        -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+        ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
+        llama-server \
+        -hf google/gemma-4-E2B-it-qat-q4_0-gguf \
+        --hf-file gemma-4-E2B_q4_0-it.gguf \
+        --host 0.0.0.0 \
+        --port 8000 \
+        --ctx-size 36864 \
+        --parallel 1 \
+        --n-gpu-layers 999 \
+        --jinja \
+        --lazy-mode on \
+        --load-mode mmap \
+        --cache-ram 0
 ---
 
 Gemma 4 E2B is the smallest variant in the Gemma 4 family. Google positions E2B as an edge-first model for low-latency, low-memory deployments where efficiency matters more than absolute model size.

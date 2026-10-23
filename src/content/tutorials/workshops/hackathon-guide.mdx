@@ -213,11 +213,36 @@ This is a great starting point for building projects that need visual understand
 
 <a href="/tutorials/live-vlm-webui" class="nv-button">Go to Live VLM WebUI tutorial →</a>
 
-### Ollama : Run LLMs Locally
+### Gemma 4 E2B: Chat in Your Browser
 
-[Ollama](https://ollama.com/) is a popular open-source tool for running large language models locally. It has official Jetson support, letting you run models like Llama, Gemma, DeepSeek, and more entirely on-device with GPU acceleration.
+Run Gemma 4 E2B on your Jetson and chat with it through llama.cpp's built-in web UI.
 
-<a href="/tutorials/ollama" class="nv-button">Go to Ollama tutorial →</a>
+1. Open the [Gemma 4 E2B model page](/models/gemma4-e2b/), select your Jetson module and **llama.cpp**, then run the serve command in your Jetson terminal. The first run downloads the container and model, so keep the Jetson connected to the internet.
+2. Leave that terminal running and wait for the server to finish loading the model.
+3. Open a browser on your laptop and go to `http://JETSON_IP:8000`. Replace `JETSON_IP` with the address you found in [Network Connection](#network-connection). If you're connected over USB, open [http://192.168.55.1:8000](http://192.168.55.1:8000). If you're using a browser on the Jetson itself, open [http://localhost:8000](http://localhost:8000).
+4. Type a message in the chat box and send it. Try: "Suggest three things a plant-watering robot should check before watering."
+
+Keep the server running while you chat. If the page doesn't open, check that the model has finished loading and that your laptop can reach the Jetson over USB or the network.
+
+#### Use It in Your App
+
+The same server exposes an OpenAI-compatible API on port **8000**. Your app can send messages to it and use the model's replies.
+
+Try this in a second terminal on the Jetson while the server is running:
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "google/gemma-4-E2B-it-qat-q4_0-gguf",
+    "messages": [
+      {"role": "user", "content": "Suggest three things a plant-watering robot should check before watering."}
+    ],
+    "max_tokens": 512
+  }'
+```
+
+The response is JSON. Read the model's reply from `choices[0].message.content`. If your app runs on your laptop, replace `localhost` with the Jetson's network IP address, or `192.168.55.1` when connected over USB.
 
 ### More Ideas
 
