@@ -527,7 +527,7 @@ const catalogTypeCounts = new Map(
         id="models-directory-toolbar"
         class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end sm:justify-between gap-3 mb-3"
       >
-        <div class="flex items-end gap-4">
+        <div class="flex flex-wrap items-end gap-3">
           <div class="flex flex-col gap-1">
           <span class="text-xs font-bold text-nvidia-gray-500 uppercase tracking-wider">Directory view</span>
           <div
@@ -535,30 +535,71 @@ const catalogTypeCounts = new Map(
             role="group"
             aria-label="Directory view mode"
           >
-            <button
-              type="button"
-              id="models-view-cards"
-              class="models-view-toggle inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors bg-white text-nvidia-black shadow-sm"
-              data-view="cards"
-              aria-pressed="true"
-            >
-              <svg
-                class="w-3.5 h-3.5 shrink-0 opacity-90"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
+            <div id="models-cards-view-control" class="relative inline-flex rounded-md bg-white text-nvidia-black shadow-sm">
+              <button
+                type="button"
+                id="models-view-cards"
+                class="models-view-toggle inline-flex items-center gap-1.5 rounded-l-md py-1.5 pl-3 pr-2 text-xs font-semibold transition-colors"
+                data-view="cards"
+                aria-pressed="true"
               >
-                <rect width="7" height="7" x="3" y="3" rx="1" />
-                <rect width="7" height="7" x="14" y="3" rx="1" />
-                <rect width="7" height="7" x="14" y="14" rx="1" />
-                <rect width="7" height="7" x="3" y="14" rx="1" />
-              </svg>
-              Cards
-            </button>
+                <svg
+                  class="w-3.5 h-3.5 shrink-0 opacity-90"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <rect width="7" height="7" x="3" y="3" rx="1" />
+                  <rect width="7" height="7" x="14" y="3" rx="1" />
+                  <rect width="7" height="7" x="14" y="14" rx="1" />
+                  <rect width="7" height="7" x="3" y="14" rx="1" />
+                </svg>
+                Cards
+              </button>
+              <button
+                type="button"
+                id="models-card-columns-menu-button"
+                class="inline-flex w-7 items-center justify-center rounded-r-md border-l border-nvidia-gray-200/80 text-nvidia-gray-500 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-nvidia-green"
+                aria-label="Card column options"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                aria-controls="models-card-columns-menu"
+              >
+                <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <div
+                id="models-card-columns-menu"
+                class="absolute left-0 top-[calc(100%+0.4rem)] z-30 hidden w-44 rounded-lg border border-nvidia-gray-200 bg-white p-1.5 text-left shadow-lg"
+                role="menu"
+                aria-label="Card columns"
+              >
+                <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-nvidia-gray-500">Card columns</div>
+                <button type="button" class="models-card-columns-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-black transition-colors hover:bg-nvidia-gray-100" data-card-columns="4" role="menuitemradio" aria-checked="true">
+                  <span>4 columns</span>
+                  <svg data-card-columns-check class="h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                </button>
+                <button type="button" class="models-card-columns-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-gray-600 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black" data-card-columns="3" role="menuitemradio" aria-checked="false">
+                  <span>3 columns</span>
+                  <svg data-card-columns-check class="hidden h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                </button>
+                <div class="mx-2 my-1 border-t border-nvidia-gray-200"></div>
+                <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-nvidia-gray-500">Card layout</div>
+                <button type="button" class="models-card-fit-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-black transition-colors hover:bg-nvidia-gray-100" data-card-fit="aligned" role="menuitemradio" aria-checked="true">
+                  <span>Aligned rows</span>
+                  <svg data-card-fit-check class="h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                </button>
+                <button type="button" class="models-card-fit-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-gray-600 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black" data-card-fit="content" role="menuitemradio" aria-checked="false">
+                  <span>Content fit</span>
+                  <svg data-card-fit-check class="hidden h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                </button>
+              </div>
+            </div>
             <button
               type="button"
               id="models-view-compact"
@@ -611,9 +652,17 @@ const catalogTypeCounts = new Map(
             </button>
           </div>
           </div>
-          <p id="models-result-count" class="pb-2 text-sm font-medium text-nvidia-gray-500" aria-live="polite">
-            {models.length} models
-          </p>
+          <div id="models-card-rearrange-control" class="hidden items-center self-end pb-0.5">
+            <div class="inline-flex items-center gap-1 rounded-lg border border-nvidia-green/50 bg-nvidia-green/10 p-1">
+              <button type="button" id="models-card-rearrange" class="inline-flex items-center gap-1.5 rounded-md bg-nvidia-green px-3 py-1.5 text-xs font-bold text-nvidia-black shadow-sm transition-colors hover:bg-nvidia-green/80" aria-pressed="false">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m5 12 4 4L19 6" />
+                </svg>
+                <span data-rearrange-label>Done</span>
+              </button>
+              <button type="button" id="models-card-order-reset" class="hidden rounded-md px-2.5 py-1.5 text-xs font-semibold text-nvidia-gray-500 transition-colors hover:bg-white hover:text-nvidia-black disabled:cursor-default disabled:opacity-40" title="Restore the default family order">Reset</button>
+            </div>
+          </div>
         </div>
         <div class="flex w-full items-center gap-2 sm:w-auto">
           <div id="models-search-cards-bar" class="relative min-w-0 flex-1 sm:w-80 sm:max-w-sm">
@@ -655,14 +704,19 @@ const catalogTypeCounts = new Map(
         </div>
       </div>
 
-      <div
-        id="models-active-filters"
-        class="scrollbar-hide mb-3 flex h-8 items-center gap-2 overflow-x-auto whitespace-nowrap"
-        aria-live="polite"
-        aria-label="Active filters"
-      ></div>
+      <div class="scrollbar-hide mb-3 flex h-8 items-center gap-2 overflow-x-auto whitespace-nowrap">
+        <p id="models-result-count" class="shrink-0 text-sm font-medium text-nvidia-gray-500" aria-live="polite">
+          {models.length} models
+        </p>
+        <div
+          id="models-active-filters"
+          class="flex min-w-0 items-center gap-2"
+          aria-live="polite"
+          aria-label="Active filters"
+        ></div>
+      </div>
 
-      <div class="models-card-directory" id="models-directory-cards" data-card-layout="legacy">
+      <div class="models-card-directory" id="models-directory-cards" data-card-layout="legacy" data-card-columns="4" data-card-fit="aligned" data-rearranging="false">
         {families.map(family => (
           <section class="model-family-group scroll-mt-24" data-family={family}>
             <div class="model-family-header">
@@ -671,6 +725,13 @@ const catalogTypeCounts = new Map(
                 {models.filter(m => m.family === family).length}
               </span>
               <span class="model-family-divider h-px flex-1 bg-nvidia-gray-200" aria-hidden="true"></span>
+              <button type="button" class="model-family-drag-handle" data-family-drag-handle aria-label={`Move ${family}`} title="Drag to rearrange; use arrow keys for precise movement">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+                  <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+                  <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+                </svg>
+              </button>
             </div>
             <div class="model-family-grid" data-family-model-grid>
               {models.filter(m => m.family === family).map(model => (
@@ -720,6 +781,7 @@ const catalogTypeCounts = new Map(
           </section>
         ))}
       </div>
+      <p id="models-card-order-status" class="sr-only" aria-live="polite"></p>
 
       <div id="models-directory-table" class="hidden -mx-4 sm:mx-0">
         <div class="max-h-[70vh] overflow-auto border border-nvidia-gray-200 rounded-xl bg-white shadow-sm">
@@ -933,6 +995,9 @@ const catalogTypeCounts = new Map(
 <script>
   const MODELS_DIRECTORY_VIEW_KEY = 'jetson-ai-lab-models-directory-view';
   const MODELS_DEVICE_FILTER_VIEW_KEY = 'jetson-ai-lab-models-device-filter-view';
+  const MODELS_DIRECTORY_COLUMNS_KEY = 'jetson-ai-lab-models-card-columns';
+  const MODELS_DIRECTORY_FIT_KEY = 'jetson-ai-lab-models-card-fit';
+  const MODELS_DIRECTORY_ORDER_KEY = 'jetson-ai-lab-model-family-order-v1';
 
   const SORT_ATTR: Record<string, string> = {
     name: 'data-sort-name',
@@ -980,6 +1045,15 @@ const catalogTypeCounts = new Map(
     const btnCards = document.getElementById('models-view-cards');
     const btnCompact = document.getElementById('models-view-compact');
     const btnTable = document.getElementById('models-view-table');
+    const cardsViewControl = document.getElementById('models-cards-view-control');
+    const cardColumnsMenuButton = document.getElementById('models-card-columns-menu-button') as HTMLButtonElement | null;
+    const cardColumnsMenu = document.getElementById('models-card-columns-menu');
+    const cardRearrangeControl = document.getElementById('models-card-rearrange-control');
+    const cardRearrangeButton = document.getElementById('models-card-rearrange') as HTMLButtonElement | null;
+    const cardOrderReset = document.getElementById('models-card-order-reset') as HTMLButtonElement | null;
+    const cardOrderStatus = document.getElementById('models-card-order-status');
+    const cardColumnButtons = Array.from(directory.querySelectorAll<HTMLButtonElement>('.models-card-columns-toggle[data-card-columns]'));
+    const cardFitButtons = Array.from(directory.querySelectorAll<HTMLButtonElement>('.models-card-fit-toggle[data-card-fit]'));
     const filterPanel = document.getElementById('models-filter-panel');
     const mobileFilterToggle = document.getElementById('models-mobile-filter-toggle');
     const mobileFilterCount = document.getElementById('models-mobile-filter-count');
@@ -989,6 +1063,231 @@ const catalogTypeCounts = new Map(
 
     let currentSearch = '';
     let catalogFilterMode: 'simple' | 'advanced' = 'simple';
+    const defaultFamilyOrder = cardsArea
+      ? Array.from(cardsArea.querySelectorAll<HTMLElement>('.model-family-group')).map((group) => group.dataset.family || '')
+      : [];
+    let rearrangingFamilies = false;
+    let draggedFamily: HTMLElement | null = null;
+    let activePointerId: number | null = null;
+    let lastDropTarget: HTMLElement | null = null;
+    let familyOrderChanged = false;
+    let familyDragGhost: HTMLElement | null = null;
+    let familyDragOffsetX = 0;
+    let familyDragOffsetY = 0;
+    const reduceFamilyMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let familyLayoutFrame = 0;
+
+    function layoutFamilyCards() {
+      if (!cardsArea) return;
+      cancelAnimationFrame(familyLayoutFrame);
+      familyLayoutFrame = requestAnimationFrame(() => {
+        const groups = familyCards();
+        groups.forEach((group) => { group.style.gridRowEnd = 'auto'; });
+        if (cardsArea.dataset.cardLayout !== 'legacy' || cardsArea.dataset.cardFit !== 'content') return;
+        const styles = getComputedStyle(cardsArea);
+        const rowHeight = Number.parseFloat(styles.gridAutoRows) || 4;
+        const rowGap = Number.parseFloat(styles.rowGap) || 24;
+        groups.forEach((group) => {
+          if (group.style.display === 'none') return;
+          const span = Math.ceil((group.getBoundingClientRect().height + rowGap) / (rowHeight + rowGap));
+          group.style.gridRowEnd = `span ${span}`;
+        });
+      });
+    }
+
+    function familyCards(): HTMLElement[] {
+      return cardsArea ? Array.from(cardsArea.querySelectorAll<HTMLElement>('.model-family-group')) : [];
+    }
+
+    function announceFamilyOrder(message: string) {
+      if (cardOrderStatus) cardOrderStatus.textContent = message;
+    }
+
+    function hasSavedFamilyOrder(): boolean {
+      try {
+        return !!localStorage.getItem(MODELS_DIRECTORY_ORDER_KEY);
+      } catch {
+        return false;
+      }
+    }
+
+    function persistFamilyOrder() {
+      try {
+        localStorage.setItem(
+          MODELS_DIRECTORY_ORDER_KEY,
+          JSON.stringify(familyCards().map((group) => group.dataset.family).filter(Boolean))
+        );
+      } catch {
+        /* ignore */
+      }
+      cardOrderReset?.classList.remove('hidden');
+      if (cardOrderReset) cardOrderReset.disabled = false;
+    }
+
+    function applyFamilyOrder(order: string[]) {
+      if (!cardsArea) return;
+      const groups = familyCards();
+      const byFamily = new Map(groups.map((group) => [group.dataset.family || '', group]));
+      const used = new Set<string>();
+      order.forEach((family) => {
+        const group = byFamily.get(family);
+        if (group && !used.has(family)) {
+          cardsArea.appendChild(group);
+          used.add(family);
+        }
+      });
+      groups.forEach((group) => {
+        const family = group.dataset.family || '';
+        if (!used.has(family)) cardsArea.appendChild(group);
+      });
+      layoutFamilyCards();
+    }
+
+    function restoreFamilyOrder() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(MODELS_DIRECTORY_ORDER_KEY) || '[]');
+        if (Array.isArray(stored) && stored.every((family) => typeof family === 'string')) applyFamilyOrder(stored);
+      } catch {
+        /* ignore malformed local preference */
+      }
+      const hasSavedOrder = hasSavedFamilyOrder();
+      cardOrderReset?.classList.toggle('hidden', !hasSavedOrder);
+      if (cardOrderReset) cardOrderReset.disabled = !hasSavedOrder;
+    }
+
+    function setFamilyRearrangeMode(active: boolean) {
+      if (!active && draggedFamily) finishFamilyDrag();
+      rearrangingFamilies = active;
+      if (cardsArea) cardsArea.dataset.rearranging = active ? 'true' : 'false';
+      cardRearrangeButton?.setAttribute('aria-pressed', active ? 'true' : 'false');
+      const label = cardRearrangeButton?.querySelector<HTMLElement>('[data-rearrange-label]');
+      if (label) label.textContent = 'Done';
+      cardRearrangeControl?.classList.toggle('hidden', !active);
+      cardRearrangeControl?.classList.toggle('flex', active);
+      const hasSavedOrder = hasSavedFamilyOrder();
+      cardOrderReset?.classList.toggle('hidden', !active || !hasSavedOrder);
+      if (active) announceFamilyOrder('Rearrange mode enabled. Drag family handles or use the arrow keys.');
+    }
+
+    function clearFamilyDropTarget() {
+      lastDropTarget?.classList.remove('model-family-drop-target');
+      lastDropTarget = null;
+    }
+
+    function visibleFamilyCards(): HTMLElement[] {
+      return familyCards().filter((group) => group.style.display !== 'none');
+    }
+
+    function captureFamilyRects(): Map<HTMLElement, DOMRect> {
+      return new Map(
+        visibleFamilyCards()
+          .filter((group) => group !== draggedFamily)
+          .map((group) => [group, group.getBoundingClientRect()])
+      );
+    }
+
+    function animateFamilyReflow(before: Map<HTMLElement, DOMRect>) {
+      if (reduceFamilyMotion) return;
+      requestAnimationFrame(() => {
+        before.forEach((oldBounds, group) => {
+          if (!group.isConnected || group.style.display === 'none') return;
+          const newBounds = group.getBoundingClientRect();
+          const deltaX = oldBounds.left - newBounds.left;
+          const deltaY = oldBounds.top - newBounds.top;
+          if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+          group.animate(
+            [
+              { transform: `translate3d(${deltaX}px, ${deltaY}px, 0)` },
+              { transform: 'translate3d(0, 0, 0)' },
+            ],
+            { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }
+          );
+        });
+      });
+    }
+
+    function createFamilyDragGhost(group: HTMLElement, clientX: number, clientY: number) {
+      const bounds = group.getBoundingClientRect();
+      const ghost = group.cloneNode(true) as HTMLElement;
+      ghost.classList.add('model-family-drag-ghost');
+      ghost.removeAttribute('data-family');
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.style.width = `${bounds.width}px`;
+      ghost.style.height = `${bounds.height}px`;
+      ghost.querySelectorAll<HTMLElement>('a, button, [tabindex]').forEach((element) => element.setAttribute('tabindex', '-1'));
+      familyDragOffsetX = clientX - bounds.left;
+      familyDragOffsetY = clientY - bounds.top;
+      ghost.style.left = `${clientX - familyDragOffsetX}px`;
+      ghost.style.top = `${clientY - familyDragOffsetY}px`;
+      document.body.appendChild(ghost);
+      familyDragGhost = ghost;
+    }
+
+    function positionFamilyDragGhost(clientX: number, clientY: number) {
+      if (!familyDragGhost) return;
+      familyDragGhost.style.left = `${clientX - familyDragOffsetX}px`;
+      familyDragGhost.style.top = `${clientY - familyDragOffsetY}px`;
+    }
+
+    function finishFamilyDrag() {
+      if (!draggedFamily) return;
+      const droppedGroup = draggedFamily;
+      const ghost = familyDragGhost;
+      document.documentElement.classList.remove('model-family-drag-active');
+      clearFamilyDropTarget();
+      if (familyOrderChanged) {
+        persistFamilyOrder();
+        announceFamilyOrder(`${droppedGroup.dataset.family || 'Model family'} moved. New order saved in this browser.`);
+      }
+      draggedFamily = null;
+      familyDragGhost = null;
+      activePointerId = null;
+      familyOrderChanged = false;
+      const revealGroup = () => {
+        ghost?.remove();
+        droppedGroup.classList.remove('model-family-dragging');
+      };
+      if (ghost && !reduceFamilyMotion) {
+        const destination = droppedGroup.getBoundingClientRect();
+        const animation = ghost.animate(
+          [
+            { left: ghost.style.left, top: ghost.style.top, opacity: 0.96, transform: 'rotate(0.6deg) scale(1.01)' },
+            { left: `${destination.left}px`, top: `${destination.top}px`, opacity: 0.3, transform: 'rotate(0deg) scale(1)' },
+          ],
+          { duration: 170, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' }
+        );
+        animation.finished.then(revealGroup).catch(revealGroup);
+      } else {
+        revealGroup();
+      }
+    }
+
+    function moveFamilyByKeyboard(handle: HTMLButtonElement, key: string) {
+      if (!cardsArea || !rearrangingFamilies) return;
+      const group = handle.closest<HTMLElement>('.model-family-group');
+      if (!group) return;
+      const groups = visibleFamilyCards();
+      const currentIndex = groups.indexOf(group);
+      if (currentIndex < 0) return;
+      const columnCount = Math.max(1, getComputedStyle(cardsArea).gridTemplateColumns.split(/\s+/).length);
+      const offsets: Record<string, number> = {
+        ArrowLeft: -1,
+        ArrowRight: 1,
+        ArrowUp: -columnCount,
+        ArrowDown: columnCount,
+      };
+      let nextIndex = key === 'Home' ? 0 : key === 'End' ? groups.length - 1 : currentIndex + (offsets[key] || 0);
+      nextIndex = Math.max(0, Math.min(groups.length - 1, nextIndex));
+      if (nextIndex === currentIndex) return;
+      const before = captureFamilyRects();
+      const target = groups[nextIndex];
+      if (nextIndex > currentIndex) target.after(group);
+      else target.before(group);
+      persistFamilyOrder();
+      animateFamilyReflow(before);
+      handle.focus();
+      announceFamilyOrder(`${group.dataset.family || 'Model family'} moved to position ${nextIndex + 1} of ${groups.length}.`);
+    }
 
     function setDeviceFilterIconView(iconView: boolean) {
       directory.querySelectorAll<HTMLButtonElement>('[data-device-icon-toggle]').forEach((button) => {
@@ -1223,8 +1522,9 @@ const catalogTypeCounts = new Map(
           cardsArea.classList.remove('hidden');
         }
         cardsArea.dataset.cardLayout = mode === 'compact' ? 'compact' : 'legacy';
+        layoutFamilyCards();
       }
-      [btnCards, btnCompact, btnTable].forEach((button) => {
+      [btnCompact, btnTable].forEach((button) => {
         const selected = button?.dataset.view === mode;
         button?.classList.toggle('bg-white', selected);
         button?.classList.toggle('shadow-sm', selected);
@@ -1232,9 +1532,59 @@ const catalogTypeCounts = new Map(
         button?.classList.toggle('text-nvidia-gray-600', !selected);
         button?.setAttribute('aria-pressed', selected ? 'true' : 'false');
       });
+      const cardsSelected = mode === 'cards';
+      btnCards?.classList.toggle('text-nvidia-black', cardsSelected);
+      btnCards?.classList.toggle('text-nvidia-gray-600', !cardsSelected);
+      btnCards?.setAttribute('aria-pressed', cardsSelected ? 'true' : 'false');
+      cardsViewControl?.classList.toggle('bg-white', cardsSelected);
+      cardsViewControl?.classList.toggle('shadow-sm', cardsSelected);
+      cardsViewControl?.classList.toggle('text-nvidia-black', cardsSelected);
+      cardsViewControl?.classList.toggle('text-nvidia-gray-600', !cardsSelected);
       if (cardsSearchBar) {
         cardsSearchBar.classList.toggle('hidden', mode === 'table');
       }
+      if (!cardsSelected) setCardColumnsMenu(false);
+      if (mode !== 'cards' && rearrangingFamilies) setFamilyRearrangeMode(false);
+    }
+
+    function setCardColumnsMenu(open: boolean) {
+      cardColumnsMenu?.classList.toggle('hidden', !open);
+      cardColumnsMenuButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function setCardColumns(columns: '3' | '4') {
+      try {
+        localStorage.setItem(MODELS_DIRECTORY_COLUMNS_KEY, columns);
+      } catch {
+        /* ignore */
+      }
+      if (cardsArea) cardsArea.dataset.cardColumns = columns;
+      cardColumnButtons.forEach((button) => {
+        const selected = button.dataset.cardColumns === columns;
+        button.classList.toggle('bg-nvidia-gray-100', selected);
+        button.classList.toggle('text-nvidia-black', selected);
+        button.classList.toggle('text-nvidia-gray-600', !selected);
+        button.setAttribute('aria-checked', selected ? 'true' : 'false');
+        button.querySelector('[data-card-columns-check]')?.classList.toggle('hidden', !selected);
+      });
+      layoutFamilyCards();
+    }
+
+    function setCardFit(fit: 'aligned' | 'content') {
+      try {
+        localStorage.setItem(MODELS_DIRECTORY_FIT_KEY, fit);
+      } catch {
+        /* ignore */
+      }
+      if (cardsArea) cardsArea.dataset.cardFit = fit;
+      cardFitButtons.forEach((button) => {
+        const selected = button.dataset.cardFit === fit;
+        button.classList.toggle('text-nvidia-black', selected);
+        button.classList.toggle('text-nvidia-gray-600', !selected);
+        button.setAttribute('aria-checked', selected ? 'true' : 'false');
+        button.querySelector('[data-card-fit-check]')?.classList.toggle('hidden', !selected);
+      });
+      layoutFamilyCards();
     }
 
     function updateSortIndicators(activeCol: string, dir: 'asc' | 'desc') {
@@ -1417,6 +1767,7 @@ const catalogTypeCounts = new Map(
       if (resultCount) resultCount.textContent = `${visibleModelCount} ${visibleModelCount === 1 ? 'model' : 'models'}`;
       renderActiveFilters();
       syncFilterUrl();
+      layoutFamilyCards();
     }
 
     refreshModelFreshness();
@@ -1425,9 +1776,15 @@ const catalogTypeCounts = new Map(
       directory.dataset.modelsFilterListeners = '1';
 
       let initial: 'cards' | 'compact' | 'table' = 'cards';
+      let initialCardColumns: '3' | '4' = '4';
+      let initialCardFit: 'aligned' | 'content' = 'aligned';
       try {
         const v = localStorage.getItem(MODELS_DIRECTORY_VIEW_KEY);
         if (v === 'table' || v === 'compact' || v === 'cards') initial = v;
+        const columns = localStorage.getItem(MODELS_DIRECTORY_COLUMNS_KEY);
+        if (columns === '3' || columns === '4') initialCardColumns = columns;
+        const fit = localStorage.getItem(MODELS_DIRECTORY_FIT_KEY);
+        if (fit === 'aligned' || fit === 'content') initialCardFit = fit;
       } catch {
         /* ignore */
       }
@@ -1439,6 +1796,9 @@ const catalogTypeCounts = new Map(
       }
       setDeviceFilterIconView(deviceIconView);
       restoreFiltersFromUrl();
+      restoreFamilyOrder();
+      setCardColumns(initialCardColumns);
+      setCardFit(initialCardFit);
       setViewMode(initial);
 
       directory.querySelectorAll<HTMLInputElement>('.model-directory-search').forEach((input) => {
@@ -1453,8 +1813,18 @@ const catalogTypeCounts = new Map(
       });
 
       btnCards?.addEventListener('click', () => {
+        setCardColumnsMenu(false);
         setViewMode('cards');
         filterModels();
+      });
+      cardColumnsMenuButton?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const willOpen = cardColumnsMenu?.classList.contains('hidden') ?? false;
+        if (btnCards?.getAttribute('aria-pressed') !== 'true') {
+          setViewMode('cards');
+          filterModels();
+        }
+        setCardColumnsMenu(willOpen);
       });
       btnCompact?.addEventListener('click', () => {
         setViewMode('compact');
@@ -1463,6 +1833,109 @@ const catalogTypeCounts = new Map(
       btnTable?.addEventListener('click', () => {
         setViewMode('table');
         filterModels();
+      });
+      cardColumnButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const columns = button.dataset.cardColumns;
+          if (columns === '3' || columns === '4') {
+            setCardColumns(columns);
+            setCardColumnsMenu(false);
+            cardColumnsMenuButton?.focus();
+          }
+        });
+      });
+      cardFitButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const fit = button.dataset.cardFit;
+          if (fit === 'aligned' || fit === 'content') {
+            setCardFit(fit);
+            setCardColumnsMenu(false);
+            cardColumnsMenuButton?.focus();
+          }
+        });
+      });
+      window.addEventListener('resize', layoutFamilyCards, { passive: true });
+      document.addEventListener('click', (event) => {
+        if (!cardsViewControl?.contains(event.target as Node)) setCardColumnsMenu(false);
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || cardColumnsMenu?.classList.contains('hidden')) return;
+        setCardColumnsMenu(false);
+        cardColumnsMenuButton?.focus();
+      });
+      cardRearrangeButton?.addEventListener('click', () => {
+        setFamilyRearrangeMode(false);
+      });
+      cardOrderReset?.addEventListener('click', () => {
+        try {
+          localStorage.removeItem(MODELS_DIRECTORY_ORDER_KEY);
+        } catch {
+          /* ignore */
+        }
+        applyFamilyOrder(defaultFamilyOrder);
+        cardOrderReset.disabled = true;
+        cardOrderReset.classList.add('hidden');
+        announceFamilyOrder('Default model family order restored.');
+      });
+      cardsArea?.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0 || cardsArea.dataset.cardLayout !== 'legacy') return;
+        const handle = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-family-drag-handle]');
+        const group = handle?.closest<HTMLElement>('.model-family-group');
+        if (!handle || !group) return;
+        event.preventDefault();
+        if (!rearrangingFamilies) setFamilyRearrangeMode(true);
+        draggedFamily = group;
+        activePointerId = event.pointerId;
+        familyOrderChanged = false;
+        createFamilyDragGhost(group, event.clientX, event.clientY);
+        group.classList.add('model-family-dragging');
+        document.documentElement.classList.add('model-family-drag-active');
+        handle.setPointerCapture(event.pointerId);
+      });
+      cardsArea?.addEventListener('pointermove', (event) => {
+        if (!draggedFamily || event.pointerId !== activePointerId) return;
+        event.preventDefault();
+        positionFamilyDragGhost(event.clientX, event.clientY);
+        if (event.clientY < 72) window.scrollBy(0, -12);
+        else if (event.clientY > window.innerHeight - 72) window.scrollBy(0, 12);
+        const hit = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
+        const target = hit?.closest<HTMLElement>('.model-family-group');
+        if (!target || target === draggedFamily || target.style.display === 'none') {
+          clearFamilyDropTarget();
+          return;
+        }
+        const bounds = target.getBoundingClientRect();
+        const verticalEdge = Math.min(48, bounds.height * 0.25);
+        const placeBefore = event.clientY < bounds.top + verticalEdge
+          ? true
+          : event.clientY > bounds.bottom - verticalEdge
+            ? false
+            : event.clientX < bounds.left + bounds.width / 2;
+        if (lastDropTarget !== target) clearFamilyDropTarget();
+        target.classList.add('model-family-drop-target');
+        lastDropTarget = target;
+        const alreadyPlaced = placeBefore
+          ? draggedFamily.nextElementSibling === target
+          : draggedFamily.previousElementSibling === target;
+        if (alreadyPlaced) return;
+        const before = captureFamilyRects();
+        if (placeBefore) target.before(draggedFamily);
+        else target.after(draggedFamily);
+        familyOrderChanged = true;
+        animateFamilyReflow(before);
+      });
+      cardsArea?.addEventListener('pointerup', (event) => {
+        if (event.pointerId === activePointerId) finishFamilyDrag();
+      });
+      cardsArea?.addEventListener('pointercancel', (event) => {
+        if (event.pointerId === activePointerId) finishFamilyDrag();
+      });
+      cardsArea?.addEventListener('keydown', (event) => {
+        const handle = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-family-drag-handle]');
+        if (!handle || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        if (!rearrangingFamilies) setFamilyRearrangeMode(true);
+        moveFamilyByKeyboard(handle, event.key);
       });
       directory.addEventListener('change', (e) => {
         const t = e.target as HTMLInputElement | null;
@@ -1575,6 +2048,12 @@ const catalogTypeCounts = new Map(
     gap: 1.5rem;
   }
 
+  .models-card-directory[data-card-layout='legacy'][data-card-fit='content'] {
+    grid-auto-flow: dense;
+    grid-auto-rows: 4px;
+    align-items: start;
+  }
+
   .models-card-directory[data-card-layout='legacy'] .model-family-group {
     display: flex;
     height: 100%;
@@ -1583,6 +2062,10 @@ const catalogTypeCounts = new Map(
     border: 1px solid #e5e5e5;
     border-radius: 0.75rem;
     background: #fff;
+  }
+
+  .models-card-directory[data-card-layout='legacy'][data-card-fit='content'] .model-family-group {
+    height: auto;
   }
 
   .models-card-directory[data-card-layout='legacy'] .model-family-header {
@@ -1651,6 +2134,139 @@ const catalogTypeCounts = new Map(
     display: none;
   }
 
+  .model-family-drag-handle {
+    display: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    touch-action: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(0 0 0 / 12%);
+    border-radius: 0.375rem;
+    background: rgb(255 255 255 / 74%);
+    color: #666;
+    cursor: grab;
+    opacity: 0.28;
+    transition: opacity 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .model-family-drag-handle:hover,
+  .model-family-drag-handle:focus-visible {
+    border-color: #76b900;
+    color: #111;
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(118 185 0 / 18%);
+    opacity: 1;
+  }
+
+  .model-family-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  html.model-family-drag-active,
+  html.model-family-drag-active * {
+    cursor: grabbing !important;
+  }
+
+  .model-family-drag-handle svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-drag-handle {
+    display: inline-flex;
+  }
+
+  .models-card-directory[data-card-layout='legacy'][data-rearranging='true'] .model-family-drag-handle {
+    opacity: 0.82;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-title {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .models-card-directory[data-rearranging='true'] .model-family-group {
+    user-select: none;
+    box-shadow: 0 0 0 1px rgb(118 185 0 / 12%);
+  }
+
+  .model-family-group.model-family-dragging {
+    border: 2px dashed rgb(118 185 0 / 72%);
+    background: rgb(118 185 0 / 4%);
+    box-shadow: inset 0 0 0 3px rgb(255 255 255 / 62%);
+  }
+
+  .model-family-group.model-family-dragging > * {
+    opacity: 0;
+  }
+
+  .model-family-drag-ghost {
+    position: fixed !important;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0 !important;
+    border: 1px solid #e5e5e5;
+    border-radius: 0.75rem;
+    background: #fff;
+    pointer-events: none;
+    opacity: 0.96;
+    transform: rotate(0.6deg) scale(1.01);
+    transform-origin: center;
+    box-shadow: 0 18px 42px rgb(0 0 0 / 24%), 0 0 0 2px rgb(118 185 0 / 55%);
+    will-change: left, top, transform;
+  }
+
+  .model-family-drag-ghost .model-family-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f1f1f1;
+    background: rgb(250 250 250 / 0.5);
+  }
+
+  .model-family-drag-ghost .model-family-title {
+    min-width: 0;
+    flex: 1;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+
+  .model-family-drag-ghost .model-family-count,
+  .model-family-drag-ghost .model-family-divider,
+  .model-family-drag-ghost .model-card-capability {
+    display: none;
+  }
+
+  .model-family-drag-ghost .model-family-grid {
+    flex: 1 1 0%;
+    padding: 0.75rem;
+  }
+
+  .model-family-drag-ghost .model-card {
+    padding: 0.75rem;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+  }
+
+  .model-family-drag-ghost .model-card + .model-card {
+    margin-top: 0.5rem;
+  }
+
+  .model-family-group.model-family-drop-target {
+    box-shadow: 0 0 0 3px rgb(118 185 0 / 58%), 0 8px 24px rgb(0 0 0 / 10%);
+  }
+
   @media (min-width: 640px) {
     .models-card-directory[data-card-layout='compact'] .model-family-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1674,8 +2290,12 @@ const catalogTypeCounts = new Map(
   }
 
   @media (min-width: 1280px) {
-    .models-card-directory[data-card-layout='legacy'] {
+    .models-card-directory[data-card-layout='legacy'][data-card-columns='4'] {
       grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .models-card-directory[data-card-layout='legacy'][data-card-columns='3'] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 

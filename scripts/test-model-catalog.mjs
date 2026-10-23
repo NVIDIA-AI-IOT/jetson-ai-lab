@@ -58,6 +58,18 @@ try {
 	await t4000Filter.evaluate((input) => input.click());
 	const t4000Chip = page.locator('[data-remove-catalog-filter="module"][data-filter-value="thor_t4000"]');
 	assert((await t4000Chip.textContent())?.trim() === 'T4000 ×', 'Active device chip should omit the result count');
+	const resultCountBox = await page.locator('#models-result-count').boundingBox();
+	const t4000ChipBox = await t4000Chip.boundingBox();
+	assert(
+		await page.locator('#models-result-count').evaluate((element) => !document.querySelector('#models-directory-toolbar')?.contains(element)),
+		'Result count and active filters should use the dedicated line below the view toolbar'
+	);
+	assert(
+		resultCountBox && t4000ChipBox
+			&& t4000ChipBox.x > resultCountBox.x + resultCountBox.width
+			&& Math.abs((t4000ChipBox.y + t4000ChipBox.height / 2) - (resultCountBox.y + resultCountBox.height / 2)) <= 2,
+		'Active filter chips should sit inline to the right of the result count'
+	);
 	assert(await page.locator('#featured-models-section').isVisible(), 'Directory filters should not hide the independent Featured Models section');
 	const firstFamilyTopAfterFilter = (await page.locator('.model-family-group:visible').first().boundingBox())?.y;
 	assert(
@@ -133,9 +145,110 @@ try {
 		getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length
 	);
 	assert(legacyFamilyColumns === 4, `Expected four legacy family columns on desktop, received ${legacyFamilyColumns}`);
+	const cardColumnsMenuButton = page.locator('#models-card-columns-menu-button');
+	const cardColumnsMenu = page.locator('#models-card-columns-menu');
+	assert(await cardColumnsMenuButton.isVisible(), 'Cards split button should expose its column options');
+	assert(!(await cardColumnsMenu.isVisible()), 'Card column menu should be closed initially');
+	await cardColumnsMenuButton.click();
+	assert(await cardColumnsMenu.isVisible(), 'Card column menu did not open');
+	await page.locator('.models-card-columns-toggle[data-card-columns="3"]').click();
+	assert(!(await cardColumnsMenu.isVisible()), 'Card column menu should close after choosing a density');
+	const threeFamilyColumns = await page.locator('#models-directory-cards').evaluate((element) =>
+		getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length
+	);
+	assert(threeFamilyColumns === 3, `Expected three family columns after density change, received ${threeFamilyColumns}`);
+	assert(
+		await page.evaluate(() => localStorage.getItem('jetson-ai-lab-models-card-columns')) === '3',
+		'Card column preference was not stored'
+	);
+	await page.reload({ waitUntil: 'networkidle' });
+	assert(
+		(await page.locator('#models-directory-cards').getAttribute('data-card-columns')) === '3',
+		'Stored card column preference was not restored'
+	);
+	await cardColumnsMenuButton.click();
+	assert(
+		(await page.locator('.models-card-columns-toggle[data-card-columns="3"]').getAttribute('aria-checked')) === 'true',
+		'Stored card column preference was not reflected in the menu'
+	);
+	await page.locator('.models-card-columns-toggle[data-card-columns="4"]').click();
+	await cardColumnsMenuButton.click();
+	await page.locator('.models-card-fit-toggle[data-card-fit="content"]').click();
+	assert(
+		(await page.locator('#models-directory-cards').getAttribute('data-card-fit')) === 'content',
+		'Content-fit card layout was not applied'
+	);
+	assert(
+		await page.evaluate(() => localStorage.getItem('jetson-ai-lab-models-card-fit')) === 'content',
+		'Content-fit preference was not stored'
+	);
+	assert(
+		(await page.locator('.model-family-group[style*="grid-row-end: span"]').count()) > 0,
+		'Content-fit layout did not measure family cards'
+	);
+	await cardColumnsMenuButton.click();
+	await page.locator('.models-card-fit-toggle[data-card-fit="aligned"]').click();
+
+	const originalFirstFamily = await page.locator('.model-family-group').first().getAttribute('data-family');
+	const originalSecondFamily = await page.locator('.model-family-group').nth(1).getAttribute('data-family');
+	const firstFamilyHandle = page.locator('.model-family-group').first().locator('[data-family-drag-handle]');
+	assert(await firstFamilyHandle.isVisible(), 'A subtle family rearrange handle should always be available in Cards view');
+	assert(!(await page.locator('#models-card-rearrange-control').isVisible()), 'Done control should stay hidden until rearrangement begins');
+	await firstFamilyHandle.focus();
+	await firstFamilyHandle.press('ArrowRight');
+	assert((await page.locator('#models-card-rearrange').getAttribute('aria-pressed')) === 'true', 'Using a card handle should activate rearrange mode');
+	assert(await page.locator('#models-card-rearrange-control').isVisible(), 'Done control should appear while rearranging');
+	assert(
+		(await page.locator('.model-family-group').first().getAttribute('data-family')) === originalSecondFamily,
+		'Keyboard rearrangement did not move the first family'
+	);
+	assert(
+		await page.evaluate(() => localStorage.getItem('jetson-ai-lab-model-family-order-v1')) !== null,
+		'Custom family order was not stored'
+	);
+	await page.reload({ waitUntil: 'networkidle' });
+	assert(
+		(await page.locator('.model-family-group').first().getAttribute('data-family')) === originalSecondFamily,
+		'Stored family order was not restored'
+	);
+	await page.locator('.model-family-group').first().locator('[data-family-drag-handle]').click();
+	await page.locator('#models-card-order-reset').click();
+	assert(
+		(await page.locator('.model-family-group').first().getAttribute('data-family')) === originalFirstFamily,
+		'Reset did not restore the default family order'
+	);
+	const pointerHandle = page.locator('.model-family-group').first().locator('[data-family-drag-handle]');
+	const pointerTarget = page.locator('.model-family-group').nth(1);
+	await pointerHandle.scrollIntoViewIfNeeded();
+	const handleBox = await pointerHandle.boundingBox();
+	const targetBox = await pointerTarget.boundingBox();
+	assert(handleBox && targetBox, 'Pointer rearrangement fixtures are not visible');
+	await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+	await page.mouse.down();
+	assert((await page.locator('.model-family-drag-ghost').count()) === 1, 'Pointer drag should create a following card ghost');
+	assert(await page.locator('html').evaluate((node) => node.classList.contains('model-family-drag-active')), 'Pointer drag should retain the page-wide grabbing cursor');
+	await page.mouse.move(targetBox.x + targetBox.width * 0.75, Math.min(970, targetBox.y + 100));
+	assert((await page.locator('.model-family-drop-target').count()) === 1, 'Pointer drag should highlight the insertion target');
+	await page.mouse.up();
+	await page.waitForFunction(() => document.querySelector('.model-family-drag-ghost') === null);
+	assert(!(await page.locator('html').evaluate((node) => node.classList.contains('model-family-drag-active'))), 'Grabbing cursor should clear when pointer drag ends');
+	assert(
+		(await page.locator('.model-family-group').first().getAttribute('data-family')) === originalSecondFamily,
+		'Pointer rearrangement did not update the family order'
+	);
+	await page.locator('#models-card-order-reset').click();
 
 	await page.locator('#models-view-compact').click();
 	assert((await page.locator('#models-view-compact').getAttribute('aria-pressed')) === 'true', 'Compact view did not become active');
+	assert(await cardColumnsMenuButton.isVisible(), 'Cards column options should remain discoverable in the split button');
+	assert(!(await cardColumnsMenu.isVisible()), 'Card column menu should stay closed outside Cards view');
+	await cardColumnsMenuButton.click();
+	assert((await page.locator('#models-view-cards').getAttribute('aria-pressed')) === 'true', 'Opening card options should switch to Cards view');
+	assert(await cardColumnsMenu.isVisible(), 'Card column menu should open after switching to Cards view');
+	await page.keyboard.press('Escape');
+	assert(!(await cardColumnsMenu.isVisible()), 'Escape should close the card column menu');
+	await page.locator('#models-view-compact').click();
+	assert(!(await page.locator('#models-card-rearrange-control').isVisible()), 'Rearrange control should hide outside Cards view');
 	assert(
 		(await cosmosFamily.evaluate((element) => getComputedStyle(element).display)) === 'block',
 		'Compact view should use the block-based family layout'
