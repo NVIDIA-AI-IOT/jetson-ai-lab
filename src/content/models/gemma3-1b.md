@@ -3,6 +3,8 @@ title: "Gemma 3 1B"
 model_id: "gemma3-1b"
 short_description: "Google's efficient 1 billion parameter model balancing capability and resource usage"
 family: "Google Gemma3"
+visual_family: "gemma"
+visual_variant: "3"
 icon: "💎"
 is_new: false
 order: 2
@@ -12,6 +14,9 @@ memory_requirements: "2GB RAM"
 precision: "FP16"
 parameters: "1B"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "32K"
 license: "Gemma Terms of Service"
 model_size: "1.2GB"
@@ -71,4 +76,3 @@ Gemma is a family of lightweight, state-of-the-art open models from Google, buil
 **Output:**
 - Generated text in response to the input, such as an answer to a question or a summary of a document
 - Total output context of 8192 tokens
-

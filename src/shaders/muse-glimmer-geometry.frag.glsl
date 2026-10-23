@@ -1,0 +1,9 @@
+#version 300 es
+precision highp float;
+precision highp int;
+uniform int u_geometry_kind;
+in vec2 v_local;
+in vec3 v_color;
+in float v_alpha;
+out vec4 outColor;
+void main(){float alpha=u_geometry_kind==0?(1.-smoothstep(.45,1.,abs(v_local.y))):exp(-dot(v_local,v_local)*3.2);outColor=vec4(v_color,alpha*v_alpha);}

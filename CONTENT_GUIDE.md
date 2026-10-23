@@ -4,6 +4,14 @@ This guide explains how to manage content for Jetson AI Lab using Markdown, MDX,
 
 The authoritative schemas live in `src/content/config.ts`. This guide summarizes them; if the two ever disagree, `config.ts` wins. See also `CONTRIBUTING.md`, `TUTORIAL_TEMPLATE.md`, and `docs/jetson-matrix-and-run-modal.md`.
 
+New model files in `src/content/models/` must include the catalog registration date in ISO format:
+
+```yaml
+catalog_added_at: "2026-10-21"
+```
+
+The catalog derives the New badge and the `New only` filter from this date for 60 days. `new_until: YYYY-MM-DD` can set an explicit inclusive end date. Existing model files may continue using the deprecated `is_new` flag while they are migrated; date metadata takes precedence whenever both are present.
+
 ## File Structure
 
 ```

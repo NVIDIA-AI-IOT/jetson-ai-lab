@@ -1,0 +1,488 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import ModelShaderCanvas from '../components/ModelShaderCanvas.astro';
+import ShaderControls from '../components/ShaderControls.astro';
+import ShaderVersionSwitch from '../components/ShaderVersionSwitch.astro';
+import { modelFamilyVisual } from '../data/modelVisuals';
+import { defaultShaderVariant, modelShaderDefaults } from '../data/modelShaderDefaults.mjs';
+import { modalityLabel } from '../lib/modelModalities';
+
+const visual = modelFamilyVisual('qwen');
+const gemma = modelFamilyVisual('gemma');
+const liquid = modelFamilyVisual('liquid-d1');
+const nemotron = modelFamilyVisual('nvidia-nemotron');
+const cosmos = modelFamilyVisual('nvidia-cosmos');
+const llama = modelFamilyVisual('meta-llama');
+const museGlimmer = modelFamilyVisual('meta-muse-glimmer');
+const gptOss = modelFamilyVisual('openai-gpt-oss');
+const ministral3 = modelFamilyVisual('mistral-ministral3');
+const minimax = modelFamilyVisual('minimax-m2');
+const fluxAction = modelFamilyVisual('flux3-action');
+if (!visual) throw new Error('Qwen model-family visual is missing.');
+if (!gemma) throw new Error('Gemma model-family visual is missing.');
+if (!liquid) throw new Error('Liquid d1 model-family visual is missing.');
+if (!nemotron) throw new Error('NVIDIA Nemotron model-family visual is missing.');
+if (!cosmos) throw new Error('NVIDIA Cosmos model-family visual is missing.');
+if (!llama || !museGlimmer || !gptOss || !ministral3 || !minimax || !fluxAction) throw new Error('One or more additional model-family visuals are missing.');
+if (!nemotron.assets.icon) throw new Error('Nemotron icon is missing.');
+if (!cosmos.assets.icon) throw new Error('Cosmos icon is missing.');
+
+const shaderDefaults = {
+  qwen: modelShaderDefaults('qwen'),
+  gemma: modelShaderDefaults('gemma'),
+  cosmos: modelShaderDefaults('cosmos'),
+  nemotron: modelShaderDefaults('nemotron'),
+  liquid: modelShaderDefaults('liquid'),
+  llama: modelShaderDefaults('llama'),
+  'muse-glimmer': modelShaderDefaults('muse-glimmer'),
+  'gpt-oss': modelShaderDefaults('gpt-oss'),
+  ministral3: modelShaderDefaults('ministral3'),
+  minimax: modelShaderDefaults('minimax'),
+  'flux-action': modelShaderDefaults('flux-action'),
+};
+
+const shaderControls = {
+  qwen: [
+    { key: 'speed', label: 'Drift speed', min: 0, max: 1, step: 0.01, value: 0.3, unit: '×' },
+    { key: 'center_x', label: 'Center X', min: 0.55, max: 0.9, step: 0.01, value: 0.73 },
+    { key: 'center_y', label: 'Center Y', min: 0.3, max: 0.7, step: 0.01, value: 0.47 },
+    { key: 'scale', label: 'Plane field scale', min: 0.65, max: 1.45, step: 0.01, value: 1 },
+    { key: 'motion', label: 'Drift distance', min: 0, max: 2.5, step: 0.05, value: 1 },
+  ],
+  gemma: [
+    { key: 'breeze_speed', label: 'Stream speed', min: 0, max: 1.25, step: 0.01, value: 0.32 },
+    { key: 'streak_width', label: 'Blue streak width', min: 0.4, max: 2.2, step: 0.02, value: 1 },
+    { key: 'streak_bend', label: 'Stream curvature', min: 0, max: 2.2, step: 0.02, value: 1.18 },
+    { key: 'streak_intensity', label: 'Blue streak intensity', min: 0.3, max: 2, step: 0.02, value: 1 },
+  ],
+  cosmos: [
+    { key: 'speed', label: 'Rotation speed', min: 0, max: 1, step: 0.01, value: 0.20 },
+    { key: 'center_x', label: 'Core X', min: 0.5, max: 0.88, step: 0.01, value: 0.72 },
+    { key: 'center_y', label: 'Core Y', min: 0.34, max: 0.66, step: 0.01, value: 0.51 },
+    { key: 'scale', label: 'Galaxy scale', min: 0.65, max: 1.45, step: 0.01, value: 1 },
+    { key: 'arm_width', label: 'Arm width', min: 0.5, max: 4, step: 0.02, value: 2.8, description: 'Expands the physical ribbon width in the galaxy plane rather than only increasing particle density.' },
+    { key: 'brightness', label: 'Arm brightness', min: 0.45, max: 1.8, step: 0.02, value: 1 },
+    { key: 'view_tilt', label: 'View tilt', min: 0, max: 1.25, step: 0.01, value: 1.09 },
+    { key: 'view_angle', label: 'View direction', min: -1.57, max: 1.57, step: 0.01, value: 0.64 },
+    { key: 'galaxy_rotation', label: 'Galaxy rotation', min: -3.14, max: 3.14, step: 0.01, value: 0.54 },
+    { key: 'particle_twinkle', label: 'Particle twinkle', min: 0, max: 1, step: 0.01, value: 0.08, description: 'Blends a small amount of granular particle texture into the temporally smooth rotating field. Set to 0 for maximum stability.' },
+    { key: 'spectral_intensity', label: 'Violet opacity', min: 0, max: 2, step: 0.02, value: 0.62, description: 'Controls how strongly the displaced violet spiral replaces the underlying field. Cosmos 2 remains green.' },
+    { key: 'spectral_offset', label: 'Violet offset', min: 0.15, max: 1.2, step: 0.01, value: 0.65, description: 'Moves the parallel violet spiral away from or toward the original yellow-green arms.' },
+    { key: 'spectral_width', label: 'Violet width', min: 0.25, max: 4, step: 0.01, value: 4, description: 'Changes the width of the displaced violet bands and their internal filaments.' },
+    { key: 'spectral_hue', label: 'Violet hue · blue ↔ pink', min: -1, max: 1, step: 0.02, value: 0, description: 'Left shifts the displaced arm toward vivid blue; right shifts it toward vivid pink. The midpoint remains neutral violet.' },
+    { key: 'spectral_brightness', label: 'Violet brightness', min: 0.25, max: 2.5, step: 0.01, value: 1.14, description: 'Changes emitted brightness independently from opacity and width.' },
+    { key: 'spectral_paleness', label: 'Violet paleness', min: 0, max: 1, step: 0.02, value: 1, description: 'Blends the saturated purple toward a lighter lavender without moving the arm back over the green spiral.' },
+  ],
+  nemotron: [
+    { key: 'render_scale', label: 'Render resolution', min: 0.5, max: 1.5, step: 0.05, value: 1, unit: '×', description: 'Actual WebGL buffer scale. Higher values sharpen the mirror grid but increase fragment work.' },
+    { key: 'soft_focus', label: 'Soft focus', min: 0, max: 2.5, step: 0.05, value: 2, unit: 'px', description: 'Post-render blur for intentionally softening low-resolution edges without changing the simulation.' },
+    { key: 'speed', label: 'Wave speed', min: 0, max: 1, step: 0.01, value: 0.32 },
+    { key: 'center_x', label: 'Surface X', min: 0.52, max: 0.88, step: 0.01, value: 0.72 },
+    { key: 'center_y', label: 'Surface Y', min: 0.35, max: 0.65, step: 0.01, value: 0.50 },
+    { key: 'scale', label: 'Surface zoom', min: 0.55, max: 1.7, step: 0.01, value: 1.12 },
+    { key: 'surface_angle', label: 'Surface angle', min: -0.75, max: 0.35, step: 0.01, value: -0.24 },
+    { key: 'tile_count', label: 'Mirror density', min: 6, max: 26, step: 1, value: 6, decimals: 0 },
+    { key: 'wave_scale', label: 'Wave length', min: 0.45, max: 2.2, step: 0.01, value: 0.91 },
+    { key: 'wave_amplitude', label: 'Z displacement', min: 0, max: 5, step: 0.05, value: 4.4, description: 'Physical height of the travelling surface wave. It moves projected mirror centers and also changes each mirror normal.' },
+    { key: 'mirror_tilt', label: 'Rotation / tilt', min: 0, max: 2, step: 0.02, value: 1.48 },
+  ],
+  liquid: [
+    { key: 'speed', label: 'Flow speed', min: 0, max: 10, step: 0.05, value: 3.5, unit: '×' },
+    { key: 'flow_amplitude', label: 'Drift distance', min: 0, max: 5, step: 0.05, value: 2.05, unit: '×', description: 'Controls how far the ribbons and converged stream travel without changing their speed.' },
+    { key: 'convergence', label: 'Convergence', min: 0, max: 1.4, step: 0.02, value: 0.98 },
+    { key: 'field_density', label: 'Probability field', min: 0.5, max: 2, step: 0.05, value: 0.9 },
+    { key: 'field_orbit', label: 'Field orbit', min: 0, max: 5, step: 0.05, value: 0.45, unit: '×', description: 'Rotates two probability-particle layers around the sphere haze.' },
+    { key: 'pulse', label: 'Decision pulse', min: 0, max: 2, step: 0.02, value: 0.24 },
+    { key: 'sphere_haze', label: 'Sphere haze', min: 0, max: 10, step: 0.05, value: 3.5, unit: '×', description: 'A broad spherical glow behind the streams. Set to 0 to remove the System 1 reference entirely.' },
+  ],
+  llama: [
+    { key: 'orbit_speed', label: 'Orbit speed', min: 0, max: 1, step: 0.01, value: 0.3 },
+    { key: 'openness', label: 'Path openness', min: 0, max: 1.8, step: 0.02, value: 1 },
+    { key: 'layers', label: 'Orbit layers', min: 2, max: 7, step: 1, value: 6, decimals: 0 },
+  ],
+  'muse-glimmer': [
+    { key: 'render_scale', label: 'Background resolution', min: 0.1, max: 1, step: 0.05, value: 0.1, unit: '×', description: 'Live resolution of the nearly black background, dust, and broad halos. This is independent of the foreground geometry resolution.' },
+    { key: 'geometry_scale', label: 'Foreground resolution', min: 0.5, max: 1, step: 0.05, value: 1, unit: '×', description: 'Resolution of graph edges, nodes, and moving signal orbs. Compare this together with Soft focus; the background remains at its own resolution.' },
+    { key: 'soft_focus', label: 'Soft focus', min: 0, max: 2.5, step: 0.05, value: 2.3, unit: 'px', description: 'Post-render blur. It changes presentation only and does not alter graph geometry.' },
+    { key: 'node_drift', label: 'Node drift distance', min: 0, max: 2, step: 0.02, value: 1.18 },
+    { key: 'node_drift_speed', label: 'Node drift speed', min: 0, max: 8, step: 0.05, value: 3.05, unit: '×', description: 'Changes how quickly nodes move around their local drift paths without increasing their travel distance.' },
+    { key: 'signal_speed', label: 'Burst cadence', min: 0, max: 2, step: 0.02, value: 1.78 },
+    { key: 'branch_activity', label: 'Tool / recovery branch', min: 0, max: 1.5, step: 0.02, value: 1.5 },
+  ],
+  'gpt-oss': [
+    { key: 'render_scale', label: 'Render resolution', min: 0.5, max: 1.5, step: 0.05, value: 1, unit: '×', description: 'Actual WebGL buffer scale. Higher values preserve the distant tile grid but increase fragment work.' },
+    { key: 'soft_focus', label: 'Soft focus', min: 0, max: 2.5, step: 0.05, value: 0.30, unit: 'px', description: 'Post-render blur for suppressing distant-grid aliasing without changing tile geometry.' },
+    { key: 'grid_angle', label: 'Camera angle', min: 0.35, max: 1.8, step: 0.02, value: 1 },
+    { key: 'grid_density', label: 'Tile density', min: 0.4, max: 1.8, step: 0.02, value: 1 },
+    { key: 'tile_contrast', label: 'Tile contrast', min: 0.2, max: 1.7, step: 0.02, value: 1 },
+    { key: 'pulse_rate', label: 'Pulse cadence', min: 0.2, max: 10, step: 0.1, value: 4, unit: '×', description: 'Changes the interval between events without shortening the visible pulse. The range extends to 10× for tuning.' },
+    { key: 'pulse_activity', label: 'Pulse activity', min: 0, max: 1, step: 0.02, value: 0.65, description: 'How many foreground tiles are eligible for the occasional color response.' },
+    { key: 'blue_highlight', label: 'Blue highlight', min: 0, max: 2, step: 0.02, value: 1.25, description: 'Subtle launch-blue tint on a selected tile; the field remains monochrome and flat.' },
+    { key: 'distance_fog', label: 'Distance fog', min: 0, max: 2, step: 0.02, value: 1, description: 'Progressively dissolves the distant grid into the background to suppress compressed-tile aliasing.' },
+  ],
+  ministral3: [
+    { key: 'render_scale', label: 'Background resolution', min: 0.1, max: 1, step: 0.05, value: 0.5, unit: '×', description: 'Live resolution of the background and square dust. Instanced rectangles and their boundaries remain full resolution, so the visual impact can be compared independently.' },
+    { key: 'geometry_scale', label: 'Foreground resolution', min: 0.5, max: 1, step: 0.05, value: 1, unit: '×', description: 'Resolution of the instanced warm rectangles and their boundaries. Compare this together with Soft focus.' },
+    { key: 'soft_focus', label: 'Soft focus', min: 0, max: 2.5, step: 0.05, value: 0, unit: 'px', description: 'Post-render blur for softening enlarged step edges independently of render resolution.' },
+    { key: 'drift_speed', label: 'Step drift', min: 0, max: 2, step: 0.02, value: 1 },
+    { key: 'step_scale', label: 'Step scale', min: 0.5, max: 1.5, step: 0.02, value: 1 },
+    { key: 'depth', label: 'Ribbon depth', min: 0.3, max: 1.6, step: 0.02, value: 1 },
+  ],
+  minimax: [
+    { key: 'iteration_speed', label: 'Iteration speed', min: 0, max: 1, step: 0.01, value: 0.28 },
+    { key: 'loop_depth', label: 'Feedback depth', min: 2, max: 10, step: 1, value: 8, decimals: 0 },
+    { key: 'wave_height', label: 'Wave amplitude', min: 0.04, max: 0.36, step: 0.01, value: 0.2 },
+  ],
+  'flux-action': [
+    { key: 'horizon', label: 'Prediction horizon', min: 2, max: 9, step: 1, value: 8, decimals: 0 },
+    { key: 'frame_depth', label: 'Frame depth', min: 0.4, max: 1.8, step: 0.02, value: 1 },
+    { key: 'action_energy', label: 'Action trajectory', min: 0, max: 1.8, step: 0.02, value: 1 },
+  ],
+};
+
+const controlsWithSavedDefaults = Object.fromEntries(Object.entries(shaderControls).map(([shaderId, controls]) => {
+  const values = shaderDefaults[shaderId as keyof typeof shaderDefaults] as Record<string, number>;
+  return [shaderId, controls.map((control) => ({
+    ...control,
+    value: values[control.key] ?? control.value,
+  }))];
+}));
+
+const shaderVersions = {
+  qwen: [
+    {
+      label: '3',
+      params: modelShaderDefaults('qwen', '3'),
+    },
+    {
+      label: '3.5',
+      params: modelShaderDefaults('qwen', '3.5'),
+    },
+    {
+      label: '3.8',
+      params: modelShaderDefaults('qwen', '3.8'),
+    },
+  ],
+  gemma: [
+    {
+      label: '3',
+      params: modelShaderDefaults('gemma', '3'),
+      resolutionScale: 0.7,
+      description: 'Pale blue translucent streaks drift across a deep blue field, recalling the quieter single-color visual language used around Gemma 3.',
+    },
+    {
+      label: '4',
+      params: modelShaderDefaults('gemma', '4'),
+      resolutionScale: 0.5,
+      description: 'Gemma 4 keeps the same pale blue identity while increasing stream curvature, layer count, and sparse particulate highlights. The effect renders at half resolution and is smoothly enlarged by the browser.',
+    },
+  ],
+  cosmos: [
+    { label: '2', params: modelShaderDefaults('cosmos', '2') },
+    { label: '3', params: modelShaderDefaults('cosmos', '3') },
+  ],
+  nemotron: [
+    { label: '3', params: modelShaderDefaults('nemotron', '3') },
+    { label: '3.5', params: modelShaderDefaults('nemotron', '3.5') },
+  ],
+};
+
+const showcaseTreatments = [
+  {
+    visual, shaderId: 'qwen' as const, previewSlug: 'qwen3-8-27b', model: 'Qwen3.8 27B', eyebrow: 'Alibaba Qwen · isometric plane field',
+    description: 'Long rectangular planes overlap in an isometric field and drift just enough to change their spacing, extending Qwen’s geometric character without turning the background into a second logo.',
+    rationale: 'The procedural field remains separate from the reviewed Qwen identity asset. Generation presets vary motion, scale, and the official icon used for the selected release.',
+    identityDescription: 'The selected official Qwen mark is shown independently from the generated background.', startTime: 7, resolutionScale: 0.8,
+    versions: shaderVersions.qwen, activeVersion: '3.8', labelPrefix: 'Qwen', labelSuffix: ' 27B',
+  },
+  {
+    visual: gemma, shaderId: 'gemma' as const, previewSlug: 'gemma4-12b', model: 'Gemma 4 model family', eyebrow: 'Google Gemma · pale-blue stream field',
+    description: 'Pale blue streams curve across a deep field. Gemma 4 increases curvature, layer count, and sparse particulate highlights while retaining family continuity.',
+    rationale: 'Version differences live in the procedural background. No reconstructed Gemma mark is shipped while an approved, locally distributable first-party identity asset is unavailable.',
+    identityDescription: 'Text identity only; no reconstructed or redistributed icon.', startTime: 11, resolutionScale: 0.5,
+    versions: shaderVersions.gemma, activeVersion: '4', labelPrefix: 'Gemma ', labelSuffix: ' model family',
+  },
+  {
+    visual: liquid, shaderId: 'liquid' as const, previewSlug: 'd1-3b', model: 'Liquid AI d1', eyebrow: 'Liquid AI · converging decision field',
+    description: 'Smooth input ribbons pass through a sparse decision field and resolve into one weighted stream with tightly packed answer-probability traces, without claiming to diagram the model’s internal topology.',
+    rationale: 'The live shader is the decorative source of truth. Hero and catalog WebPs are deterministic first-paint and failure fallbacks from the same program.',
+    identityDescription: 'Stable official identity for selectors and compact cards.', startTime: 13, resolutionScale: 0.75,
+  },
+  {
+    visual: llama, shaderId: 'llama' as const, previewSlug: 'llama3-1-8b', model: 'Meta Llama', eyebrow: 'Open model family · continuous orbit grammar',
+    description: 'Open, layered blue paths circulate without closing into a copied logo. A single moving node makes the family field feel connected and extensible.',
+    rationale: 'This remains a provisional Llama-only treatment while official Llama materials are reviewed. It does not apply to Muse Glimmer; provider identity remains a separate reviewed official asset.',
+    identityDescription: 'Reviewed official identity is kept separate from the orbit field.', startTime: 9, resolutionScale: 0.75,
+  },
+  {
+    visual: museGlimmer, shaderId: 'muse-glimmer' as const, previewSlug: 'muse-glimmer-30b', model: 'Muse Glimmer 30B', eyebrow: 'Official launch-KV grammar · directed glimmer graph',
+    description: 'Luminous nodes drift slowly while their directed edges follow. Small light orbs burst rapidly from source nodes, decelerate along each route, and fade into their destinations; a temporary branch suggests a tool call or recovery step.',
+    rationale: 'The palette, sparse topology, fine blue paths, and luminous nodes come from Meta’s official Muse Glimmer launch key visual. Motion is an explanatory metaphor, not a model architecture diagram. The identity asset is Meta’s official wordmark; no unofficial Muse logo is introduced.',
+    identityDescription: 'Official provider identity; no unofficial Muse logo is introduced.', startTime: 13, resolutionScale: 0.75,
+  },
+  {
+    visual: gptOss, shaderId: 'gpt-oss' as const, previewSlug: 'gpt-oss-20b', model: 'OpenAI gpt-oss', eyebrow: 'Open-weight reasoning · four active expert routes · Harmony bands',
+    description: 'A large monochrome plane of gray square tiles is viewed from a low, strongly oblique angle. Slow reflections pass across the orderly surface without turning it into a literal architecture diagram.',
+    rationale: 'The revised treatment intentionally avoids illustrating MoE routing. It uses only OpenAI’s restrained monochrome identity and a generic mathematical grid; the grid makes no claim about the model’s internal topology and the official OpenAI identity remains separate.',
+    identityDescription: 'Reviewed official identity remains separate from the generic grid.', startTime: 17, resolutionScale: 0.75,
+  },
+  {
+    visual: ministral3, shaderId: 'ministral3' as const, previewSlug: 'ministral3-8b-instruct', model: 'Ministral 3', eyebrow: 'Official Mistral 3 KV grammar · pixel-step wind',
+    description: 'Yellow, orange, and red rectangular steps form layered wind-like ribbons across Mistral’s dark launch field, with slow motion suitable for compact edge-model pages.',
+    rationale: 'The pixel cadence, dark ground, and warm palette come from Mistral’s official Mistral 3 launch key visual. The ribbons avoid redrawing its central numeral or wordmark and make no architecture claim.',
+    identityDescription: 'Text identity until redistribution of a first-party mark is reviewed.', startTime: 21, resolutionScale: 0.75,
+  },
+  {
+    visual: minimax, shaderId: 'minimax' as const, previewSlug: 'minimax-m2-7', model: 'MiniMax M2.7', eyebrow: 'Agentic iteration · recursive feedback waves',
+    description: 'Nested magenta-to-coral waves repeatedly pass through the same field, representing an agent harness that evaluates, remembers, and improves its next iteration.',
+    rationale: 'The waveform rhythm and gradient are grounded in MiniMax’s official mark; recursion is grounded in the M2.7 self-evolution narrative.',
+    identityDescription: 'Text identity until redistribution of a first-party mark is reviewed.', startTime: 25, resolutionScale: 0.75,
+  },
+  {
+    visual: fluxAction, shaderId: 'flux-action' as const, previewSlug: 'flux-3-action', model: 'FLUX.3 Action', eyebrow: 'World-action model · video and action predicted together',
+    description: 'Observation panes advance through a dark temporal corridor while a green joint trajectory crosses them as one action chunk.',
+    rationale: 'The composition reflects FLUX.3 Action’s joint future-frame/action prediction and the visual timeline used in Black Forest Labs’ official launch material.',
+    identityDescription: 'Reviewed Black Forest Labs identity is independent from the action field.', startTime: 29, resolutionScale: 0.75,
+  },
+  {
+    visual: nemotron, shaderId: 'nemotron' as const, previewSlug: 'nemotron3-5-lightning', model: 'Nemotron 3.5', eyebrow: 'NVIDIA Nemotron · travelling micromirror surface',
+    description: 'An orderly surface of transparent square micromirrors translates and tilts in slow travelling waves, revealing color only through rims and passing reflections.',
+    rationale: 'The surface extends beyond the frame and remains family-specific decoration, not a replacement for NVIDIA identity or a claim about model architecture.',
+    identityDescription: 'The official NVIDIA neural-network cube provides compact family identity.', startTime: 60, resolutionScale: 1,
+    versions: shaderVersions.nemotron, activeVersion: '3.5', labelPrefix: 'Nemotron ', labelSuffix: '',
+  },
+  {
+    visual: cosmos, shaderId: 'cosmos' as const, previewSlug: 'cosmos3-nano', model: 'Cosmos 3', eyebrow: 'NVIDIA Cosmos · two logarithmic galaxy arms',
+    description: 'A softly rotating two-arm galaxy follows the geometry of the official Cosmos mark. Cosmos 3 adds a phase-displaced violet spiral while preserving the yellow-green arms.',
+    rationale: 'The live field uses a logarithmic phase with its second arm offset by π radians. It remains decorative and separate from the official galaxy-in-cube identity.',
+    identityDescription: 'The official Cosmos galaxy-in-cube mark provides compact family identity.', startTime: 24, resolutionScale: 0.75,
+    versions: shaderVersions.cosmos, activeVersion: '3', labelPrefix: 'Cosmos ', labelSuffix: '',
+  },
+];
+
+const modelEntries = await getCollection('models');
+const heroPreviewInfo = Object.fromEntries(showcaseTreatments.map((treatment) => {
+  const entry = modelEntries.find((model) => model.slug === treatment.previewSlug);
+  if (!entry) throw new Error(`Hero preview model is missing: ${treatment.previewSlug}`);
+  const data = entry.data;
+  const inputs = data.input_modalities?.length
+    ? data.input_modalities
+    : data.modalities?.map((modality: string) => modality.toLowerCase())
+      ?? (data.vision_capable ? ['text', 'image'] : ['text']);
+  const outputs = data.output_modalities?.length
+    ? data.output_modalities
+    : data.type === 'Image' ? ['image'] : data.type === 'Audio' ? ['audio'] : ['text'];
+  return [treatment.shaderId, {
+    parameters: data.parameters ?? data.model_size ?? '—',
+    inputs: inputs.map((modality: string) => modalityLabel(modality, 'input')),
+    outputs: outputs.map((modality: string) => modalityLabel(modality, 'output')),
+    contextLength: data.context_length,
+    license: data.license,
+    precision: data.precision.split(/[\/,]/).map((token: string) => token.trim()).filter(Boolean),
+  }];
+}));
+---
+
+<Layout title="Procedural model visual system" description="Prototype for deterministic WebGL2 model-family visuals." noindex>
+  <main class="min-h-screen bg-nvidia-gray-50 pb-20">
+    <section class="border-b border-nvidia-gray-200 bg-white">
+      <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-8">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.18em] text-nvidia-green">Live placement preview</p>
+          <h1 class="mt-1 text-2xl font-bold text-nvidia-black">Model-page hero</h1>
+          <p class="mt-1 text-sm text-nvidia-gray-600">The selected live shader is placed in the real hero composition. Tuning and generation controls remain in its showcase below.</p>
+        </div>
+        <div class="flex flex-wrap items-end gap-3">
+          <label class="flex min-w-64 flex-1 flex-col gap-1 text-xs font-bold uppercase tracking-wide text-nvidia-gray-500">
+            Preview family
+            <select data-family-hero-select class="rounded-sm border border-nvidia-gray-300 bg-white px-3 py-2.5 text-sm font-bold normal-case tracking-normal text-nvidia-black focus:border-nvidia-green focus:outline-none">
+              {showcaseTreatments.map((treatment, index) => <option value={treatment.shaderId} selected={index === 0}>{treatment.model}</option>)}
+            </select>
+          </label>
+          <button type="button" data-hero-info-toggle aria-pressed="true" class="inline-flex h-[42px] items-center gap-2 rounded-sm border border-nvidia-gray-300 bg-white px-3 text-xs font-bold text-nvidia-gray-700 hover:border-nvidia-green">
+            <span>Model info</span>
+            <span class="relative h-4 w-8 rounded-[5px] border border-[#5d9200] bg-nvidia-green/60" data-hero-info-track aria-hidden="true">
+              <span class="absolute left-[2px] top-[2px] h-2.5 w-2.5 translate-x-[14px] rounded-[3px] bg-white shadow-sm transition-transform" data-hero-info-thumb></span>
+            </span>
+            <span class="w-5 text-left" data-hero-info-state>On</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="relative isolate min-h-[52rem] overflow-hidden bg-nvidia-black text-white md:min-h-[29rem]" data-hero-info-stage>
+      {showcaseTreatments.map((treatment, index) => (
+        <div data-family-hero={treatment.shaderId} class:list={['absolute inset-0', index !== 0 && 'hidden']}>
+          <img src={treatment.visual.assets.hero} alt="" class="absolute inset-0 h-full w-full object-cover" />
+          <ModelShaderCanvas
+            shaderId={treatment.shaderId}
+            instanceId={`hero-${treatment.shaderId}`}
+            defaults={shaderDefaults[treatment.shaderId]}
+            startTime={treatment.startTime}
+            maxFps={20}
+            resolutionScale={treatment.resolutionScale}
+            class="pointer-events-none absolute inset-0 h-full w-full"
+          />
+          <div class="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/5"></div>
+          <div class="relative mx-auto grid h-full min-h-[52rem] max-w-7xl items-center gap-10 px-6 py-12 md:min-h-[29rem] md:grid-cols-2 lg:px-8" data-hero-layout>
+            <div>
+              <div class="mb-6 flex items-center gap-4">
+                {treatment.visual.assets.icon ? (
+                  <span class="grid h-12 w-12 place-items-center overflow-hidden rounded-lg border border-white/15 bg-black/45 p-1.5 backdrop-blur">
+                    <img src={treatment.visual.assets.icon} alt={treatment.visual.alt.icon} data-version-icon={treatment.shaderId} class="h-full w-full object-contain" />
+                  </span>
+                ) : null}
+                <span class="text-sm font-bold uppercase tracking-[0.18em] text-white/65">Model visual preview</span>
+              </div>
+              <h2 class="text-4xl font-bold sm:text-5xl" data-version-display={treatment.shaderId}>{treatment.model}</h2>
+              <p class="mt-5 text-lg leading-relaxed text-white/75 sm:text-xl">{treatment.description}</p>
+              <div class="mt-8 flex flex-wrap gap-3">
+                <span class="rounded-sm border border-nvidia-green/70 bg-black/35 px-4 py-2 text-sm font-bold text-white">Benchmark</span>
+                <span class="rounded-sm border border-nvidia-green/70 bg-black/35 px-4 py-2 text-sm font-bold text-white">Model Details</span>
+              </div>
+            </div>
+            <div class="rounded-xl border border-nvidia-gray-700 bg-black/50 p-6 shadow-2xl backdrop-blur-sm sm:p-8" data-hero-info-panel>
+              <div class="divide-y divide-nvidia-gray-700">
+                <div class="flex items-start justify-between gap-4 py-3">
+                  <span class="shrink-0 font-medium text-nvidia-gray-300">Parameters</span>
+                  <span class="text-right font-bold text-white">{heroPreviewInfo[treatment.shaderId].parameters}</span>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-3">
+                  <span class="shrink-0 font-medium text-nvidia-gray-300">Inputs</span>
+                  <div class="flex flex-wrap justify-end gap-1.5">
+                    {heroPreviewInfo[treatment.shaderId].inputs.map((input) => <span class="rounded-full border border-white/15 bg-white/[0.06] px-2 py-0.5 text-xs font-medium text-slate-400">{input}</span>)}
+                  </div>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-3">
+                  <span class="shrink-0 font-medium text-nvidia-gray-300">Outputs</span>
+                  <div class="flex flex-wrap justify-end gap-1.5">
+                    {heroPreviewInfo[treatment.shaderId].outputs.map((output) => <span class="rounded-full border border-white/15 bg-white/[0.06] px-2 py-0.5 text-xs font-medium text-slate-400">{output}</span>)}
+                  </div>
+                </div>
+                {heroPreviewInfo[treatment.shaderId].contextLength && (
+                  <div class="flex items-center justify-between gap-4 py-3">
+                    <span class="shrink-0 font-medium text-nvidia-gray-300">Context Length</span>
+                    <span class="text-right font-bold text-white">{heroPreviewInfo[treatment.shaderId].contextLength}</span>
+                  </div>
+                )}
+                <div class="flex items-start justify-between gap-4 py-3">
+                  <span class="shrink-0 font-medium text-nvidia-gray-300">License</span>
+                  <span class="text-right font-bold text-white">{heroPreviewInfo[treatment.shaderId].license}</span>
+                </div>
+                <div class="flex items-center justify-between gap-4 py-3">
+                  <span class="shrink-0 font-medium text-nvidia-gray-300">Precision</span>
+                  <div class="flex flex-wrap justify-end gap-1.5">
+                    {heroPreviewInfo[treatment.shaderId].precision.map((precision) => <span class="rounded-full border border-[#008080] bg-[#006666]/20 px-2.5 py-1 text-xs font-bold text-[#4DD9D9]">{precision}</span>)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <section class="mx-auto max-w-7xl px-6 py-10 lg:px-8">
+      <div class="grid gap-5 rounded-xl border border-nvidia-gray-300 bg-white p-6 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.18em] text-nvidia-green">Deterministic code render · one comparison system</p>
+          <h2 class="mt-2 text-3xl font-bold text-nvidia-black">Family visual showcase</h2>
+          <p class="mt-2 max-w-4xl text-sm leading-relaxed text-nvidia-gray-700">Every family below uses the same layout and exposes the same asset boundaries: live hero, catalog crop, identity treatment, design rationale, tuning controls, and Shadertoy export.</p>
+        </div>
+        <code class="rounded-md bg-nvidia-black px-4 py-3 text-xs text-[#a4e645]">GLSL → live + WebP · identity → reviewed separately</code>
+      </div>
+    </section>
+
+    {showcaseTreatments.map((treatment) => (
+      <section class="mx-auto max-w-7xl px-6 pb-12 lg:px-8" data-family-showcase={treatment.shaderId}>
+        <div class="mb-6 border-t border-nvidia-gray-200 pt-10">
+          <p class="text-xs font-bold uppercase tracking-[0.18em] text-nvidia-gray-500">{treatment.eyebrow}</p>
+          <h2 class="mt-2 text-3xl font-bold text-nvidia-black">{treatment.model}</h2>
+        </div>
+        <article class="overflow-hidden rounded-xl border border-nvidia-gray-200 bg-white shadow-sm">
+          <div class="relative min-h-[24rem] overflow-hidden" style={`background-color:${treatment.visual.palette.background}`}>
+            <img src={treatment.visual.assets.hero} alt="" class="absolute inset-0 h-full w-full object-cover" />
+            <ModelShaderCanvas shaderId={treatment.shaderId} instanceId={`showcase-${treatment.shaderId}`} defaults={shaderDefaults[treatment.shaderId]} startTime={treatment.startTime} maxFps={20} resolutionScale={treatment.resolutionScale} class="absolute inset-0 h-full w-full" />
+            <div class="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-transparent"></div>
+            <div class="relative flex min-h-[24rem] max-w-xl flex-col justify-center p-8 text-white sm:p-10">
+              <div class="mb-5 flex items-center gap-4">
+                {treatment.visual.assets.icon ? (
+                  <span class="grid h-16 w-16 place-items-center overflow-hidden rounded-xl border border-white/15 bg-black/50 p-2 backdrop-blur">
+                    <img src={treatment.visual.assets.icon} alt={treatment.visual.alt.icon} data-version-icon={treatment.shaderId} class="h-full w-full object-contain" />
+                  </span>
+                ) : null}
+                <span class="text-xs font-bold uppercase tracking-[0.18em] text-white/70">Hero treatment</span>
+              </div>
+              <h3 class="text-4xl font-bold" data-version-display={treatment.shaderId}>{treatment.model}</h3>
+              <p class="mt-4 text-lg leading-relaxed text-white/75" data-version-description={treatment.shaderId}>{treatment.description}</p>
+            </div>
+          </div>
+          {'versions' in treatment && treatment.versions && (
+            <ShaderVersionSwitch shaderId={treatment.shaderId} versions={treatment.versions} active={treatment.activeVersion} labelPrefix={treatment.labelPrefix} labelSuffix={treatment.labelSuffix} />
+          )}
+          <ShaderControls
+            shaderId={treatment.shaderId}
+            controls={controlsWithSavedDefaults[treatment.shaderId]}
+            savedDefaults={shaderDefaults[treatment.shaderId]}
+            defaultVariant={defaultShaderVariant(treatment.shaderId)}
+          />
+          <div class="grid gap-0 border-t border-nvidia-gray-200 lg:grid-cols-[1.25fr_0.75fr_1fr]">
+            <div class="border-b border-nvidia-gray-200 p-6 lg:border-b-0 lg:border-r">
+              <p class="text-xs font-bold uppercase tracking-wider text-nvidia-gray-500">Catalog crop</p>
+              <div class="relative mt-3 aspect-video overflow-hidden rounded-sm border border-nvidia-gray-200" style={`background-color:${treatment.visual.palette.background}`}>
+                <img src={treatment.visual.assets.catalog} alt={treatment.visual.alt.catalog} class="absolute inset-0 h-full w-full object-cover" />
+                <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 pb-3 pt-10 text-sm font-bold text-white">{treatment.model}</div>
+              </div>
+            </div>
+            <div class="border-b border-nvidia-gray-200 p-6 lg:border-b-0 lg:border-r">
+              <p class="text-xs font-bold uppercase tracking-wider text-nvidia-gray-500">Identity</p>
+              {treatment.visual.assets.icon ? (
+                <div class="mt-3 grid h-24 w-24 place-items-center overflow-hidden rounded-xl border border-nvidia-gray-200 bg-black p-3">
+                  <img src={treatment.visual.assets.icon} alt={treatment.visual.alt.icon} data-version-icon={treatment.shaderId} class="h-full w-full object-contain" />
+                </div>
+              ) : (
+                <div class="mt-3 grid h-24 w-24 place-items-center rounded-xl border border-dashed border-nvidia-gray-300 bg-nvidia-gray-50 text-center text-[10px] font-bold uppercase leading-tight text-nvidia-gray-400">Text<br />only</div>
+              )}
+              <p class="mt-3 text-sm leading-relaxed text-nvidia-gray-700" data-version-icon-description={treatment.shaderId}>{treatment.identityDescription}</p>
+            </div>
+            <div class="p-6">
+              <p class="text-xs font-bold uppercase tracking-wider text-nvidia-gray-500">Recorded design rationale</p>
+              <p class="mt-3 text-sm leading-relaxed text-nvidia-gray-700">{treatment.rationale}</p>
+              <p class="mt-4 text-xs leading-relaxed text-nvidia-gray-500">The checked-in shader is the source of truth; the WebP is a deterministic first-paint and failure fallback.</p>
+            </div>
+          </div>
+        </article>
+      </section>
+    ))}
+  </main>
+
+  <script>
+    const familySelect = document.querySelector('[data-family-hero-select]');
+    const infoToggle = document.querySelector('[data-hero-info-toggle]');
+    const infoStage = document.querySelector('[data-hero-info-stage]');
+    if (familySelect instanceof HTMLSelectElement) {
+      const showFamily = (family) => {
+        document.querySelectorAll('[data-family-hero]').forEach((panel) => {
+          panel.classList.toggle('hidden', panel.getAttribute('data-family-hero') !== family);
+        });
+      };
+      familySelect.addEventListener('change', () => showFamily(familySelect.value));
+      showFamily(familySelect.value);
+    }
+    if (infoToggle instanceof HTMLButtonElement && infoStage instanceof HTMLElement) {
+      const setInfoVisible = (visible) => {
+        infoToggle.setAttribute('aria-pressed', String(visible));
+        document.querySelectorAll('[data-hero-info-panel]').forEach((panel) => panel.classList.toggle('hidden', !visible));
+        document.querySelectorAll('[data-hero-layout]').forEach((layout) => layout.classList.toggle('!min-h-[29rem]', !visible));
+        infoStage.classList.toggle('!min-h-[29rem]', !visible);
+        infoToggle.querySelector('[data-hero-info-thumb]')?.classList.toggle('!translate-x-0', !visible);
+        infoToggle.querySelector('[data-hero-info-track]')?.classList.toggle('!bg-nvidia-gray-300', !visible);
+        const state = infoToggle.querySelector('[data-hero-info-state]');
+        if (state) state.textContent = visible ? 'On' : 'Off';
+      };
+      infoToggle.addEventListener('click', () => setInfoVisible(infoToggle.getAttribute('aria-pressed') !== 'true'));
+      setInfoVisible(true);
+    }
+  </script>
+</Layout>

@@ -3,6 +3,7 @@ title: "Ministral 3 14B Instruct"
 model_id: "ministral3-14b-instruct"
 short_description: "Mistral AI's powerful 14 billion parameter instruction-tuned model"
 family: "Mistral AI Ministral 3"
+visual_family: "mistral-ministral3"
 icon: "🌀"
 is_new: false
 order: 3
@@ -11,7 +12,10 @@ vision_capable: true
 memory_requirements: "16GB RAM"
 precision: "FP8"
 parameters: "14B"
-modalities: ["Text"]
+modalities: ["Text", "Image"]
+input_modalities: ["text", "image"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "262K"
 license: "Apache 2.0"
 model_size: "9GB"

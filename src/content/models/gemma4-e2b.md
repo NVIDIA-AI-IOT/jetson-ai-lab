@@ -3,6 +3,8 @@ title: "Gemma 4 E2B"
 model_id: "gemma4-e2b"
 short_description: "Google's compact frontier Gemma 4 model for efficient multimodal and agentic workloads"
 family: "Google Gemma4"
+visual_family: "gemma"
+visual_variant: "4"
 icon: "💎"
 is_new: false
 order: 1
@@ -11,7 +13,10 @@ vision_capable: true
 memory_requirements: "8GB RAM"
 precision: "NVFP4 / W4A16 / Q4_0 GGUF"
 parameters: "2.3B effective (5.1B with embeddings)"
-modalities: ["Text", "Image", "Audio"]
+modalities: ["Text", "Image", "Video", "Audio"]
+input_modalities: ["text", "image", "video", "audio"]
+output_modalities: ["text"]
+tasks: ["text-generation", "automatic-speech-recognition"]
 context_length: "128K"
 license: "Apache 2.0"
 model_size: "5.0GB"

@@ -1,0 +1,206 @@
+{
+  "qwen": {
+    "defaultVariant": "3.8",
+    "variants": {
+      "3": {
+        "speed": 0.18,
+        "center_x": 0.73,
+        "center_y": 0.47,
+        "scale": 0.92,
+        "motion": 0.68,
+        "generation": 3
+      },
+      "3.5": {
+        "speed": 0.2,
+        "center_x": 0.73,
+        "center_y": 0.47,
+        "scale": 0.97,
+        "motion": 0.86,
+        "generation": 3.5
+      },
+      "3.6": {
+        "speed": 0.2,
+        "center_x": 0.73,
+        "center_y": 0.47,
+        "scale": 0.97,
+        "motion": 0.86,
+        "generation": 3.6
+      },
+      "3.8": {
+        "center_x": 0.73,
+        "center_y": 0.47,
+        "generation": 3.8,
+        "motion": 1,
+        "scale": 1,
+        "speed": 0.3
+      }
+    }
+  },
+  "gemma": {
+    "defaultVariant": "4",
+    "variants": {
+      "3": {
+        "speed": 1,
+        "generation": 3,
+        "breeze_speed": 0.22,
+        "streak_width": 1,
+        "streak_bend": 1,
+        "streak_intensity": 1
+      },
+      "4": {
+        "speed": 1,
+        "generation": 4,
+        "breeze_speed": 0.32,
+        "streak_width": 1.08,
+        "streak_bend": 1.18,
+        "streak_intensity": 1
+      }
+    }
+  },
+  "cosmos": {
+    "defaultVariant": "3",
+    "variants": {
+      "2": {
+        "speed": 0.2,
+        "center_x": 0.72,
+        "center_y": 0.51,
+        "scale": 1,
+        "arm_width": 2.8,
+        "brightness": 1,
+        "view_tilt": 1.09,
+        "view_angle": 0.64,
+        "galaxy_rotation": 0.54,
+        "generation": 2,
+        "particle_twinkle": 0.08,
+        "spectral_intensity": 0.38,
+        "spectral_offset": 0.65,
+        "spectral_width": 4,
+        "spectral_hue": 0,
+        "spectral_brightness": 1.14,
+        "spectral_paleness": 1
+      },
+      "3": {
+        "speed": 0.2,
+        "center_x": 0.72,
+        "center_y": 0.51,
+        "scale": 1,
+        "arm_width": 2.8,
+        "brightness": 1,
+        "view_tilt": 1.09,
+        "view_angle": 0.64,
+        "galaxy_rotation": 0.54,
+        "generation": 3,
+        "particle_twinkle": 0.08,
+        "spectral_intensity": 0.62,
+        "spectral_offset": 0.65,
+        "spectral_width": 4,
+        "spectral_hue": 0,
+        "spectral_brightness": 1.14,
+        "spectral_paleness": 1
+      }
+    }
+  },
+  "nemotron": {
+    "defaultVariant": "3.5",
+    "variants": {
+      "3": {
+        "speed": 0.28,
+        "center_x": 0.72,
+        "center_y": 0.5,
+        "scale": 1.12,
+        "surface_angle": -0.24,
+        "tile_count": 11,
+        "wave_scale": 1.15,
+        "wave_amplitude": 5,
+        "mirror_tilt": 1.2,
+        "render_scale": 1,
+        "soft_focus": 2
+      },
+      "3.5": {
+        "speed": 0.32,
+        "center_x": 0.72,
+        "center_y": 0.5,
+        "scale": 1.12,
+        "surface_angle": -0.24,
+        "tile_count": 6,
+        "wave_scale": 0.91,
+        "wave_amplitude": 4.4,
+        "mirror_tilt": 1.48,
+        "render_scale": 1,
+        "soft_focus": 2
+      }
+    }
+  },
+  "liquid": {
+    "defaults": {
+      "speed": 3.5,
+      "flow_amplitude": 2.05,
+      "convergence": 0.98,
+      "field_density": 0.9,
+      "field_orbit": 0.45,
+      "pulse": 0.24,
+      "sphere_haze": 3.5
+    }
+  },
+  "llama": {
+    "defaults": {
+      "speed": 1,
+      "openness": 1,
+      "layers": 6,
+      "orbit_speed": 0.3
+    }
+  },
+  "muse-glimmer": {
+    "defaults": {
+      "speed": 1,
+      "node_drift": 1.18,
+      "node_drift_speed": 3.05,
+      "signal_speed": 1.78,
+      "branch_activity": 1.5,
+      "render_scale": 0.1,
+      "geometry_scale": 1,
+      "soft_focus": 2.3
+    }
+  },
+  "gpt-oss": {
+    "defaults": {
+      "speed": 1,
+      "grid_angle": 1,
+      "grid_density": 1,
+      "tile_contrast": 1,
+      "pulse_rate": 4,
+      "pulse_activity": 0.65,
+      "blue_highlight": 1.25,
+      "distance_fog": 1,
+      "render_scale": 1,
+      "soft_focus": 0.3
+    }
+  },
+  "ministral3": {
+    "defaults": {
+      "speed": 1,
+      "drift_speed": 1,
+      "step_scale": 1,
+      "depth": 1,
+      "render_scale": 0.5,
+      "geometry_scale": 1,
+      "soft_focus": 0
+    }
+  },
+  "minimax": {
+    "defaults": {
+      "speed": 1,
+      "loop_depth": 8,
+      "wave_height": 0.2,
+      "iteration_speed": 0.28
+    }
+  },
+  "flux-action": {
+    "defaults": {
+      "speed": 1,
+      "horizon": 8,
+      "frame_depth": 1,
+      "action_energy": 1
+    }
+  }
+}

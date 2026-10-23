@@ -3,6 +3,8 @@ title: "Qwen3.8 27B"
 model_id: "qwen3-8-27b"
 short_description: "Qwen's dense 27B vision-language model for coding, research, and long-horizon agents with controllable thinking and native speculative decoding through MTP"
 family: "Alibaba Qwen3.8"
+visual_family: "qwen"
+visual_variant: "3.8"
 icon: "🔮"
 is_new: false
 order: -3
@@ -12,6 +14,9 @@ memory_requirements: "24GB RAM"
 precision: "Q4_K_M GGUF"
 parameters: "27B"
 modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "262K"
 license: "Apache 2.0"
 model_size: "18GB"

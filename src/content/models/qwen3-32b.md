@@ -3,6 +3,8 @@ title: "Qwen3 32B"
 model_id: "qwen3-32b"
 short_description: "Alibaba's flagship 32 billion parameter language model for advanced reasoning"
 family: "Alibaba Qwen3"
+visual_family: "qwen"
+visual_variant: "3"
 icon: "🔮"
 is_new: false
 order: 4
@@ -12,6 +14,9 @@ memory_requirements: "24GB RAM"
 precision: "W4A16"
 parameters: "32B"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Apache 2.0"
 model_size: "18GB"
@@ -64,4 +69,3 @@ Qwen3 32B is the flagship dense model in Alibaba Cloud's Qwen3 family. With 32 b
 - **Subject Matter Experts**: Fine-tuning for domain-specific expertise
 - **Multilingual Instruction Following**: Following instructions across 100+ languages
 - **Translation**: High-quality translation between supported languages
-

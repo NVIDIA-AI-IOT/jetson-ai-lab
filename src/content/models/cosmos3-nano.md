@@ -3,6 +3,8 @@ title: "Cosmos3 Nano"
 model_id: "cosmos3-nano"
 short_description: "NVIDIA's compact vision-language reasoning model (16B) with chain-of-thought over text, image, and video — NVFP4 for Blackwell/Thor."
 family: "NVIDIA Cosmos"
+visual_family: "nvidia-cosmos"
+visual_variant: "3"
 icon: "🧠"
 is_new: false
 order: 5
@@ -12,6 +14,9 @@ memory_requirements: "16GB RAM"
 precision: "NVFP4"
 parameters: "16B"
 modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "NVIDIA Open Model License"
 model_size: "7GB"

@@ -3,6 +3,8 @@ title: "Cosmos3 Edge"
 model_id: "cosmos3-edge"
 short_description: "NVIDIA's edge-optimized omnimodal world model (4B) — multimodal reasoning, video generation, and robot action policies on Jetson."
 family: "NVIDIA Cosmos"
+visual_family: "nvidia-cosmos"
+visual_variant: "3"
 icon: "🤖"
 is_new: false
 order: 4
@@ -12,6 +14,13 @@ memory_requirements: "32GB RAM (Reasoner: 8GB)"
 precision: "BF16"
 parameters: "4B (2.4B reasoner + generator)"
 modalities: ["Text", "Image", "Video", "Action"]
+input_modalities: ["text", "image", "video", "action"]
+output_modalities: ["text", "image", "video", "action"]
+tasks:
+  - "text-generation"
+  - "text-to-image"
+  - "text-to-video"
+  - "action-generation"
 license: "OpenMDW 1.1"
 model_size: "9.2GB"
 hf_checkpoint: "nvidia/Cosmos3-Edge"

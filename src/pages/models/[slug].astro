@@ -5,7 +5,12 @@ import ModelServeSection from '../../components/ModelServeSection.astro';
 import ModelCallSection from '../../components/ModelCallSection.astro';
 import ModelBenchmarkSection from '../../components/ModelBenchmarkSection.astro';
 import ModelOneShotSection from '../../components/ModelOneShotSection.astro';
+import ModelShaderCanvas from '../../components/ModelShaderCanvas.astro';
 import { getSupportedInferenceEngines, sortEnginesForUi } from '../../lib/modelFrontmatterAdapter';
+import { isModelNew, MODEL_NEW_WINDOW_DAYS } from '../../lib/modelFreshness';
+import { modalityIcon, modalityLabel } from '../../lib/modelModalities';
+import { modelFamilyVisual } from '../../data/modelVisuals';
+import { modelShaderDefaults } from '../../data/modelShaderDefaults.mjs';
 import benchmarksData from '../../data/benchmarks.json';
 
 export async function getStaticPaths() {
@@ -19,6 +24,35 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content } = await entry.render();
 const { data } = entry;
+const modelIsNew = isModelNew(data);
+const hasFreshnessMetadata = data.catalog_added_at !== undefined || data.is_new !== undefined;
+const familyVisual = modelFamilyVisual(data.visual_family, data.visual_variant);
+const isMinistralVisual = data.visual_family === 'mistral-ministral3';
+const visualCardOpacity = isMinistralVisual ? 0.68 : 0.5;
+const familyHeroFallback = familyVisual?.assets.hero;
+const familyShaderConfig = {
+  qwen: { shaderId: 'qwen' as const, startTime: 7, resolutionScale: 0.8 },
+  gemma: {
+    shaderId: 'gemma' as const,
+    startTime: 11,
+    resolutionScale: data.visual_variant === '4' ? 0.5 : 0.7,
+  },
+  'liquid-d1': { shaderId: 'liquid' as const, startTime: 13, resolutionScale: 0.75 },
+  'meta-llama': { shaderId: 'llama' as const, startTime: 9, resolutionScale: 0.75 },
+  'meta-muse-glimmer': { shaderId: 'muse-glimmer' as const, startTime: 21, resolutionScale: 1 },
+  'openai-gpt-oss': { shaderId: 'gpt-oss' as const, startTime: 16, resolutionScale: 1 },
+  'mistral-ministral3': { shaderId: 'ministral3' as const, startTime: 18, resolutionScale: 1 },
+  'minimax-m2': { shaderId: 'minimax' as const, startTime: 15, resolutionScale: 0.75 },
+  'flux3-action': { shaderId: 'flux-action' as const, startTime: 18, resolutionScale: 0.75 },
+  'nvidia-nemotron': { shaderId: 'nemotron' as const, startTime: 60, resolutionScale: 1 },
+  'nvidia-cosmos': { shaderId: 'cosmos' as const, startTime: 24, resolutionScale: 0.75 },
+} as const;
+const familyShaderBase = data.visual_family
+  ? familyShaderConfig[data.visual_family as keyof typeof familyShaderConfig]
+  : undefined;
+const familyShader = familyShaderBase
+  ? { ...familyShaderBase, defaults: modelShaderDefaults(familyShaderBase.shaderId, data.visual_variant) }
+  : undefined;
 
 // Generate HuggingFace URL from hf_checkpoint if huggingface_url not provided
 const huggingfaceUrl = data.huggingface_url || (data.hf_checkpoint ? `https://huggingface.co/${data.hf_checkpoint}` : null);
@@ -53,16 +87,17 @@ function precisionPill(token: string) {
 }
 const precisionTokens = data.precision.split(/[\/,]/).map((t: string) => t.trim()).filter(Boolean);
 
-// Modality icon SVG path data (heroicons 20px solid)
-function modalityIcon(modality: string): string {
-  const icons: Record<string, string> = {
-    'Text':  '<path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>',
-    'Image': '<path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>',
-    'Audio': '<path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>',
-    'Video': '<path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>',
-  };
-  return icons[modality] ?? '';
-}
+const inputModalities = data.input_modalities?.length
+  ? data.input_modalities
+  : data.modalities?.map((modality: string) => modality.toLowerCase())
+    ?? (data.vision_capable ? ['text', 'image'] : ['text']);
+const outputModalities = data.output_modalities?.length
+  ? data.output_modalities
+  : data.type === 'Image'
+    ? ['image']
+    : data.type === 'Audio'
+      ? ['audio']
+      : ['text'];
 
 const inferenceNeedsHfToken = sortedEngines.some((e) => {
   const cmds = [
@@ -78,13 +113,67 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
 
 <Layout title={data.title} description={data.short_description}>
   {/* Hero Section */}
-  <section class="bg-nvidia-black text-nvidia-white py-20">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <section
+    class="relative overflow-hidden bg-nvidia-black text-nvidia-white py-20"
+    style={familyVisual ? `background-color:${familyVisual.palette.background}` : undefined}
+    data-model-visual-hero={familyVisual ? '' : undefined}
+  >
+    {familyVisual && (
+      <>
+        <div
+          class="pointer-events-none absolute inset-0"
+          data-model-visual-art
+          aria-hidden="true"
+        >
+          <img
+            src={familyHeroFallback}
+            alt=""
+            class="absolute inset-0 h-full w-full object-cover"
+            style={isMinistralVisual ? 'filter:blur(2.5px);transform:scale(1.012)' : undefined}
+          />
+          {familyShader && (
+            <ModelShaderCanvas
+              shaderId={familyShader.shaderId}
+              instanceId={`model-${entry.slug}`}
+              defaults={familyShader.defaults}
+              startTime={familyShader.startTime}
+              maxFps={20}
+              resolutionScale={familyShader.resolutionScale}
+              class="absolute inset-0 h-full w-full"
+            />
+          )}
+          <div class="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/20"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25"></div>
+          {isMinistralVisual && <div class="absolute inset-0 bg-black/30"></div>}
+        </div>
+        <button
+          type="button"
+          class="model-visual-toggle absolute right-4 top-3 z-[2] inline-flex items-center gap-2 rounded border border-white/10 bg-black/25 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-white/55 transition hover:border-white/25 hover:bg-black/45 hover:text-white/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nvidia-green sm:right-6 lg:right-8"
+          data-model-visual-toggle
+          aria-pressed="true"
+          aria-label="Turn model visual off"
+        >
+          <span>Model visual</span>
+          <span class="model-visual-switch relative h-3.5 w-7 rounded-[4px] border border-white/15 bg-[#76b900]/45 transition-colors" aria-hidden="true">
+            <span class="model-visual-thumb absolute left-[2px] top-[2px] h-2 w-2 translate-x-[14px] rounded-[2px] bg-white/80 transition-transform"></span>
+          </span>
+          <span class="w-5 text-left" data-model-visual-state>On</span>
+        </button>
+      </>
+    )}
+    <div class="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid md:grid-cols-2 gap-12 items-center">
         <div>
           <div class="flex items-center space-x-3 mb-6">
-            {data.is_new && (
-              <span class="bg-nvidia-green text-nvidia-black px-4 py-2 rounded-full text-sm font-semibold">New</span>
+            {hasFreshnessMetadata && (
+              <span
+                data-model-new-badge
+                data-catalog-added-at={data.catalog_added_at}
+                data-new-until={data.new_until}
+                data-legacy-is-new={String(data.is_new === true)}
+                data-new-window-days={MODEL_NEW_WINDOW_DAYS}
+                class:list={["bg-nvidia-green text-nvidia-black px-4 py-2 rounded-full text-sm font-semibold", { hidden: !modelIsNew }]}
+              >New</span>
             )}
             {data.type && (
               <span class="text-nvidia-gray-300 font-semibold text-lg">{data.type}</span>
@@ -130,7 +219,12 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
             </a>
           </div>
         </div>
-        <div class="bg-nvidia-gray-800 rounded-xl p-8 border border-nvidia-gray-700">
+        <div
+          class:list={["rounded-xl p-8 border border-nvidia-gray-700", familyVisual ? "shadow-2xl" : "bg-nvidia-gray-800"]}
+          style={familyVisual ? `background-color:rgba(0,0,0,${visualCardOpacity})` : undefined}
+          data-model-visual-card={familyVisual ? '' : undefined}
+          data-model-visual-card-opacity={familyVisual ? String(visualCardOpacity) : undefined}
+        >
           <div class="divide-y divide-nvidia-gray-700">
 
             {/* Parameters */}
@@ -141,20 +235,30 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
               </div>
             )}
 
-            {/* Modalities */}
-            {(data.modalities?.length > 0 || data.vision_capable !== undefined) && (
+            {/* Directional modalities */}
+            {inputModalities.length > 0 && (
               <div class="flex justify-between items-center py-3 gap-4">
-                <span class="text-nvidia-gray-300 font-medium shrink-0">Modalities</span>
+                <span class="text-nvidia-gray-300 font-medium shrink-0">Inputs</span>
                 <div class="flex flex-wrap gap-1.5 justify-end">
-                  {data.modalities
-                    ? (data.modalities as string[]).map((m) => (
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:#94A3B8">
-                          <svg class="w-3 h-3 shrink-0" viewBox="0 0 20 20" fill="currentColor"><Fragment set:html={modalityIcon(m)}/></svg>
-                          {m}
-                        </span>
-                      ))
-                    : <span class="font-bold text-nvidia-white">{data.vision_capable ? 'Text, Image' : 'Text'}</span>
-                  }
+                  {inputModalities.map((modality: string) => (
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:#94A3B8">
+                      <svg class="w-3 h-3 shrink-0" viewBox="0 0 20 20" fill="currentColor"><Fragment set:html={modalityIcon(modality)}/></svg>
+                      {modalityLabel(modality, 'input')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {outputModalities.length > 0 && (
+              <div class="flex justify-between items-center py-3 gap-4">
+                <span class="text-nvidia-gray-300 font-medium shrink-0">Outputs</span>
+                <div class="flex flex-wrap gap-1.5 justify-end">
+                  {outputModalities.map((modality: string) => (
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:#94A3B8">
+                      <svg class="w-3 h-3 shrink-0" viewBox="0 0 20 20" fill="currentColor"><Fragment set:html={modalityIcon(modality)}/></svg>
+                      {modalityLabel(modality, 'output')}
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
@@ -289,6 +393,85 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
 </Layout>
 
 <script>
+  function refreshModelNewBadge() {
+    const badge = document.querySelector<HTMLElement>('[data-model-new-badge]');
+    if (!badge) return;
+
+    const addedDate = badge.dataset.catalogAddedAt;
+    const newUntilDate = badge.dataset.newUntil;
+    const dayMs = 24 * 60 * 60 * 1000;
+    let isNew = badge.dataset.legacyIsNew === 'true';
+
+    if (addedDate) {
+      const addedAt = Date.parse(`${addedDate}T00:00:00Z`);
+      const now = Date.now();
+      if (!Number.isFinite(addedAt) || now < addedAt) {
+        isNew = false;
+      } else if (newUntilDate) {
+        const newUntil = Date.parse(`${newUntilDate}T00:00:00Z`);
+        isNew = Number.isFinite(newUntil) && now < newUntil + dayMs;
+      } else {
+        const windowDays = Number(badge.dataset.newWindowDays || '60');
+        isNew = now < addedAt + windowDays * dayMs;
+      }
+    }
+
+    badge.classList.toggle('hidden', !isNew);
+  }
+
+  refreshModelNewBadge();
+  document.addEventListener('astro:page-load', refreshModelNewBadge);
+
+  function initializeModelVisualToggle() {
+    const storageKey = 'jetson-ai-lab:model-visuals';
+    document.querySelectorAll<HTMLElement>('[data-model-visual-hero]').forEach((hero) => {
+      const button = hero.querySelector<HTMLButtonElement>('[data-model-visual-toggle]');
+      const artwork = hero.querySelector<HTMLElement>('[data-model-visual-art]');
+      const card = hero.querySelector<HTMLElement>('[data-model-visual-card]');
+      const stateLabel = button?.querySelector<HTMLElement>('[data-model-visual-state]');
+      const switchTrack = button?.querySelector<HTMLElement>('.model-visual-switch');
+      const thumb = button?.querySelector<HTMLElement>('.model-visual-thumb');
+      if (!button || !artwork || !card || !stateLabel || !switchTrack || !thumb) return;
+      const visualBackground = hero.style.backgroundColor || 'rgb(0, 0, 0)';
+      const visualCardOpacity = Number(card.dataset.modelVisualCardOpacity ?? 0.5);
+
+      const applyState = (enabled: boolean) => {
+        artwork.hidden = !enabled;
+        hero.style.backgroundColor = enabled ? visualBackground : 'rgb(0, 0, 0)';
+        card.style.backgroundColor = enabled ? `rgba(0, 0, 0, ${visualCardOpacity})` : 'rgb(31, 41, 55)';
+        card.style.boxShadow = enabled ? '' : 'none';
+        button.setAttribute('aria-pressed', String(enabled));
+        button.setAttribute('aria-label', enabled ? 'Turn model visual off' : 'Show model visual');
+        stateLabel.textContent = enabled ? 'On' : 'Off';
+        switchTrack.style.backgroundColor = enabled ? 'rgba(118, 185, 0, 0.45)' : 'rgba(255, 255, 255, 0.14)';
+        thumb.style.transform = enabled ? 'translateX(14px)' : 'translateX(0)';
+      };
+
+      let enabled = true;
+      try {
+        enabled = localStorage.getItem(storageKey) !== 'off';
+      } catch {
+        // Storage may be disabled; retain the visible default for this page.
+      }
+      applyState(enabled);
+
+      if (button.dataset.bound === 'true') return;
+      button.dataset.bound = 'true';
+      button.addEventListener('click', () => {
+        enabled = button.getAttribute('aria-pressed') !== 'true';
+        applyState(enabled);
+        try {
+          localStorage.setItem(storageKey, enabled ? 'on' : 'off');
+        } catch {
+          // The toggle still works for the current page when storage is unavailable.
+        }
+      });
+    });
+  }
+
+  initializeModelVisualToggle();
+  document.addEventListener('astro:page-load', initializeModelVisualToggle);
+
   // Body content device tabs (inside markdown-rendered sections)
   document.querySelectorAll('.device-tabs').forEach(group => {
     const buttons = group.querySelectorAll('.device-tab');
