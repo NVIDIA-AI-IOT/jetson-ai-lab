@@ -72,6 +72,12 @@ Ideally, your Jetson developer kit comes pre-setup. But you can also set it up y
       <li><p>Find a USB cable to connect the Jetson to your PC (USB-C end goes into the Jetson).</p></li>
       <li><p>You should see a "L4T-README" drive automatically mounted on your PC.</p></li>
       <li>
+        <div class="admonition note">
+          <p class="admonition-title">📘 Mac + Orin Nano on L4T R39.2.1</p>
+          <p>Complete the Jetson's first-run setup and reboot before trying SSH. On this release, a known USB networking issue can prevent a Mac from obtaining an IPv4 address, even when the "L4T-README" drive appears.</p>
+          <p>If affected, follow the <a href="https://github.com/NVIDIA-AI-IOT/jetson-usb-network-recovery#mac-first-test">Jetson USB Network Recovery README</a>, starting with diagnosis. The tool runs on the Mac through the Jetson's USB serial console; it does not require working SSH or internet access on the Jetson.</p>
+          <p>This is a scoped workaround, validated on one R39.2.1 Orin Nano device, not a general USB fix. Review the README's supported scope before approving a repair.</p>
+        </div>
         <p>Open a terminal on your PC and SSH into the Jetson:</p>
         <div class="admonition info">
           <p class="admonition-title">🔰 What is SSH?</p>
@@ -232,6 +238,7 @@ Browse the full [Tutorials](/tutorials) page for more examples across LLMs, VLMs
     <ul>
       <li>Check if the green LED near the USB-C port is lit (power indicator). If not, verify the DC power supply connection to the wall outlet and the Jetson carrier board.</li>
       <li>Check if the "L4T-README" drive appears on your PC. If not, try a different USB-C cable or check connections on both ends.</li>
+      <li>On a Mac with Orin Nano running L4T R39.2.1, USB networking may fail even when that drive appears. See the <a href="https://github.com/NVIDIA-AI-IOT/jetson-usb-network-recovery#mac-first-test">USB network diagnosis and recovery guide</a>.</li>
     </ul>
   </div>
 </details>
