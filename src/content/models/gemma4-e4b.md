@@ -9,7 +9,7 @@ order: 2
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "8GB RAM"
-precision: "NVFP4 / W4A16 / Q4_K_M GGUF"
+precision: "NVFP4 / W4A16 / Q4_0 GGUF"
 parameters: "4.5B effective (8B with embeddings)"
 modalities: ["Text", "Image", "Audio"]
 context_length: "128K"
@@ -17,7 +17,7 @@ license: "Apache 2.0"
 model_size: "5.3GB"
 hf_checkpoint: "unsloth/gemma-4-E4B"
 huggingface_url: "https://huggingface.co/unsloth/gemma-4-E4B"
-minimum_jetson: "Orin NX"
+minimum_jetson: "Orin Nano"
 serving:
   entries:
     - engine: "vLLM"
@@ -38,19 +38,39 @@ serving:
         - thor_t4000
         - orin_agx_64
         - orin_nx_16
+        - orin_nano_8
       serve_command_orin: |-
-        sudo docker run -it --rm --pull always \
-          --runtime=nvidia --network host \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
-          llama-server -hf unsloth/gemma-4-E4B:Q4_K_M
+        docker run --rm -it --pull always --runtime nvidia --network host \
+        -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+        ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
+        llama-server \
+        -hf google/gemma-4-E4B-it-qat-q4_0-gguf \
+        --hf-file gemma-4-E4B_q4_0-it.gguf \
+        --host 0.0.0.0 \
+        --port 8000 \
+        --ctx-size 36864 \
+        --parallel 1 \
+        --n-gpu-layers 999 \
+        --jinja \
+        --lazy-mode on \
+        --load-mode mmap \
+        --cache-ram 0
       serve_command_thor: |-
-        sudo docker run -it --rm --pull always \
-          --runtime=nvidia --network host \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
-          llama-server -hf unsloth/gemma-4-E4B:Q4_K_M
-benchmark_key: "Gemma 4 E4B"
+        docker run --rm -it --pull always --runtime nvidia --network host \
+        -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+        ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
+        llama-server \
+        -hf google/gemma-4-E4B-it-qat-q4_0-gguf \
+        --hf-file gemma-4-E4B_q4_0-it.gguf \
+        --host 0.0.0.0 \
+        --port 8000 \
+        --ctx-size 36864 \
+        --parallel 1 \
+        --n-gpu-layers 999 \
+        --jinja \
+        --lazy-mode on \
+        --load-mode mmap \
+        --cache-ram 0
 ---
 
 Gemma 4 E4B is a lightweight Gemma 4 model that can be served locally on Jetson with `llama.cpp`. In Google's launch material, E4B is framed as the stronger edge-focused sibling to E2B, combining on-device efficiency with materially better coding, reasoning, and multimodal performance.
