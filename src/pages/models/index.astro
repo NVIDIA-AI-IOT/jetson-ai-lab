@@ -109,7 +109,7 @@ const families = Array.from(new Set(models.map(m => m.family)))
         </div>
 
         <div class="relative -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div class="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide justify-start">
+          <div class="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide [justify-content:safe_center]">
             {models.filter(m => m.highlighted).map(model => (
               <div
                 class="model-catalog-card w-[280px] sm:w-[300px] md:w-[320px] snap-center flex-shrink-0"
@@ -124,8 +124,8 @@ const families = Array.from(new Set(models.map(m => m.family)))
                       <h3 class="text-lg font-bold text-slate-900 group-hover:text-nvidia-green transition-colors line-clamp-1">
                         {model.name}
                       </h3>
-                      {model.vision_capable && (
-                        <span class="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide shrink-0" title="Vision-language model">VLM</span>
+                      {(model.vision_capable || model.category === 'Text') && (
+                        <span class="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide shrink-0" title={model.vision_capable ? 'Vision-language model' : 'Large language model'}>{model.vision_capable ? 'VLM' : 'LLM'}</span>
                       )}
                     </div>
 

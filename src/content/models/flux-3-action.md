@@ -3,7 +3,7 @@ title: "FLUX 3 Action"
 model_id: "flux-3-action"
 short_description: "Black Forest Labs' world action model for robotics, with a guide to generating action predictions on Jetson Thor using LeRobot."
 family: "Black Forest Labs"
-is_new: true
+is_new: false
 order: -5
 type: "Multimodal"
 vision_capable: true
