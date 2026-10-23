@@ -3,6 +3,8 @@ title: "Qwen3 30B-A3B (MoE)"
 model_id: "qwen3-30b-a3b"
 short_description: "Alibaba's Mixture-of-Experts model with 30B total / 3B active parameters"
 family: "Alibaba Qwen3"
+visual_family: "qwen"
+visual_variant: "3"
 icon: "🔮"
 is_new: false
 order: 3

@@ -3,6 +3,7 @@ title: "Muse Glimmer 30B"
 model_id: "muse-glimmer-30b"
 short_description: "Meta's local agentic model with reasoning, tool use, image understanding, and DFlash speculative decoding"
 family: "Meta Muse"
+visual_family: "meta-muse-glimmer"
 icon: "✨"
 is_new: false
 order: -1

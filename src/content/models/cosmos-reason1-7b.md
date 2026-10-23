@@ -3,6 +3,8 @@ title: "Cosmos Reason 1 7B"
 model_id: "cosmos-reason1-7b"
 short_description: "NVIDIA's 7B parameter reasoning vision-language model designed for physical AI and robotics applications"
 family: "NVIDIA Cosmos"
+visual_family: "nvidia-cosmos"
+visual_variant: "2"
 icon: "🧠"
 is_new: false
 order: 1

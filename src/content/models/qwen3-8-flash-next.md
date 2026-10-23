@@ -3,6 +3,8 @@ title: "Qwen3.8 Flash Next"
 model_id: "qwen3-8-flash-next"
 short_description: "Qwen's vision-language MoE model for reasoning, coding, and tool use on Jetson Thor, with NVFP4 quantization and MTP speculative decoding"
 family: "Alibaba Qwen3.8"
+visual_family: "qwen"
+visual_variant: "3.8"
 icon: "🔮"
 is_new: true
 order: -4

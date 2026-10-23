@@ -3,6 +3,8 @@ title: "Nemotron 3.5 Lightning"
 model_id: "nemotron3-5-lightning"
 short_description: "NVIDIA's fast open-weight model for responsive local agents, reasoning, coding, and tool use. It delivers performance comparable to the much larger Nemotron 3 Super."
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 icon: "⚡"
 is_new: false
 order: -2

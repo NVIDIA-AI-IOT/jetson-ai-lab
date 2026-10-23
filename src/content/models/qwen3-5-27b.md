@@ -3,6 +3,8 @@ title: "Qwen3.5 27B"
 model_id: "qwen3-5-27b"
 short_description: "Alibaba's dense 27 billion parameter language model with native tool calling and MTP speculative decoding"
 family: "Alibaba Qwen3.5"
+visual_family: "qwen"
+visual_variant: "3.5"
 icon: "🔮"
 is_new: false
 order: 2

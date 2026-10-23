@@ -3,6 +3,8 @@ title: "Gemma 3 270M"
 model_id: "gemma3-270m"
 short_description: "Google's ultra-compact 270 million parameter model for lightweight edge deployments"
 family: "Google Gemma3"
+visual_family: "gemma"
+visual_variant: "3"
 icon: "💎"
 is_new: false
 order: 1

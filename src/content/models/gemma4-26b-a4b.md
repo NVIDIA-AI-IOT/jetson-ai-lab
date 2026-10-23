@@ -3,6 +3,8 @@ title: "Gemma 4 26B-A4B"
 model_id: "gemma4-26b-a4b"
 short_description: "Google's 26B MoE frontier Gemma 4 model for fast high-end reasoning and multimodal workflows"
 family: "Google Gemma4"
+visual_family: "gemma"
+visual_variant: "4"
 icon: "💎"
 is_new: false
 order: 3

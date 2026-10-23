@@ -3,6 +3,8 @@ title: "Qwen3 4B"
 model_id: "qwen3-4b"
 short_description: "Alibaba's efficient 4 billion parameter instruction-tuned language model"
 family: "Alibaba Qwen3"
+visual_family: "qwen"
+visual_variant: "3"
 icon: "🔮"
 is_new: false
 order: 1

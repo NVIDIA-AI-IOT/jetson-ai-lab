@@ -17,6 +17,7 @@ try {
 	assert(initialCount?.trim() === `${totalModels} models`, `Expected ${totalModels} models, received "${initialCount?.trim()}"`);
 
 	assert((await page.locator('.model-card [data-model-link]').count()) === totalModels, 'Every model card name should link to its model page');
+	assert((await page.locator('.model-card .model-card-meta').count()) === 0, 'Catalog cards should reserve their width for model names instead of parameter metadata');
 	assert((await page.locator('.model-table-row [data-model-link]').count()) === totalModels, 'Every table model name should link to its model page');
 	assert((await page.getByRole('link', { name: 'Details', exact: true }).count()) === 0, 'Legacy Details links are still present');
 	const quickRunButtons = page.locator('[data-run-open]');
@@ -28,6 +29,66 @@ try {
 	assert(
 		(await quickRunButtons.first().getAttribute('aria-label'))?.startsWith('Quick run ') === true,
 		'Icon-only Quick run control should have an accessible label'
+	);
+	const catalogQuickRun = page.locator('#models-directory-cards [data-run-open]').first();
+	await catalogQuickRun.click();
+	const catalogRunModal = page.locator('#models-directory-cards [data-run-modal]:not(.hidden)').first();
+	assert(await catalogRunModal.isVisible(), 'Catalog Quick run should open its modal');
+	assert(
+		await page.evaluate(() => Boolean(document.elementFromPoint(window.innerWidth / 2, window.innerHeight * 0.7)?.closest('[data-run-modal]'))),
+		'Catalog cards should not paint over the open Run modal'
+	);
+	await catalogRunModal.locator('[data-run-close]').click();
+
+	const visualModelHref = await page.locator('.model-card[data-has-model-art="true"] [data-model-link]').first().getAttribute('href');
+	assert(visualModelHref, 'Expected at least one catalog model with family artwork');
+	await page.goto(new URL(visualModelHref, baseUrl).toString(), { waitUntil: 'networkidle' });
+	const modelVisualToggle = page.locator('[data-model-visual-toggle]');
+	assert(await modelVisualToggle.isVisible(), 'Model page should expose the shared Model visual preference');
+	await modelVisualToggle.click();
+	assert(
+		await page.evaluate(() => localStorage.getItem('jetson-ai-lab:model-visuals')) === 'off',
+		'Model visual preference was not stored as off'
+	);
+	await page.goto(baseUrl, { waitUntil: 'networkidle' });
+	assert(
+		(await page.locator('#models-directory-cards').getAttribute('data-visuals-enabled')) === 'false',
+		'Catalog artwork should follow the Model visual off preference'
+	);
+	assert(
+		!(await page.locator('#models-compact-art-menu-button').isVisible()),
+		'Compact Model visual options should be hidden when the shared preference is off'
+	);
+	await page.evaluate(() => {
+		localStorage.setItem('jetson-ai-lab:model-visuals', 'on');
+		localStorage.setItem('jetson-ai-lab-models-compact-artwork', 'off');
+	});
+	await page.reload({ waitUntil: 'networkidle' });
+	assert(
+		(await page.locator('#models-directory-cards').getAttribute('data-visuals-enabled')) === 'true',
+		'Catalog artwork should return when Model visual is enabled'
+	);
+	assert(
+		await page.locator('#models-compact-art-menu-button').isVisible(),
+		'Compact Model visual options should return when the shared preference is on'
+	);
+	assert(
+		(await page.locator('#models-directory-cards').getAttribute('data-compact-art')) === 'model',
+		'Legacy Compact Off preference should migrate to By model'
+	);
+	assert(
+		await page.evaluate(() => localStorage.getItem('jetson-ai-lab-models-compact-artwork')) === 'model',
+		'Legacy Compact artwork preference should be rewritten after migration'
+	);
+	const compactVisualStyleButtons = page.locator('.models-compact-art-toggle');
+	assert((await compactVisualStyleButtons.count()) === 2, 'Compact Model visual style should expose exactly two choices');
+	assert(
+		JSON.stringify(await compactVisualStyleButtons.allTextContents()) === JSON.stringify(['By model', 'By family']),
+		'Compact Model visual style should offer By model and By family'
+	);
+	assert(
+		(await page.locator('[data-compact-art="off"]').count()) === 0,
+		'Compact Model visual style must not expose a separate Off setting'
 	);
 
 	assert((await page.getByText('Supported Models', { exact: true }).count()) === 0, 'Legacy Supported Models hero is still present');
@@ -188,6 +249,41 @@ try {
 	);
 	await cardColumnsMenuButton.click();
 	await page.locator('.models-card-fit-toggle[data-card-fit="aligned"]').click();
+	await cardColumnsMenuButton.click();
+	assert((await page.locator('.models-cards-art-toggle').count()) === 0, 'Cards should use a single artwork treatment controlled by intensity');
+	assert((await page.locator('#models-directory-cards').getAttribute('data-cards-art')) === 'family', 'Cards should retain the family wash treatment');
+	const artIntensitySliders = page.locator('input[data-art-intensity]');
+	assert((await artIntensitySliders.count()) === 0, 'Editorial artwork intensity should not be exposed as a user control');
+	assert(
+		await page.evaluate(() => localStorage.getItem('jetson-ai-lab-models-artwork-intensity')) === null,
+		'Legacy artwork intensity preference should not be read or written'
+	);
+	assert(
+		(await page.locator('#models-directory-cards').getAttribute('data-art-intensity')) === '25',
+		'Editorial 25% artwork intensity was not applied to the catalog'
+	);
+	assert((await cosmosFamily.locator('.model-family-section').count()) === 1, 'Rich family card should expose its category eyebrow');
+	assert((await cosmosFamily.locator('.model-family-icon').count()) === 1, 'Rich family card should expose its visual identity icon');
+	const nemotronIconFrame = page.locator(".model-family-icon-frame[data-icon-family='nvidia-nemotron']").first();
+	assert((await nemotronIconFrame.evaluate((node) => getComputedStyle(node).backgroundImage)) !== 'none', 'Nemotron line art should have a contrast plate');
+	assert(
+		(await page.locator(".model-family-icon-frame[data-icon-family='gemma']").count()) === 0,
+		'Gemma should use text identity until an approved, locally redistributable official icon is available'
+	);
+	const qwen36Icon = page.locator('.model-family-group[data-family="Alibaba Qwen3.6"] .model-family-icon');
+	const qwen38Icon = page.locator('.model-family-group[data-family="Alibaba Qwen3.8"] .model-family-icon');
+	assert((await qwen36Icon.count()) === 0, 'Qwen 3.6 should use text identity until its logo redistribution is approved');
+	assert((await qwen38Icon.count()) === 0, 'Qwen 3.8 should use text identity until its logo redistribution is approved');
+	const longGemmaTitle = page.locator('#models-directory-cards [data-name="gemma 4 26b-a4b"] [data-model-link]');
+	assert((await longGemmaTitle.textContent())?.trim() === 'Gemma 4 26B-A4B', 'Model titles should retain their complete label');
+	assert((await longGemmaTitle.evaluate((node) => getComputedStyle(node).whiteSpace)) === 'normal', 'Model titles should wrap instead of truncating');
+	const cosmosMore = cosmosFamily.locator('[data-family-expand]');
+	assert(await cosmosMore.isVisible(), 'A family with more than four models should expose its compact expansion control');
+	assert(!(await cosmosFamily.locator('.model-card').nth(4).isVisible()), 'The fifth family model should initially be folded');
+	await cosmosMore.click();
+	assert(await cosmosFamily.locator('.model-card').nth(4).isVisible(), 'Expanding a family should reveal its remaining models');
+	assert((await cosmosFamily.locator('[data-family-more-label]').textContent()) === 'Show fewer', 'Expanded family should offer Show fewer');
+	assert((await cosmosFamily.locator('[data-family-more-arrow]').textContent()) === '↑', 'Show fewer should point toward the collapse direction');
 
 	const originalFirstFamily = await page.locator('.model-family-group').first().getAttribute('data-family');
 	const originalSecondFamily = await page.locator('.model-family-group').nth(1).getAttribute('data-family');
@@ -226,6 +322,24 @@ try {
 	await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
 	await page.mouse.down();
 	assert((await page.locator('.model-family-drag-ghost').count()) === 1, 'Pointer drag should create a following card ghost');
+	assert(
+		await page.evaluate(() => {
+			const source = document.querySelector('.model-family-group.model-family-dragging');
+			const ghost = document.querySelector('.model-family-drag-ghost');
+			if (!source || !ghost) return false;
+			const sourceHeader = source.querySelector('.model-family-header');
+			const ghostHeader = ghost.querySelector('.model-family-header');
+			const sourceRow = source.querySelector('.model-card');
+			const ghostRow = ghost.querySelector('.model-card');
+			return Boolean(
+				sourceHeader && ghostHeader && sourceRow && ghostRow &&
+				getComputedStyle(sourceHeader).padding === getComputedStyle(ghostHeader).padding &&
+				getComputedStyle(sourceRow).padding === getComputedStyle(ghostRow).padding &&
+				getComputedStyle(source, '::before').backgroundImage === getComputedStyle(ghost, '::before').backgroundImage
+			);
+		}),
+		'Drag ghost should preserve the source family card design'
+	);
 	assert(await page.locator('html').evaluate((node) => node.classList.contains('model-family-drag-active')), 'Pointer drag should retain the page-wide grabbing cursor');
 	await page.mouse.move(targetBox.x + targetBox.width * 0.75, Math.min(970, targetBox.y + 100));
 	assert((await page.locator('.model-family-drop-target').count()) === 1, 'Pointer drag should highlight the insertion target');
@@ -258,6 +372,25 @@ try {
 		getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length
 	);
 	assert(cosmosGridColumns === 2, `Expected a two-column desktop model grid, received ${cosmosGridColumns} columns`);
+	const compactCosmosIcon = cosmosFamily.locator('.model-card:visible .model-card-icon-frame').first();
+	assert(await compactCosmosIcon.isVisible(), 'Compact model rows should retain their model-family icon');
+	const compactFamilyHeader = cosmosFamily.locator('.model-family-header');
+	const compactFamilyDivider = compactFamilyHeader.locator('.model-family-divider');
+	const compactFamilyCount = compactFamilyHeader.locator('.model-family-count');
+	const [compactHeaderBox, compactDividerBox, compactCountBox] = await Promise.all([
+		compactFamilyHeader.boundingBox(),
+		compactFamilyDivider.boundingBox(),
+		compactFamilyCount.boundingBox(),
+	]);
+	assert(compactHeaderBox && compactDividerBox && compactCountBox, 'Compact family header layout should be measurable');
+	assert(
+		compactCountBox.x > compactDividerBox.x + compactDividerBox.width,
+		'Compact family count should appear after the divider'
+	);
+	assert(
+		compactHeaderBox.x + compactHeaderBox.width - (compactCountBox.x + compactCountBox.width) < 2,
+		'Compact family count should align with the right edge'
+	);
 	assert(
 		(await page.locator('.model-family-group[data-family="NVIDIA Cosmos Reason"]').count()) === 0,
 		'Legacy NVIDIA Cosmos Reason family group is still present'

@@ -3,6 +3,8 @@ title: "Gemma 3 1B"
 model_id: "gemma3-1b"
 short_description: "Google's efficient 1 billion parameter model balancing capability and resource usage"
 family: "Google Gemma3"
+visual_family: "gemma"
+visual_variant: "3"
 icon: "💎"
 is_new: false
 order: 2

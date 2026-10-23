@@ -3,6 +3,8 @@ title: "Qwen3.5 9B"
 model_id: "qwen3-5-9b"
 short_description: "Alibaba's dense Qwen3.5 9B vision-language model with Jetson-specific checkpoints for Orin and Thor"
 family: "Alibaba Qwen3.5"
+visual_family: "qwen"
+visual_variant: "3.5"
 icon: "🔮"
 is_new: false
 order: 3

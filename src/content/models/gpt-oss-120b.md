@@ -3,6 +3,7 @@ title: "GPT OSS 120B"
 model_id: "gpt-oss-120b"
 short_description: "OpenAI's open-source 120 billion parameter language model for Jetson Thor"
 family: "OpenAI GPT OSS"
+visual_family: "openai-gpt-oss"
 icon: "🤖"
 is_new: false
 order: 2

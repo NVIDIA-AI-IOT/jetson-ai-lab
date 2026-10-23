@@ -1,4 +1,6 @@
 import { defineCollection, z } from 'astro:content';
+import { modelFamilyVisuals } from '../data/modelVisuals';
+import modelShaderDefaultsRegistry from '../data/modelShaderDefaults.json';
 
 const tutorials = defineCollection({
 	type: 'content',
@@ -91,6 +93,10 @@ const modelsSchema = z.object({
 	model_id: z.string().optional(),
 	short_description: z.string(),
 	family: z.string().optional(),
+	/** Optional key into the shared model-family visual registry. */
+	visual_family: z.string().optional(),
+	/** Explicit generation/treatment key for visual families with multiple variants. */
+	visual_variant: z.string().optional(),
 	icon: z.string().optional(),
 	/**
 	 * Legacy manual New flag. Existing entries may keep this during migration;
@@ -184,6 +190,38 @@ export type ModelCollectionData = z.infer<typeof modelsSchema>;
 const models = defineCollection({
 	type: 'content',
 	schema: modelsSchema.superRefine((data, ctx) => {
+		const visual = data.visual_family ? modelFamilyVisuals[data.visual_family] : undefined;
+		const shaderEntry = visual
+			? (modelShaderDefaultsRegistry as Record<string, { variants?: Record<string, Record<string, number>> }>)[visual.shaderId]
+			: undefined;
+		if (data.visual_family && !visual) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: `Unknown visual_family ${data.visual_family}.`,
+				path: ['visual_family'],
+			});
+		}
+		if (visual?.variants && !data.visual_variant) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: `visual_variant is required for ${data.visual_family}.`,
+				path: ['visual_variant'],
+			});
+		}
+		if (data.visual_variant && (!visual?.variants || !(data.visual_variant in visual.variants))) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: `No fallback artwork for ${data.visual_family ?? '<missing visual_family>'}/${data.visual_variant}.`,
+				path: ['visual_variant'],
+			});
+		}
+		if (data.visual_variant && (!shaderEntry?.variants || !(data.visual_variant in shaderEntry.variants))) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: `Unknown visual variant ${data.visual_family ?? '<missing visual_family>'}/${data.visual_variant}.`,
+				path: ['visual_variant'],
+			});
+		}
 		if (data.new_until && !data.catalog_added_at) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,

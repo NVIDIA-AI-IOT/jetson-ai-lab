@@ -12,7 +12,12 @@
     "build": "astro build",
     "preview": "astro preview",
     "check:model-metadata": "node scripts/check-model-catalog-metadata.mjs",
-    "test:model-freshness": "node scripts/test-model-freshness.mjs",
+    "test:model-freshness": "tsx scripts/test-model-freshness.mjs",
+    "check:model-visuals": "node scripts/check-model-family-visuals.mjs",
+    "build:model-visuals": "node scripts/render-model-visuals-webgl.mjs && node scripts/render-gemma-visuals-webgl.mjs && node scripts/render-nvidia-visuals-webgl.mjs && node scripts/render-additional-visuals-webgl.mjs && npm run check:model-visuals",
+    "benchmark:model-shaders": "node scripts/benchmark-model-shaders.mjs",
+    "benchmark:layered-shaders": "node scripts/benchmark-layered-model-shaders.mjs",
+    "benchmark:all-model-shaders": "npm run benchmark:model-shaders && npm run benchmark:layered-shaders",
     "test:models-ui": "node scripts/test-model-catalog.mjs",
     "astro": "astro"
   },
@@ -28,7 +33,9 @@
     "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^20.0.0",
     "playwright": "^1.57.0",
-    "rehype-mermaid": "^3.0.0"
+    "rehype-mermaid": "^3.0.0",
+    "sharp": "^0.34.5",
+    "tsx": "^4.20.6"
   },
   "keywords": [
     "jetson",

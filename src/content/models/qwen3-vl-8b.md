@@ -3,6 +3,8 @@ title: "Qwen3 VL 8B"
 model_id: "qwen3-vl-8b"
 short_description: "Alibaba's 8 billion parameter vision-language model for advanced multimodal understanding"
 family: "Alibaba Qwen3"
+visual_family: "qwen"
+visual_variant: "3"
 icon: "🔮"
 is_new: false
 order: 6

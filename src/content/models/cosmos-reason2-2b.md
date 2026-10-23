@@ -3,6 +3,8 @@ title: "Cosmos Reason 2 2B"
 model_id: "cosmos-reason2-2b"
 short_description: "NVIDIA's compact 2B parameter vision-language model with built-in chain-of-thought reasoning for edge deployment"
 family: "NVIDIA Cosmos"
+visual_family: "nvidia-cosmos"
+visual_variant: "2"
 icon: "🧠"
 is_new: false
 order: 3

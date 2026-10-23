@@ -3,6 +3,8 @@ title: "Qwen3.5 0.8B"
 model_id: "qwen3-5-0-8b"
 short_description: "Alibaba's compact Qwen3.5 vision-language model for lightweight multimodal deployment"
 family: "Alibaba Qwen3.5"
+visual_family: "qwen"
+visual_variant: "3.5"
 icon: "🔮"
 is_new: false
 order: 5

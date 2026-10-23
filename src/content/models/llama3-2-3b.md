@@ -3,6 +3,7 @@ title: "Llama 3.2 3B"
 model_id: "llama3-2-3b"
 short_description: "Meta's compact 3 billion parameter model, ideal for resource-constrained Jetson deployments"
 family: "Meta Llama 3"
+visual_family: "meta-llama"
 icon: "🦙"
 is_new: false
 order: 1
@@ -76,4 +77,3 @@ one_shot_inference:
 Meta's Llama 3.2 3B is a compact yet capable language model optimized for edge deployment. With just 3 billion parameters, it offers an excellent balance between performance and resource efficiency.
 
 Perfect for Jetson Orin Nano and other memory-constrained deployments while still delivering strong instruction-following capabilities.
-

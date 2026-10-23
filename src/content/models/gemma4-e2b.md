@@ -3,6 +3,8 @@ title: "Gemma 4 E2B"
 model_id: "gemma4-e2b"
 short_description: "Google's compact frontier Gemma 4 model for efficient multimodal and agentic workloads"
 family: "Google Gemma4"
+visual_family: "gemma"
+visual_variant: "4"
 icon: "💎"
 is_new: false
 order: 1

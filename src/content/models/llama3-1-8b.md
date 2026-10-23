@@ -3,6 +3,7 @@ title: "Llama 3.1 8B"
 model_id: "llama3-1-8b"
 short_description: "Meta's efficient 8 billion parameter instruction-tuned language model optimized for Jetson"
 family: "Meta Llama 3"
+visual_family: "meta-llama"
 icon: "🦙"
 is_new: false
 order: 2
@@ -75,4 +76,3 @@ one_shot_inference:
 Meta's Llama 3.1 8B Instruct is a powerful instruction-tuned language model with 8 billion parameters. This quantized version (W4A16) provides excellent performance while being memory efficient for edge deployment on Jetson devices.
 
 The model excels at following instructions, answering questions, and generating coherent text across a wide range of tasks.
-

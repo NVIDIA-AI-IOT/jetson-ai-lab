@@ -3,6 +3,8 @@ title: "Nemotron Nano 12B VL"
 model_id: "nemotron-nano-12b-vl"
 short_description: "NVIDIA's vision-language model for image understanding and multimodal reasoning"
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 icon: "⚡"
 is_new: false
 order: 3
@@ -54,4 +56,3 @@ NVIDIA Nemotron Nano 12B VL is a vision-language model capable of understanding 
 ## Supported Languages
 
 English, German, Spanish, French, Italian, Korean, Portuguese, Russian, Japanese, Chinese.
-

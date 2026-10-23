@@ -3,6 +3,8 @@ title: "Gemma 3 27B"
 model_id: "gemma3-27b"
 short_description: "Google's flagship 27 billion parameter model delivering state-of-the-art Gemma performance"
 family: "Google Gemma3"
+visual_family: "gemma"
+visual_variant: "3"
 icon: "💎"
 is_new: false
 order: 5

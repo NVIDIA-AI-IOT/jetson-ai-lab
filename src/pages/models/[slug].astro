@@ -5,9 +5,12 @@ import ModelServeSection from '../../components/ModelServeSection.astro';
 import ModelCallSection from '../../components/ModelCallSection.astro';
 import ModelBenchmarkSection from '../../components/ModelBenchmarkSection.astro';
 import ModelOneShotSection from '../../components/ModelOneShotSection.astro';
+import ModelShaderCanvas from '../../components/ModelShaderCanvas.astro';
 import { getSupportedInferenceEngines, sortEnginesForUi } from '../../lib/modelFrontmatterAdapter';
 import { isModelNew, MODEL_NEW_WINDOW_DAYS } from '../../lib/modelFreshness';
 import { modalityIcon, modalityLabel } from '../../lib/modelModalities';
+import { modelFamilyVisual } from '../../data/modelVisuals';
+import { modelShaderDefaults } from '../../data/modelShaderDefaults.mjs';
 import benchmarksData from '../../data/benchmarks.json';
 
 export async function getStaticPaths() {
@@ -23,6 +26,33 @@ const { Content } = await entry.render();
 const { data } = entry;
 const modelIsNew = isModelNew(data);
 const hasFreshnessMetadata = data.catalog_added_at !== undefined || data.is_new !== undefined;
+const familyVisual = modelFamilyVisual(data.visual_family, data.visual_variant);
+const isMinistralVisual = data.visual_family === 'mistral-ministral3';
+const visualCardOpacity = isMinistralVisual ? 0.68 : 0.5;
+const familyHeroFallback = familyVisual?.assets.hero;
+const familyShaderConfig = {
+  qwen: { shaderId: 'qwen' as const, startTime: 7, resolutionScale: 0.8 },
+  gemma: {
+    shaderId: 'gemma' as const,
+    startTime: 11,
+    resolutionScale: data.visual_variant === '4' ? 0.5 : 0.7,
+  },
+  'liquid-d1': { shaderId: 'liquid' as const, startTime: 13, resolutionScale: 0.75 },
+  'meta-llama': { shaderId: 'llama' as const, startTime: 9, resolutionScale: 0.75 },
+  'meta-muse-glimmer': { shaderId: 'muse-glimmer' as const, startTime: 21, resolutionScale: 1 },
+  'openai-gpt-oss': { shaderId: 'gpt-oss' as const, startTime: 16, resolutionScale: 1 },
+  'mistral-ministral3': { shaderId: 'ministral3' as const, startTime: 18, resolutionScale: 1 },
+  'minimax-m2': { shaderId: 'minimax' as const, startTime: 15, resolutionScale: 0.75 },
+  'flux3-action': { shaderId: 'flux-action' as const, startTime: 18, resolutionScale: 0.75 },
+  'nvidia-nemotron': { shaderId: 'nemotron' as const, startTime: 60, resolutionScale: 1 },
+  'nvidia-cosmos': { shaderId: 'cosmos' as const, startTime: 24, resolutionScale: 0.75 },
+} as const;
+const familyShaderBase = data.visual_family
+  ? familyShaderConfig[data.visual_family as keyof typeof familyShaderConfig]
+  : undefined;
+const familyShader = familyShaderBase
+  ? { ...familyShaderBase, defaults: modelShaderDefaults(familyShaderBase.shaderId, data.visual_variant) }
+  : undefined;
 
 // Generate HuggingFace URL from hf_checkpoint if huggingface_url not provided
 const huggingfaceUrl = data.huggingface_url || (data.hf_checkpoint ? `https://huggingface.co/${data.hf_checkpoint}` : null);
@@ -83,8 +113,55 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
 
 <Layout title={data.title} description={data.short_description}>
   {/* Hero Section */}
-  <section class="bg-nvidia-black text-nvidia-white py-20">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <section
+    class="relative overflow-hidden bg-nvidia-black text-nvidia-white py-20"
+    style={familyVisual ? `background-color:${familyVisual.palette.background}` : undefined}
+    data-model-visual-hero={familyVisual ? '' : undefined}
+  >
+    {familyVisual && (
+      <>
+        <div
+          class="pointer-events-none absolute inset-0"
+          data-model-visual-art
+          aria-hidden="true"
+        >
+          <img
+            src={familyHeroFallback}
+            alt=""
+            class="absolute inset-0 h-full w-full object-cover"
+            style={isMinistralVisual ? 'filter:blur(2.5px);transform:scale(1.012)' : undefined}
+          />
+          {familyShader && (
+            <ModelShaderCanvas
+              shaderId={familyShader.shaderId}
+              instanceId={`model-${entry.slug}`}
+              defaults={familyShader.defaults}
+              startTime={familyShader.startTime}
+              maxFps={20}
+              resolutionScale={familyShader.resolutionScale}
+              class="absolute inset-0 h-full w-full"
+            />
+          )}
+          <div class="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/20"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25"></div>
+          {isMinistralVisual && <div class="absolute inset-0 bg-black/30"></div>}
+        </div>
+        <button
+          type="button"
+          class="model-visual-toggle absolute right-4 top-3 z-[2] inline-flex items-center gap-2 rounded border border-white/10 bg-black/25 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-white/55 transition hover:border-white/25 hover:bg-black/45 hover:text-white/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nvidia-green sm:right-6 lg:right-8"
+          data-model-visual-toggle
+          aria-pressed="true"
+          aria-label="Turn model visual off"
+        >
+          <span>Model visual</span>
+          <span class="model-visual-switch relative h-3.5 w-7 rounded-[4px] border border-white/15 bg-[#76b900]/45 transition-colors" aria-hidden="true">
+            <span class="model-visual-thumb absolute left-[2px] top-[2px] h-2 w-2 translate-x-[14px] rounded-[2px] bg-white/80 transition-transform"></span>
+          </span>
+          <span class="w-5 text-left" data-model-visual-state>On</span>
+        </button>
+      </>
+    )}
+    <div class="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid md:grid-cols-2 gap-12 items-center">
         <div>
           <div class="flex items-center space-x-3 mb-6">
@@ -142,7 +219,12 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
             </a>
           </div>
         </div>
-        <div class="bg-nvidia-gray-800 rounded-xl p-8 border border-nvidia-gray-700">
+        <div
+          class:list={["rounded-xl p-8 border border-nvidia-gray-700", familyVisual ? "shadow-2xl" : "bg-nvidia-gray-800"]}
+          style={familyVisual ? `background-color:rgba(0,0,0,${visualCardOpacity})` : undefined}
+          data-model-visual-card={familyVisual ? '' : undefined}
+          data-model-visual-card-opacity={familyVisual ? String(visualCardOpacity) : undefined}
+        >
           <div class="divide-y divide-nvidia-gray-700">
 
             {/* Parameters */}
@@ -339,6 +421,56 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
 
   refreshModelNewBadge();
   document.addEventListener('astro:page-load', refreshModelNewBadge);
+
+  function initializeModelVisualToggle() {
+    const storageKey = 'jetson-ai-lab:model-visuals';
+    document.querySelectorAll<HTMLElement>('[data-model-visual-hero]').forEach((hero) => {
+      const button = hero.querySelector<HTMLButtonElement>('[data-model-visual-toggle]');
+      const artwork = hero.querySelector<HTMLElement>('[data-model-visual-art]');
+      const card = hero.querySelector<HTMLElement>('[data-model-visual-card]');
+      const stateLabel = button?.querySelector<HTMLElement>('[data-model-visual-state]');
+      const switchTrack = button?.querySelector<HTMLElement>('.model-visual-switch');
+      const thumb = button?.querySelector<HTMLElement>('.model-visual-thumb');
+      if (!button || !artwork || !card || !stateLabel || !switchTrack || !thumb) return;
+      const visualBackground = hero.style.backgroundColor || 'rgb(0, 0, 0)';
+      const visualCardOpacity = Number(card.dataset.modelVisualCardOpacity ?? 0.5);
+
+      const applyState = (enabled: boolean) => {
+        artwork.hidden = !enabled;
+        hero.style.backgroundColor = enabled ? visualBackground : 'rgb(0, 0, 0)';
+        card.style.backgroundColor = enabled ? `rgba(0, 0, 0, ${visualCardOpacity})` : 'rgb(31, 41, 55)';
+        card.style.boxShadow = enabled ? '' : 'none';
+        button.setAttribute('aria-pressed', String(enabled));
+        button.setAttribute('aria-label', enabled ? 'Turn model visual off' : 'Show model visual');
+        stateLabel.textContent = enabled ? 'On' : 'Off';
+        switchTrack.style.backgroundColor = enabled ? 'rgba(118, 185, 0, 0.45)' : 'rgba(255, 255, 255, 0.14)';
+        thumb.style.transform = enabled ? 'translateX(14px)' : 'translateX(0)';
+      };
+
+      let enabled = true;
+      try {
+        enabled = localStorage.getItem(storageKey) !== 'off';
+      } catch {
+        // Storage may be disabled; retain the visible default for this page.
+      }
+      applyState(enabled);
+
+      if (button.dataset.bound === 'true') return;
+      button.dataset.bound = 'true';
+      button.addEventListener('click', () => {
+        enabled = button.getAttribute('aria-pressed') !== 'true';
+        applyState(enabled);
+        try {
+          localStorage.setItem(storageKey, enabled ? 'on' : 'off');
+        } catch {
+          // The toggle still works for the current page when storage is unavailable.
+        }
+      });
+    });
+  }
+
+  initializeModelVisualToggle();
+  document.addEventListener('astro:page-load', initializeModelVisualToggle);
 
   // Body content device tabs (inside markdown-rendered sections)
   document.querySelectorAll('.device-tabs').forEach(group => {

@@ -3,6 +3,8 @@ title: "FunctionGemma"
 model_id: "functiongemma"
 short_description: "Google's specialized function calling model built on Gemma 3 270M, optimized for tool use"
 family: "Google Gemma3"
+visual_family: "gemma"
+visual_variant: "3"
 icon: "💎"
 is_new: false
 order: 0.5
@@ -121,4 +123,3 @@ curl http://localhost:8080/v1/chat/completions -d '{
 - Structured function calls with appropriate parameters
 - Compatible with OpenAI chat completions format
 - JSON-formatted tool invocations
-

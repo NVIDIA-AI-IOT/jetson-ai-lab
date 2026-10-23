@@ -3,6 +3,8 @@ title: "Nemotron3 Nano 4B"
 model_id: "nemotron3-nano-4b"
 short_description: "NVIDIA's compact 4B Nano model with day-0 llama.cpp support on Jetson Orin and Thor"
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 icon: "⚡"
 is_new: false
 order: 0

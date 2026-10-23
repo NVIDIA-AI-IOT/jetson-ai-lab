@@ -10,6 +10,8 @@ import { oneShotHasRunModalContent } from '../../lib/evalRunModal';
 import { getSupportedInferenceEngines, sortEnginesForUi } from '../../lib/modelFrontmatterAdapter';
 import { isModelNew, MODEL_NEW_WINDOW_DAYS } from '../../lib/modelFreshness';
 import { modalityIcon, modalityLabel } from '../../lib/modelModalities';
+import { modelFamilyVisual } from '../../data/modelVisuals';
+import { MODEL_VISUAL_PRESENTATION } from '../../data/modelVisualPresentation';
 import {
   CATALOG_ENGINE_FILTERS,
   catalogEngineUiIdsForModel,
@@ -124,6 +126,18 @@ function inferCatalogModelType(inputs: string[], outputs: string[]): CatalogMode
 const moduleFilterOptions = JETSON_MATRIX_MODULES.filter((m) => m.showInMatrixUi !== false);
 
 const modelEntries = await getCollection('models');
+
+// Official source assets use different transparent safe areas. Keep the source
+// artwork intact and normalize only its optical size inside the catalog frame.
+const catalogIconOpticalScales: Record<string, number> = {
+  '/images/model-families/nvidia-nemotron/icon-official.svg': 1.2,
+  '/images/model-families/nvidia-cosmos/icon-official.png': 1.07,
+};
+
+function catalogIconOpticalScale(icon?: string): number {
+  return icon ? (catalogIconOpticalScales[icon] ?? 1) : 1;
+}
+
 const collectionModels = modelEntries.map(entry => {
   const engines = getSupportedInferenceEngines(entry.data);
   const category = modelTypeToInferenceCategory(entry.data.type);
@@ -144,6 +158,8 @@ const collectionModels = modelEntries.map(entry => {
     entry.data.one_shot_inference
   );
   const modelIsNew = isModelNew(entry.data);
+  const familyVisual = modelFamilyVisual(entry.data.visual_family, entry.data.visual_variant);
+  const visualIcon = familyVisual?.assets.icon;
   return {
     id: entry.slug,
     name: entry.data.title,
@@ -153,6 +169,7 @@ const collectionModels = modelEntries.map(entry => {
     minimumJetson: entry.data.minimum_jetson || 'Orin NX',
     memory: entry.data.memory_requirements,
     size: entry.data.model_size,
+    parameters: entry.data.parameters,
     order: entry.data.order ?? 999,
     status: modelIsNew ? 'new' : 'stable',
     highlighted: modelIsNew,
@@ -175,6 +192,10 @@ const collectionModels = modelEntries.map(entry => {
     matrix_modules_disabled: entry.data.matrix_modules_disabled,
     vision_capable: entry.data.vision_capable,
     one_shot_inference: entry.data.one_shot_inference,
+    visualHero: familyVisual?.assets.catalog,
+    visualIcon,
+    visualIconScale: catalogIconOpticalScale(visualIcon),
+    visualFamily: entry.data.visual_family,
   };
 });
 
@@ -199,6 +220,41 @@ const familyOrder: Record<string, number> = {
 };
 const families = Array.from(new Set(models.map(m => m.family)))
   .sort((a, b) => (familyOrder[a] ?? 99) - (familyOrder[b] ?? 99));
+
+const catalogFamilyLabel = (family: string) => {
+  if (family.startsWith('Alibaba Qwen')) return family.replace(/^Alibaba Qwen/, 'Qwen ');
+  if (family.startsWith('Google Gemma')) return family.replace(/^Google Gemma/, 'Gemma ');
+  if (family.startsWith('NVIDIA Cosmos ')) return family.replace(/^NVIDIA /, '');
+  if (family.startsWith('Meta Llama ')) return family.replace(/^Meta /, '');
+  if (family === 'Mistral AI Ministral 3') return 'Ministral 3';
+  if (family === 'Meta Muse') return 'Meta Muse Glimmer';
+  if (family === 'Black Forest Labs') return 'FLUX.3 Action';
+  return family;
+};
+
+const catalogFamilySection = (visualFamily?: string) => {
+  if (visualFamily?.startsWith('nvidia-')) return 'NVIDIA models';
+  if (visualFamily === 'flux3-action') return 'Physical AI & action';
+  if (visualFamily === 'meta-muse-glimmer' || visualFamily === 'liquid-d1' || visualFamily === 'minimax-m2') {
+    return 'Agentic & decision';
+  }
+  return 'General & multimodal';
+};
+
+const familyArtwork = new Map(
+  families.map((family) => {
+    const familyModels = models.filter((model) => model.family === family);
+    const visualFamily = familyModels.find((model) => model.visualFamily)?.visualFamily;
+    return [family, {
+      hero: familyModels.find((model) => model.visualHero)?.visualHero,
+      icon: familyModels.find((model) => model.visualIcon)?.visualIcon,
+      iconScale: familyModels.find((model) => model.visualIcon)?.visualIconScale ?? 1,
+      visualFamily,
+      label: catalogFamilyLabel(family),
+      section: catalogFamilySection(visualFamily),
+    }];
+  })
+);
 const inputFilterOptions = catalogInputDefinitions.filter((input) =>
   models.some((model) => model.inputs.includes(input.id))
 );
@@ -575,7 +631,7 @@ const catalogTypeCounts = new Map(
               </button>
               <div
                 id="models-card-columns-menu"
-                class="absolute left-0 top-[calc(100%+0.4rem)] z-30 hidden w-44 rounded-lg border border-nvidia-gray-200 bg-white p-1.5 text-left shadow-lg"
+                class="absolute left-0 top-[calc(100%+0.4rem)] z-30 hidden w-52 rounded-lg border border-nvidia-gray-200 bg-white p-1.5 text-left shadow-lg"
                 role="menu"
                 aria-label="Card columns"
               >
@@ -600,32 +656,30 @@ const catalogTypeCounts = new Map(
                 </button>
               </div>
             </div>
-            <button
-              type="button"
-              id="models-view-compact"
-              class="models-view-toggle inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors text-nvidia-gray-600 hover:text-nvidia-black"
-              data-view="compact"
-              aria-pressed="false"
-            >
-              <svg
-                class="w-3.5 h-3.5 shrink-0 opacity-90"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
+            <div id="models-compact-view-control" class="relative inline-flex rounded-md text-nvidia-gray-600">
+              <button
+                type="button"
+                id="models-view-compact"
+                class="models-view-toggle inline-flex items-center gap-1.5 rounded-l-md py-1.5 pl-3 pr-2 text-xs font-semibold transition-colors hover:text-nvidia-black"
+                data-view="compact"
+                aria-pressed="false"
               >
-                <rect width="8" height="5" x="2" y="3" rx="1" />
-                <rect width="8" height="5" x="14" y="3" rx="1" />
-                <rect width="8" height="5" x="2" y="10" rx="1" />
-                <rect width="8" height="5" x="14" y="10" rx="1" />
-                <rect width="8" height="5" x="2" y="17" rx="1" />
-                <rect width="8" height="5" x="14" y="17" rx="1" />
-              </svg>
-              Compact
-            </button>
+                <svg class="h-3.5 w-3.5 shrink-0 opacity-90" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect width="8" height="5" x="2" y="3" rx="1" /><rect width="8" height="5" x="14" y="3" rx="1" />
+                  <rect width="8" height="5" x="2" y="10" rx="1" /><rect width="8" height="5" x="14" y="10" rx="1" />
+                  <rect width="8" height="5" x="2" y="17" rx="1" /><rect width="8" height="5" x="14" y="17" rx="1" />
+                </svg>
+                Compact
+              </button>
+              <button type="button" id="models-compact-art-menu-button" class="inline-flex w-7 items-center justify-center rounded-r-md border-l border-nvidia-gray-200/80 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black" aria-label="Model visual style" aria-haspopup="menu" aria-expanded="false" aria-controls="models-compact-art-menu">
+                <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
+              </button>
+              <div id="models-compact-art-menu" class="absolute left-0 top-[calc(100%+0.4rem)] z-30 hidden w-52 rounded-lg border border-nvidia-gray-200 bg-white p-1.5 text-left shadow-lg" role="menu" aria-label="Compact model visual style">
+                <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-nvidia-gray-500">Model visual style</div>
+                <button type="button" class="models-compact-art-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-black transition-colors hover:bg-nvidia-gray-100" data-compact-art="model" role="menuitemradio" aria-checked="true"><span>By model</span><svg data-compact-art-check class="h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></button>
+                <button type="button" class="models-compact-art-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-gray-600 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black" data-compact-art="family" role="menuitemradio" aria-checked="false"><span>By family</span><svg data-compact-art-check class="hidden h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></button>
+              </div>
+            </div>
             <button
               type="button"
               id="models-view-table"
@@ -716,15 +770,50 @@ const catalogTypeCounts = new Map(
         ></div>
       </div>
 
-      <div class="models-card-directory" id="models-directory-cards" data-card-layout="legacy" data-card-columns="4" data-card-fit="aligned" data-rearranging="false">
+      <div
+        class="models-card-directory"
+        id="models-directory-cards"
+        data-card-layout="legacy"
+        data-card-columns="4"
+        data-card-fit="aligned"
+        data-cards-art="family"
+        data-compact-art="model"
+        data-visuals-enabled="true"
+        data-art-intensity={String(MODEL_VISUAL_PRESENTATION.catalogArtworkIntensityPercent)}
+        data-art-contrast={MODEL_VISUAL_PRESENTATION.catalogArtworkIntensityPercent >= 90 ? 'light' : 'dark'}
+        data-rearranging="false"
+        style={`--catalog-art-intensity:${(MODEL_VISUAL_PRESENTATION.catalogArtworkIntensityPercent / 100).toFixed(2)};--catalog-art-boost:${(1 + Math.max(0, MODEL_VISUAL_PRESENTATION.catalogArtworkIntensityPercent - 100) / 100).toFixed(2)}`}
+      >
         {families.map(family => (
-          <section class="model-family-group scroll-mt-24" data-family={family}>
+          <section
+            class="model-family-group scroll-mt-24"
+            data-family={family}
+            data-has-family-art={familyArtwork.get(family)?.hero ? 'true' : 'false'}
+            style={familyArtwork.get(family)?.hero ? `--family-visual-image:url("${familyArtwork.get(family)?.hero}")` : undefined}
+          >
             <div class="model-family-header">
-              <h3 class="model-family-title font-bold text-nvidia-black">{family}</h3>
+              {familyArtwork.get(family)?.icon && (
+                <span class="model-family-icon-frame" data-icon-family={familyArtwork.get(family)?.visualFamily} aria-hidden="true">
+                  <img
+                    class="model-family-icon"
+                    src={familyArtwork.get(family)?.icon}
+                    style={`--model-icon-optical-scale:${familyArtwork.get(family)?.iconScale ?? 1}`}
+                    alt=""
+                    width="28"
+                    height="28"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </span>
+              )}
+              <div class="model-family-heading min-w-0">
+                <p class="model-family-section">{familyArtwork.get(family)?.section}</p>
+                <h3 class="model-family-title font-bold text-nvidia-black">{familyArtwork.get(family)?.label || family}</h3>
+              </div>
+              <span class="model-family-divider h-px flex-1 bg-nvidia-gray-200" aria-hidden="true"></span>
               <span class="model-family-count shrink-0 text-xs tabular-nums text-nvidia-gray-400">
                 {models.filter(m => m.family === family).length}
               </span>
-              <span class="model-family-divider h-px flex-1 bg-nvidia-gray-200" aria-hidden="true"></span>
               <button type="button" class="model-family-drag-handle" data-family-drag-handle aria-label={`Move ${family}`} title="Drag to rearrange; use arrow keys for precise movement">
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
@@ -734,9 +823,10 @@ const catalogTypeCounts = new Map(
               </button>
             </div>
             <div class="model-family-grid" data-family-model-grid>
-              {models.filter(m => m.family === family).map(model => (
+              {models.filter(m => m.family === family).map((model, index) => (
                 <div
                   class="model-card group transition-colors hover:border-nvidia-green hover:bg-nvidia-gray-50"
+                  data-family-model-index={index}
                   data-category={model.category}
                   data-name={model.name.toLowerCase()}
                   data-search={`${model.name} ${model.family} ${model.description}`.toLowerCase()}
@@ -750,13 +840,29 @@ const catalogTypeCounts = new Map(
                   data-legacy-is-new={String(model.legacyIsNew)}
                   data-catalog-modules={model.catalog_modules.join(',')}
                   data-catalog-engines={model.catalog_engine_ui_ids.join(',')}
+                  data-has-model-art={model.visualHero ? 'true' : 'false'}
+                  style={model.visualHero ? `--model-visual-image:url("${model.visualHero}")` : undefined}
                 >
                   <div class="flex min-h-7 w-full min-w-0 items-center justify-between gap-3">
-                    <div class="flex min-w-0 items-center gap-2">
+                    <div class="flex min-w-0 flex-1 items-center gap-2">
+                      {model.visualIcon && (
+                        <span class="model-card-icon-frame" data-icon-family={model.visualFamily} aria-hidden="true">
+                          <img
+                            class="model-card-icon"
+                            src={model.visualIcon}
+                            style={`--model-icon-optical-scale:${model.visualIconScale}`}
+                            alt=""
+                            width="22"
+                            height="22"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </span>
+                      )}
                       <a
                         href={`/models/${model.id}`}
                         data-model-link
-                        class="truncate text-sm font-bold text-nvidia-black transition-colors hover:text-nvidia-green hover:underline hover:underline-offset-2"
+                        class="min-w-0 whitespace-normal break-words text-sm font-bold leading-tight text-nvidia-black transition-colors hover:text-nvidia-green hover:underline hover:underline-offset-2"
                         title={model.name}
                       >
                         {model.name}
@@ -765,7 +871,7 @@ const catalogTypeCounts = new Map(
                         <span data-model-new-badge class:list={["bg-nvidia-green text-nvidia-black px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wide shrink-0", { hidden: model.status !== 'new' }]}>New</span>
                       )}
                     </div>
-                    <div class="flex shrink-0 items-center gap-2">
+                    <div data-model-supporting-info class="flex min-w-0 max-w-[48%] shrink items-center gap-2">
                       <span class="model-card-capability rounded-sm bg-nvidia-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-nvidia-gray-600">
                         {catalogOutputLabel(model.primaryOutput)}
                       </span>
@@ -778,6 +884,10 @@ const catalogTypeCounts = new Map(
                 </div>
               ))}
             </div>
+            <button type="button" class="model-family-more hidden" data-family-expand aria-expanded="false">
+              <span data-family-more-label></span>
+              <span data-family-more-arrow aria-hidden="true">↓</span>
+            </button>
           </section>
         ))}
       </div>
@@ -998,6 +1108,8 @@ const catalogTypeCounts = new Map(
   const MODELS_DIRECTORY_COLUMNS_KEY = 'jetson-ai-lab-models-card-columns';
   const MODELS_DIRECTORY_FIT_KEY = 'jetson-ai-lab-models-card-fit';
   const MODELS_DIRECTORY_ORDER_KEY = 'jetson-ai-lab-model-family-order-v1';
+  const MODELS_COMPACT_ART_KEY = 'jetson-ai-lab-models-compact-artwork';
+  const MODEL_VISUALS_KEY = 'jetson-ai-lab:model-visuals';
 
   const SORT_ATTR: Record<string, string> = {
     name: 'data-sort-name',
@@ -1046,14 +1158,18 @@ const catalogTypeCounts = new Map(
     const btnCompact = document.getElementById('models-view-compact');
     const btnTable = document.getElementById('models-view-table');
     const cardsViewControl = document.getElementById('models-cards-view-control');
+    const compactViewControl = document.getElementById('models-compact-view-control');
     const cardColumnsMenuButton = document.getElementById('models-card-columns-menu-button') as HTMLButtonElement | null;
     const cardColumnsMenu = document.getElementById('models-card-columns-menu');
+    const compactArtMenuButton = document.getElementById('models-compact-art-menu-button') as HTMLButtonElement | null;
+    const compactArtMenu = document.getElementById('models-compact-art-menu');
     const cardRearrangeControl = document.getElementById('models-card-rearrange-control');
     const cardRearrangeButton = document.getElementById('models-card-rearrange') as HTMLButtonElement | null;
     const cardOrderReset = document.getElementById('models-card-order-reset') as HTMLButtonElement | null;
     const cardOrderStatus = document.getElementById('models-card-order-status');
     const cardColumnButtons = Array.from(directory.querySelectorAll<HTMLButtonElement>('.models-card-columns-toggle[data-card-columns]'));
     const cardFitButtons = Array.from(directory.querySelectorAll<HTMLButtonElement>('.models-card-fit-toggle[data-card-fit]'));
+    const compactArtButtons = Array.from(directory.querySelectorAll<HTMLButtonElement>('.models-compact-art-toggle[data-compact-art]'));
     const filterPanel = document.getElementById('models-filter-panel');
     const mobileFilterToggle = document.getElementById('models-mobile-filter-toggle');
     const mobileFilterCount = document.getElementById('models-mobile-filter-count');
@@ -1219,7 +1335,7 @@ const catalogTypeCounts = new Map(
       familyDragOffsetY = clientY - bounds.top;
       ghost.style.left = `${clientX - familyDragOffsetX}px`;
       ghost.style.top = `${clientY - familyDragOffsetY}px`;
-      document.body.appendChild(ghost);
+      (cardsArea || document.body).appendChild(ghost);
       familyDragGhost = ghost;
     }
 
@@ -1540,10 +1656,19 @@ const catalogTypeCounts = new Map(
       cardsViewControl?.classList.toggle('shadow-sm', cardsSelected);
       cardsViewControl?.classList.toggle('text-nvidia-black', cardsSelected);
       cardsViewControl?.classList.toggle('text-nvidia-gray-600', !cardsSelected);
+      const compactSelected = mode === 'compact';
+      compactViewControl?.classList.toggle('bg-white', compactSelected);
+      compactViewControl?.classList.toggle('shadow-sm', compactSelected);
+      compactViewControl?.classList.toggle('text-nvidia-black', compactSelected);
+      compactViewControl?.classList.toggle('text-nvidia-gray-600', !compactSelected);
       if (cardsSearchBar) {
         cardsSearchBar.classList.toggle('hidden', mode === 'table');
       }
       if (!cardsSelected) setCardColumnsMenu(false);
+      if (!compactSelected) {
+        compactArtMenu?.classList.add('hidden');
+        compactArtMenuButton?.setAttribute('aria-expanded', 'false');
+      }
       if (mode !== 'cards' && rearrangingFamilies) setFamilyRearrangeMode(false);
     }
 
@@ -1585,6 +1710,43 @@ const catalogTypeCounts = new Map(
         button.querySelector('[data-card-fit-check]')?.classList.toggle('hidden', !selected);
       });
       layoutFamilyCards();
+    }
+
+    function setCompactArtwork(mode: 'model' | 'family') {
+      try {
+        localStorage.setItem(MODELS_COMPACT_ART_KEY, mode);
+      } catch {
+        /* ignore */
+      }
+      if (cardsArea) cardsArea.dataset.compactArt = mode;
+      compactArtButtons.forEach((button) => {
+        const selected = button.dataset.compactArt === mode;
+        button.classList.toggle('text-nvidia-black', selected);
+        button.classList.toggle('text-nvidia-gray-600', !selected);
+        button.setAttribute('aria-checked', selected ? 'true' : 'false');
+        button.querySelector('[data-compact-art-check]')?.classList.toggle('hidden', !selected);
+      });
+    }
+
+    function applySharedVisualPreference() {
+      let enabled = true;
+      try {
+        enabled = localStorage.getItem(MODEL_VISUALS_KEY) !== 'off';
+      } catch {
+        /* retain the visible default */
+      }
+      if (cardsArea) cardsArea.dataset.visualsEnabled = enabled ? 'true' : 'false';
+      compactArtMenuButton?.classList.toggle('hidden', !enabled);
+      btnCompact?.classList.toggle('rounded-r-md', !enabled);
+      if (!enabled) {
+        compactArtMenu?.classList.add('hidden');
+        compactArtMenuButton?.setAttribute('aria-expanded', 'false');
+      }
+      compactArtButtons.forEach((button) => {
+        button.disabled = !enabled;
+        button.classList.toggle('opacity-40', !enabled);
+        button.title = enabled ? '' : 'Model visual is off';
+      });
     }
 
     function updateSortIndicators(activeCol: string, dir: 'asc' | 'desc') {
@@ -1734,22 +1896,37 @@ const catalogTypeCounts = new Map(
       let visibleModelCount = 0;
 
       modelGroups.forEach((group) => {
-        const cards = group.querySelectorAll('.model-card');
+        const cards = Array.from(group.querySelectorAll<HTMLElement>('.model-card'));
+        const matchingCards = cards.filter((card) => rowMatchesFilters(card));
+        const expanded = (group as HTMLElement).dataset.familyExpanded === 'true';
+        const collapseFamily = cardsArea?.dataset.cardLayout === 'legacy' && !expanded;
         let visibleCardsInGroup = 0;
 
         cards.forEach((card) => {
-          const el = card as HTMLElement;
-          if (rowMatchesFilters(card)) {
-            el.style.display = '';
+          const matchIndex = matchingCards.indexOf(card);
+          if (matchIndex >= 0) {
+            card.style.display = !collapseFamily || matchIndex < 4 ? '' : 'none';
             visibleCardsInGroup++;
             visibleModelCount++;
             hasVisibleInCards = true;
           } else {
-            el.style.display = 'none';
+            card.style.display = 'none';
           }
         });
 
         (group as HTMLElement).style.display = visibleCardsInGroup > 0 ? '' : 'none';
+        const moreButton = group.querySelector<HTMLButtonElement>('[data-family-expand]');
+        const moreLabel = group.querySelector<HTMLElement>('[data-family-more-label]');
+        const moreArrow = group.querySelector<HTMLElement>('[data-family-more-arrow]');
+        if (moreButton) {
+          moreButton.classList.toggle('hidden', cardsArea?.dataset.cardLayout !== 'legacy' || matchingCards.length <= 4);
+          moreButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        }
+        if (moreLabel) {
+          const remaining = Math.max(0, matchingCards.length - 4);
+          moreLabel.textContent = expanded ? 'Show fewer' : `+${remaining} ${remaining === 1 ? 'model' : 'models'}`;
+        }
+        if (moreArrow) moreArrow.textContent = expanded ? '↑' : '↓';
       });
 
       let hasVisibleInTable = false;
@@ -1778,6 +1955,7 @@ const catalogTypeCounts = new Map(
       let initial: 'cards' | 'compact' | 'table' = 'cards';
       let initialCardColumns: '3' | '4' = '4';
       let initialCardFit: 'aligned' | 'content' = 'aligned';
+      let initialCompactArtwork: 'model' | 'family' = 'model';
       try {
         const v = localStorage.getItem(MODELS_DIRECTORY_VIEW_KEY);
         if (v === 'table' || v === 'compact' || v === 'cards') initial = v;
@@ -1785,6 +1963,9 @@ const catalogTypeCounts = new Map(
         if (columns === '3' || columns === '4') initialCardColumns = columns;
         const fit = localStorage.getItem(MODELS_DIRECTORY_FIT_KEY);
         if (fit === 'aligned' || fit === 'content') initialCardFit = fit;
+        const compactArtwork = localStorage.getItem(MODELS_COMPACT_ART_KEY);
+        if (compactArtwork === 'family') initialCompactArtwork = 'family';
+        else if (compactArtwork === 'model' || compactArtwork === 'card' || compactArtwork === 'off') initialCompactArtwork = 'model';
       } catch {
         /* ignore */
       }
@@ -1799,6 +1980,8 @@ const catalogTypeCounts = new Map(
       restoreFamilyOrder();
       setCardColumns(initialCardColumns);
       setCardFit(initialCardFit);
+      setCompactArtwork(initialCompactArtwork);
+      applySharedVisualPreference();
       setViewMode(initial);
 
       directory.querySelectorAll<HTMLInputElement>('.model-directory-search').forEach((input) => {
@@ -1854,9 +2037,33 @@ const catalogTypeCounts = new Map(
           }
         });
       });
+      compactArtButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const mode = button.dataset.compactArt;
+          if (mode === 'model' || mode === 'family') {
+            setCompactArtwork(mode);
+            compactArtMenu?.classList.add('hidden');
+            compactArtMenuButton?.setAttribute('aria-expanded', 'false');
+            compactArtMenuButton?.focus();
+          }
+        });
+      });
+      compactArtMenuButton?.addEventListener('click', () => {
+        const open = compactArtMenu?.classList.contains('hidden') ?? true;
+        compactArtMenu?.classList.toggle('hidden', !open);
+        compactArtMenuButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) setCardColumnsMenu(false);
+      });
+      window.addEventListener('storage', (event) => {
+        if (event.key === MODEL_VISUALS_KEY) applySharedVisualPreference();
+      });
       window.addEventListener('resize', layoutFamilyCards, { passive: true });
       document.addEventListener('click', (event) => {
         if (!cardsViewControl?.contains(event.target as Node)) setCardColumnsMenu(false);
+        if (!compactViewControl?.contains(event.target as Node)) {
+          compactArtMenu?.classList.add('hidden');
+          compactArtMenuButton?.setAttribute('aria-expanded', 'false');
+        }
       });
       document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape' || cardColumnsMenu?.classList.contains('hidden')) return;
@@ -1966,6 +2173,13 @@ const catalogTypeCounts = new Map(
       });
       directory.addEventListener('click', (e) => {
         const target = e.target as HTMLElement | null;
+        const familyExpand = target?.closest<HTMLButtonElement>('[data-family-expand]');
+        if (familyExpand) {
+          const family = familyExpand.closest<HTMLElement>('.model-family-group');
+          if (family) family.dataset.familyExpanded = family.dataset.familyExpanded === 'true' ? 'false' : 'true';
+          filterModels();
+          return;
+        }
         const deviceIconToggle = target?.closest<HTMLButtonElement>('[data-device-icon-toggle]');
         if (deviceIconToggle) {
           setDeviceFilterIconView(deviceIconToggle.getAttribute('aria-pressed') !== 'true');
@@ -2064,6 +2278,107 @@ const catalogTypeCounts = new Map(
     background: #fff;
   }
 
+  .model-family-group,
+  .model-card {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* RunCommand is rendered inside each card. Lift its complete stacking chain while
+     the fixed modal is open so later masonry cards cannot paint over the overlay. */
+  .model-family-group:has([data-run-modal]:not(.hidden)),
+  .model-card:has([data-run-modal]:not(.hidden)) {
+    z-index: 70;
+  }
+
+  .model-family-group > *,
+  .model-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='legacy'][data-cards-art='family'] .model-family-group[data-has-family-art='true']::before,
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true']::before,
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: var(--family-visual-image);
+    background-position: center;
+    background-size: cover;
+    opacity: var(--catalog-art-intensity, 0.4);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']::before {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 72%)), var(--model-visual-image);
+    background-position: 70% 50%;
+    opacity: var(--catalog-art-intensity, 0.4);
+    filter: saturate(0.92) contrast(0.95);
+    transition: opacity 160ms ease;
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true']::before {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 72%)), var(--family-visual-image);
+    background-position: 70% 50%;
+    filter: saturate(0.92) contrast(0.95);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']:hover::before {
+    opacity: var(--catalog-art-intensity, 0.4);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='legacy'][data-cards-art='family'] .model-family-group[data-has-family-art='true']::before {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 72%)), var(--family-visual-image);
+    background-position: 70% 50%;
+    opacity: var(--catalog-art-intensity, 0.4);
+    filter: saturate(0.92) contrast(0.95);
+  }
+
+  /* At strong artwork levels, use a dark glass treatment so labels stay legible. */
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'][data-cards-art='family'] .model-family-group[data-has-family-art='true']::before {
+    background-image: linear-gradient(180deg, rgb(0 0 0 / 20%), rgb(0 0 0 / 48%)), var(--family-visual-image);
+    filter: saturate(var(--catalog-art-boost, 1)) contrast(var(--catalog-art-boost, 1));
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true']::before {
+    background-image: linear-gradient(rgb(0 0 0 / 42%), rgb(0 0 0 / 42%)), var(--family-visual-image);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']::before {
+    background-image: linear-gradient(rgb(0 0 0 / 42%), rgb(0 0 0 / 42%)), var(--model-visual-image);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'] .model-family-group[data-has-family-art='true'] :is(.model-family-title, .model-family-section, .model-family-more, [data-model-link]),
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] :is(.model-family-title, [data-model-link]),
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'] .model-card[data-has-model-art='true'] [data-model-link] {
+    color: #fff;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'] .model-family-group[data-has-family-art='true'] .model-card,
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] .model-card,
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true'] {
+    border-color: rgb(255 255 255 / 32%);
+    background: rgb(12 12 12 / 58%);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'] .model-family-group[data-has-family-art='true'] .model-card:hover,
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] .model-card:hover,
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']:hover {
+    border-color: #76b900;
+    background: rgb(12 12 12 / 72%);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'] .model-family-group[data-has-family-art='true'] :is(.model-family-count, .model-family-drag-handle, [data-run-open]),
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] :is(.model-family-count, [data-run-open]),
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true'] [data-run-open] {
+    border-color: rgb(255 255 255 / 30%);
+    background: rgb(0 0 0 / 42%);
+    color: #fff;
+  }
+
   .models-card-directory[data-card-layout='legacy'][data-card-fit='content'] .model-family-group {
     height: auto;
   }
@@ -2100,8 +2415,170 @@ const catalogTypeCounts = new Map(
     margin-top: 0.5rem;
   }
 
+  /* Rich card treatment carried forward from the model-visual prototype. */
+  .models-card-directory[data-card-layout='legacy'] .model-family-group {
+    align-self: start;
+    height: auto;
+    border-color: #d9d9d9;
+    background: #f4f4f4;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-header {
+    min-height: 4.1rem;
+    padding: 0.9rem 1rem 0.7rem;
+    border-bottom: 0;
+    background: transparent;
+  }
+
+  .model-family-heading {
+    flex: 1;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-section {
+    overflow: hidden;
+    color: #737373;
+    font-size: 0.625rem;
+    font-weight: 750;
+    line-height: 0.85rem;
+    letter-spacing: 0.09em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-title {
+    font-size: 1.05rem;
+    line-height: 1.3rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-count {
+    display: inline-flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 82%);
+    color: #525252;
+    font-size: 0.7rem;
+  }
+
+  .model-family-icon-frame {
+    display: inline-flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .model-family-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: scale(var(--model-icon-optical-scale, 1));
+    transform-origin: center;
+  }
+
+  .model-card-icon-frame {
+    display: none;
+    width: 1.375rem;
+    height: 1.375rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .model-card-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: scale(var(--model-icon-optical-scale, 1));
+    transform-origin: center;
+  }
+
+  .model-family-icon-frame[data-icon-family='nvidia-nemotron'],
+  .model-card-icon-frame[data-icon-family='nvidia-nemotron'] {
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 0.25rem;
+  }
+
+  .model-family-icon-frame[data-icon-family='nvidia-nemotron'],
+  .model-card-icon-frame[data-icon-family='nvidia-nemotron'] {
+    border-color: rgb(118 185 0 / 34%);
+    background: linear-gradient(145deg, #10180c, #030604);
+    box-shadow: inset 0 0 0 1px rgb(118 185 0 / 5%);
+  }
+
+  .model-family-icon-frame[data-icon-family='nvidia-nemotron'] .model-family-icon,
+  .model-card-icon-frame[data-icon-family='nvidia-nemotron'] .model-card-icon {
+    width: 82%;
+    height: 82%;
+  }
+
+  .model-family-icon-frame[data-icon-family='nvidia-nemotron'] .model-family-icon,
+  .model-card-icon-frame[data-icon-family='nvidia-nemotron'] .model-card-icon {
+    filter: drop-shadow(0 0 1px rgb(118 185 0 / 72%));
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-grid {
+    flex: none;
+    padding: 0 0.75rem 0.65rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-card {
+    min-height: 3rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid rgb(205 205 205 / 86%);
+    border-radius: 0.4rem;
+    background: rgb(255 255 255 / 88%);
+    box-shadow: 0 1px 1px rgb(0 0 0 / 2%);
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-card:hover {
+    border-color: #76b900;
+    background: rgb(255 255 255 / 96%);
+  }
+
+  .model-card [data-model-supporting-info] {
+    overflow: hidden;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-more {
+    display: flex;
+    width: calc(100% - 1.5rem);
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0.75rem 0.65rem;
+    border-top: 1px solid rgb(0 0 0 / 8%);
+    padding: 0.55rem 0.1rem 0;
+    color: #333;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-more:hover {
+    color: #5f9500;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-more.hidden,
+  .models-card-directory[data-card-layout='compact'] .model-family-more,
+  .models-card-directory[data-card-layout='compact'] .model-family-section,
+  .models-card-directory[data-card-layout='compact'] .model-family-icon-frame {
+    display: none;
+  }
+
   .models-card-directory[data-card-layout='compact'] .model-family-group + .model-family-group {
     margin-top: 1.25rem;
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] {
+    overflow: hidden;
+    border: 1px solid #e5e5e5;
+    border-radius: 0.625rem;
+    padding: 0.75rem;
+    background: #fff;
   }
 
   .models-card-directory[data-card-layout='compact'] .model-family-header {
@@ -2115,6 +2592,10 @@ const catalogTypeCounts = new Map(
     flex-shrink: 0;
     font-size: 0.875rem;
     line-height: 1.25rem;
+  }
+
+  .models-card-directory[data-card-layout='compact'] .model-card-icon-frame {
+    display: inline-flex;
   }
 
   .models-card-directory[data-card-layout='compact'] .model-family-grid {
@@ -2211,56 +2692,13 @@ const catalogTypeCounts = new Map(
   .model-family-drag-ghost {
     position: fixed !important;
     z-index: 100;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
     margin: 0 !important;
-    border: 1px solid #e5e5e5;
-    border-radius: 0.75rem;
-    background: #fff;
     pointer-events: none;
     opacity: 0.96;
     transform: rotate(0.6deg) scale(1.01);
     transform-origin: center;
     box-shadow: 0 18px 42px rgb(0 0 0 / 24%), 0 0 0 2px rgb(118 185 0 / 55%);
     will-change: left, top, transform;
-  }
-
-  .model-family-drag-ghost .model-family-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid #f1f1f1;
-    background: rgb(250 250 250 / 0.5);
-  }
-
-  .model-family-drag-ghost .model-family-title {
-    min-width: 0;
-    flex: 1;
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-  }
-
-  .model-family-drag-ghost .model-family-count,
-  .model-family-drag-ghost .model-family-divider,
-  .model-family-drag-ghost .model-card-capability {
-    display: none;
-  }
-
-  .model-family-drag-ghost .model-family-grid {
-    flex: 1 1 0%;
-    padding: 0.75rem;
-  }
-
-  .model-family-drag-ghost .model-card {
-    padding: 0.75rem;
-    border: 1px solid transparent;
-    border-radius: 0.5rem;
-  }
-
-  .model-family-drag-ghost .model-card + .model-card {
-    margin-top: 0.5rem;
   }
 
   .model-family-group.model-family-drop-target {

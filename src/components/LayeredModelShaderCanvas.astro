@@ -1,0 +1,337 @@
+---
+import museBackground from '../shaders/muse-glimmer-background.frag.glsl?raw';
+import museGeometryVertex from '../shaders/muse-glimmer-geometry.vert.glsl?raw';
+import museGeometryFragment from '../shaders/muse-glimmer-geometry.frag.glsl?raw';
+import ministralBackground from '../shaders/ministral3-background.frag.glsl?raw';
+import ministralGeometryVertex from '../shaders/ministral3-geometry.vert.glsl?raw';
+import ministralGeometryFragment from '../shaders/ministral3-geometry.frag.glsl?raw';
+import compositeFragment from '../shaders/common-texture.frag.glsl?raw';
+
+interface Props {
+  shaderId: 'muse-glimmer' | 'ministral3';
+  instanceId?: string;
+  class?: string;
+  maxFps?: number;
+  canvasCoverage?: number;
+  startTime?: number;
+  defaults: Record<string, number>;
+}
+
+const {
+  shaderId,
+  instanceId = 'hero',
+  class: className = '',
+  maxFps = 20,
+  canvasCoverage = 0.76,
+  startTime = 0,
+  defaults,
+} = Astro.props;
+const canvasId = `model-shader-${shaderId}-${instanceId}`;
+const backgroundFragment = shaderId === 'muse-glimmer' ? museBackground : ministralBackground;
+const geometryVertex = shaderId === 'muse-glimmer' ? museGeometryVertex : ministralGeometryVertex;
+const geometryFragment = shaderId === 'muse-glimmer' ? museGeometryFragment : ministralGeometryFragment;
+const fullscreenVertex = `#version 300 es
+in vec2 a_position;
+out vec2 v_uv;
+void main(){gl_Position=vec4(a_position,0.0,1.0);v_uv=a_position*0.5+0.5;}`;
+---
+
+<canvas
+  id={canvasId}
+  class={className}
+  style={`left:${(1 - canvasCoverage) * 100}%;right:auto;width:${canvasCoverage * 100}%`}
+  data-model-shader={shaderId}
+  data-layered-renderer="true"
+  aria-hidden="true"
+></canvas>
+
+<script define:vars={{ canvasId, shaderId, maxFps, canvasCoverage, startTime, defaults, backgroundFragment, geometryVertex, geometryFragment, compositeFragment, fullscreenVertex }}>
+  const layeredShaderExportRegistry = globalThis.__jalLayeredShaderExports ??= {};
+  layeredShaderExportRegistry[shaderId] = {
+    backgroundFragment,
+    geometryVertex,
+    geometryFragment,
+    compositeFragment,
+    fullscreenVertex,
+  };
+  const canvas = document.getElementById(canvasId);
+  if (canvas instanceof HTMLCanvasElement && !canvas.dataset.initialized) {
+    canvas.dataset.initialized = 'true';
+    const gl = canvas.getContext('webgl2', { alpha: true, antialias: false, powerPreference: 'low-power' });
+    if (gl) {
+      const compile = (type, source) => {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+        return shader;
+      };
+      const makeProgram = (vertex, fragment) => {
+        const program = gl.createProgram();
+        gl.attachShader(program, compile(gl.VERTEX_SHADER, vertex));
+        gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragment));
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+        return program;
+      };
+      const backgroundProgram = makeProgram(fullscreenVertex, backgroundFragment);
+      const compositeProgram = makeProgram(fullscreenVertex, compositeFragment);
+      const geometryProgram = makeProgram(geometryVertex, geometryFragment);
+      const quad = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,3,-1,-1,3]), gl.STATIC_DRAW);
+      const bindFullscreen = (program) => {
+        gl.useProgram(program);
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+        const position = gl.getAttribLocation(program, 'a_position');
+        if (position >= 0) {
+          gl.enableVertexAttribArray(position);
+          gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+          gl.vertexAttribDivisor(position, 0);
+        }
+      };
+      const values = { ...defaults };
+      const benchmarkParameters = new URLSearchParams(window.location.search);
+      const benchmarkEnabled = benchmarkParameters.has('shader-benchmark');
+      const requestedBackgroundScale = Number(benchmarkParameters.get('shader-background-scale'));
+      const requestedGeometryScale = Number(benchmarkParameters.get('shader-geometry-scale'));
+      const requestedSoftFocus = Number(benchmarkParameters.get('shader-soft-focus'));
+      let backgroundScale = benchmarkEnabled && Number.isFinite(requestedBackgroundScale) && requestedBackgroundScale > 0
+        ? requestedBackgroundScale
+        : Number(values.render_scale ?? 0.5);
+      let geometryScale = benchmarkEnabled && Number.isFinite(requestedGeometryScale) && requestedGeometryScale > 0
+        ? requestedGeometryScale
+        : Number(values.geometry_scale ?? 1);
+      let softFocus = benchmarkEnabled && Number.isFinite(requestedSoftFocus) && requestedSoftFocus >= 0
+        ? requestedSoftFocus
+        : Number(values.soft_focus ?? 0);
+      let backgroundTexture;
+      let framebuffer;
+      let backgroundWidth = 1;
+      let backgroundHeight = 1;
+      let cssWidth = 1;
+      let cssHeight = 1;
+      const museInstanceBuffer = shaderId === 'muse-glimmer' ? gl.createBuffer() : null;
+      let visible = true;
+      let frame = 0;
+      let lastFrame = -Infinity;
+      let sizeDirty = true;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const timerExtension = benchmarkEnabled ? gl.getExtension('EXT_disjoint_timer_query_webgl2') : null;
+      let pendingTimerQuery = null;
+      const gpuSamples = [];
+      const startedAt = performance.now();
+
+      const museBaseNodes = [[.18,.49],[.29,.74],[.34,.27],[.43,.52],[.50,.84],[.54,.35],[.63,.62],[.67,.17],[.71,.42],[.76,.79],[.81,.27],[.85,.57],[.89,.88],[.91,.38],[.96,.68],[.98,.20]];
+      const museEdges = [[0,1],[0,2],[0,3],[1,3],[1,4],[2,3],[2,5],[3,4],[3,5],[3,6],[4,6],[4,9],[5,6],[5,7],[5,8],[6,8],[6,9],[6,11],[7,8],[7,10],[7,15],[8,10],[8,11],[9,11],[9,12],[9,14],[10,11],[10,13],[10,15],[11,13],[11,14],[13,15]];
+      const fract = (value) => value - Math.floor(value);
+      const hash2 = (x, y) => fract(Math.sin(x * 127.1 + y * 311.7) * 43758.5453);
+      const smoothstep = (edge0, edge1, value) => { const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0))); return t * t * (3 - 2 * t); };
+      const mix3 = (a, b, amount) => a.map((value, index) => value + (b[index] - value) * amount);
+      const museInstances = (seconds) => {
+        const drift = Number(values.node_drift ?? 1);
+        const driftSpeed = Number(values.node_drift_speed ?? 1);
+        const nodes = museBaseNodes.map(([x, y], index) => {
+          const fi = Number(index);
+          return [x + Math.sin(seconds * driftSpeed * (.071 + fi * .003) + fi * 1.73) * .010 * drift, y + Math.cos(seconds * driftSpeed * (.063 + fi * .004) + fi * 2.11) * .010 * drift];
+        });
+        const branch = [.72 + Math.sin(seconds * driftSpeed * .09) * .009 * drift, .08 + Math.cos(seconds * driftSpeed * .08) * .009 * drift];
+        const branchCycle = .5 + .5 * Math.sin(seconds * .22 - .9);
+        const branchVisibility = smoothstep(.54, .76, branchCycle) * (1 - smoothstep(.91, 1, branchCycle)) * Number(values.branch_activity ?? 1);
+        const routes = [...museEdges.map(([a, b]) => [nodes[a], nodes[b]]), [nodes[6], branch], [branch, nodes[11]]];
+        const lines = [];
+        const points = [];
+        routes.forEach(([a, b], edge) => {
+          const seed = hash2(edge, 4.1);
+          const edgeColor = mix3([.08,.26,.92], [0,.63,1], seed);
+          const routeAlpha = edge < 32 ? .55 + seed * .4 : branchVisibility;
+          lines.push(a[0], a[1], b[0], b[1], ...edgeColor, routeAlpha);
+          for (let trail = 0; trail < 5; trail++) {
+            const cycle = fract(seconds * (.055 + .090 * Number(values.signal_speed ?? 1)) + seed);
+            const delayed = Math.max(cycle - trail * .010, 0);
+            const progress = 1 - Math.pow(1 - delayed, 3.4);
+            const center = [a[0] + (b[0] - a[0]) * progress, a[1] + (b[1] - a[1]) * progress];
+            const visibility = smoothstep(0, .055, cycle) * (1 - smoothstep(.80, .98, cycle));
+            const alpha = visibility * Math.exp(-trail * .72) * (edge < 32 ? 1 : branchVisibility);
+            const color = mix3(edgeColor, [.72,.91,1], .38);
+            points.push(center[0], center[1], 4.4 - trail * .45, 0, ...color, alpha);
+          }
+        });
+        nodes.forEach((center, index) => {
+          const size = index === 0 ? 7.5 : 4.2 + hash2(index, 8.3) * 2.4;
+          const color = mix3([.28,.42,1], [.18,.83,1], index / 15);
+          points.push(center[0], center[1], size, 0, ...color, 1);
+        });
+        return { lines, points };
+      };
+      const uploadMuseInstances = (data) => {
+        gl.bindBuffer(gl.ARRAY_BUFFER, museInstanceBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 32, 0);
+        gl.vertexAttribDivisor(0, 1);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 32, 16);
+        gl.vertexAttribDivisor(1, 1);
+      };
+
+      const location = (program, name) => gl.getUniformLocation(program, name);
+      const set1f = (program, name, value) => { const loc = location(program, name); if (loc) gl.uniform1f(loc, value); };
+      const set1i = (program, name, value) => { const loc = location(program, name); if (loc) gl.uniform1i(loc, value); };
+      const set2f = (program, name, x, y) => { const loc = location(program, name); if (loc) gl.uniform2f(loc, x, y); };
+      const updatePresentation = () => {
+        canvas.style.filter = softFocus > 0.001 ? `blur(${softFocus}px)` : 'none';
+        canvas.style.transform = softFocus > 0.001 ? `scale(${1 + softFocus * 0.0025})` : 'none';
+      };
+      updatePresentation();
+
+      const rebuildBackground = () => {
+        if (backgroundTexture) gl.deleteTexture(backgroundTexture);
+        if (framebuffer) gl.deleteFramebuffer(framebuffer);
+        backgroundWidth = Math.max(1, Math.round(cssWidth * backgroundScale));
+        backgroundHeight = Math.max(1, Math.round(cssHeight * backgroundScale));
+        backgroundTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, backgroundWidth, backgroundHeight);
+        const textureError = gl.getError();
+        framebuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, backgroundTexture, 0);
+        const attachmentError = gl.getError();
+        const framebufferStatus = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        if (framebufferStatus !== gl.FRAMEBUFFER_COMPLETE) {
+          if (gl.isContextLost()) return;
+          throw new Error(`Layered shader framebuffer is incomplete (${framebufferStatus}, ${backgroundWidth}×${backgroundHeight}, texture error ${textureError}, attachment error ${attachmentError})`);
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      };
+      const resize = () => {
+        if (!sizeDirty) return;
+        const bounds = canvas.getBoundingClientRect();
+        cssWidth = Math.max(1, Math.round(bounds.width));
+        cssHeight = Math.max(1, Math.round(bounds.height));
+        const width = Math.max(1, Math.round(cssWidth * geometryScale));
+        const height = Math.max(1, Math.round(cssHeight * geometryScale));
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        rebuildBackground();
+        sizeDirty = false;
+      };
+      const applyShared = (program, nowSeconds, targetWidth, targetHeight) => {
+        set2f(program, 'u_resolution', targetWidth, targetHeight);
+        set2f(program, 'u_layout_resolution', targetWidth / canvasCoverage, targetHeight);
+        set2f(program, 'u_viewport', 1 - canvasCoverage, canvasCoverage);
+        set1f(program, 'u_time', nowSeconds);
+        for (const [key, value] of Object.entries(values)) {
+          if (key === 'speed' || key === 'render_scale' || key === 'geometry_scale' || key === 'soft_focus') continue;
+          set1f(program, `u_${key}`, value);
+        }
+      };
+      const render = (now) => {
+        if (now - lastFrame >= 1000 / maxFps || reducedMotion) {
+          if (pendingTimerQuery && timerExtension && gl.getQueryParameter(pendingTimerQuery, gl.QUERY_RESULT_AVAILABLE)) {
+            if (!gl.getParameter(timerExtension.GPU_DISJOINT_EXT)) {
+              gpuSamples.push(gl.getQueryParameter(pendingTimerQuery, gl.QUERY_RESULT) / 1e6);
+              if (gpuSamples.length > 120) gpuSamples.shift();
+              canvas.dataset.gpuSamples = JSON.stringify(gpuSamples);
+            }
+            gl.deleteQuery(pendingTimerQuery);
+            pendingTimerQuery = null;
+          }
+          resize();
+          if (gl.isContextLost()) return;
+          const seconds = startTime + (reducedMotion ? 0 : (now - startedAt) / 1000 * Number(values.speed ?? 1));
+          let timingThisFrame = false;
+          if (timerExtension && !pendingTimerQuery) {
+            pendingTimerQuery = gl.createQuery();
+            gl.beginQuery(timerExtension.TIME_ELAPSED_EXT, pendingTimerQuery);
+            timingThisFrame = true;
+          }
+          gl.disable(gl.BLEND);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+          gl.viewport(0, 0, backgroundWidth, backgroundHeight);
+          bindFullscreen(backgroundProgram);
+          applyShared(backgroundProgram, seconds, backgroundWidth, backgroundHeight);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.viewport(0, 0, canvas.width, canvas.height);
+          bindFullscreen(compositeProgram);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+          set1i(compositeProgram, 'u_texture', 0);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+          gl.useProgram(geometryProgram);
+          applyShared(geometryProgram, seconds, canvas.width, canvas.height);
+          if (shaderId === 'muse-glimmer') {
+            const instances = museInstances(seconds);
+            set1i(geometryProgram, 'u_geometry_kind', 0);
+            uploadMuseInstances(instances.lines);
+            gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, instances.lines.length / 8);
+            set1i(geometryProgram, 'u_geometry_kind', 1);
+            uploadMuseInstances(instances.points);
+            gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, instances.points.length / 8);
+          } else {
+            gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, 108);
+          }
+          gl.disable(gl.BLEND);
+          if (timerExtension && timingThisFrame) gl.endQuery(timerExtension.TIME_ELAPSED_EXT);
+          canvas.dataset.ready = 'true';
+          lastFrame = now;
+        }
+        if (!reducedMotion && visible) frame = requestAnimationFrame(render);
+      };
+
+      const updateControl = (control) => {
+        if (!(control instanceof HTMLInputElement) || control.dataset.shaderControl !== shaderId) return;
+        const key = control.dataset.param;
+        if (!key) return;
+        if (key === 'darkness') {
+          document.querySelectorAll(`[data-shader-darkness-overlay="${shaderId}"]`).forEach((overlay) => {
+            if (overlay instanceof HTMLElement) overlay.style.opacity = control.value;
+          });
+          const output = document.querySelector(`[data-shader-value="${shaderId}:${key}"]`);
+          if (output) output.textContent = `${Number(control.value).toFixed(Number(control.dataset.decimals ?? 2))}${output.dataset.unit ?? ''}`;
+          return;
+        }
+        if (!(key in values)) return;
+        values[key] = Number(control.value);
+        if (key === 'render_scale') { backgroundScale = values[key]; sizeDirty = true; }
+        if (key === 'geometry_scale') { geometryScale = values[key]; sizeDirty = true; }
+        if (key === 'soft_focus') { softFocus = values[key]; updatePresentation(); }
+        const output = document.querySelector(`[data-shader-value="${shaderId}:${key}"]`);
+        if (output) output.textContent = `${Number(control.value).toFixed(Number(control.dataset.decimals ?? 2))}${output.dataset.unit ?? ''}`;
+      };
+      document.addEventListener('input', (event) => updateControl(event.target));
+      document.addEventListener('click', (event) => {
+        const resetButton = event.target instanceof Element ? event.target.closest(`[data-shader-reset="${shaderId}"]`) : null;
+        if (!(resetButton instanceof HTMLButtonElement)) return;
+        let resetValues = defaults;
+        try { resetValues = JSON.parse(resetButton.dataset.shaderResetValues || '{}'); } catch { /* retain component defaults */ }
+        document.querySelectorAll(`[data-shader-control="${shaderId}"]`).forEach((control) => {
+          if (!(control instanceof HTMLInputElement)) return;
+          const key = control.dataset.param;
+          if (!key || (!(key in resetValues) && key !== 'darkness')) return;
+          control.value = key === 'darkness' ? '0' : String(resetValues[key]);
+          control.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        document.dispatchEvent(new CustomEvent('model-shader-preset', { detail: { shaderId, params: resetValues } }));
+      });
+      new ResizeObserver(() => { sizeDirty = true; }).observe(canvas);
+      new IntersectionObserver(([entry]) => {
+        visible = entry.isIntersecting;
+        cancelAnimationFrame(frame);
+        if (visible) frame = requestAnimationFrame(render);
+      }).observe(canvas);
+    }
+  }
+</script>

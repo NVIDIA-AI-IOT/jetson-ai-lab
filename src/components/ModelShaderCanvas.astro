@@ -1,0 +1,275 @@
+---
+import qwenShader from '../shaders/qwen-isometric.frag.glsl?raw';
+import gemmaShader from '../shaders/gemma-streams.frag.glsl?raw';
+import cosmosShader from '../shaders/cosmos-galaxy.frag.glsl?raw';
+import nemotronShader from '../shaders/nemotron-microcube.frag.glsl?raw';
+import liquidShader from '../shaders/liquid-decision.frag.glsl?raw';
+import llamaShader from '../shaders/llama-orbit.frag.glsl?raw';
+import minimaxShader from '../shaders/minimax-recursion.frag.glsl?raw';
+import fluxActionShader from '../shaders/flux3-action-field.frag.glsl?raw';
+import museGlimmerShader from '../shaders/muse-glimmer-graph.frag.glsl?raw';
+import gptOssShader from '../shaders/gpt-oss-harmony.frag.glsl?raw';
+import ministral3Shader from '../shaders/ministral3-stepwind.frag.glsl?raw';
+import LayeredModelShaderCanvas from './LayeredModelShaderCanvas.astro';
+
+interface Props {
+	shaderId: 'qwen' | 'gemma' | 'cosmos' | 'nemotron' | 'liquid' | 'llama' | 'muse-glimmer' | 'gpt-oss' | 'ministral3' | 'minimax' | 'flux-action';
+	instanceId?: string;
+	class?: string;
+	maxFps?: number;
+	resolutionScale?: number;
+	canvasCoverage?: number;
+	startTime?: number;
+	defaults: Record<string, number>;
+}
+
+const shaders = {
+	qwen: qwenShader,
+	gemma: gemmaShader,
+	cosmos: cosmosShader,
+	nemotron: nemotronShader,
+	liquid: liquidShader,
+	llama: llamaShader,
+	'muse-glimmer': museGlimmerShader,
+	'gpt-oss': gptOssShader,
+	ministral3: ministral3Shader,
+	minimax: minimaxShader,
+	'flux-action': fluxActionShader,
+};
+const {
+	shaderId,
+	instanceId = 'hero',
+	class: className = '',
+	maxFps = 20,
+	resolutionScale = 0.75,
+	canvasCoverage = 0.76,
+	startTime = 0,
+	defaults,
+} = Astro.props;
+const fragmentShader = shaders[shaderId];
+const layeredRenderer = shaderId === 'muse-glimmer' || shaderId === 'ministral3';
+const layeredShaderId = layeredRenderer ? shaderId : 'muse-glimmer';
+const canvasId = `model-shader-${shaderId}-${instanceId}`;
+const vertexShader = `#version 300 es
+in vec2 a_position;
+void main() { gl_Position = vec4(a_position, 0.0, 1.0); }`;
+---
+
+{layeredRenderer ? (
+	<LayeredModelShaderCanvas
+		shaderId={layeredShaderId}
+		instanceId={instanceId}
+		class={className}
+		maxFps={maxFps}
+		canvasCoverage={canvasCoverage}
+		startTime={startTime}
+		defaults={defaults}
+	/>
+) : (
+	<canvas
+		id={canvasId}
+		class={className}
+		style={`left:${(1 - canvasCoverage) * 100}%;right:auto;width:${canvasCoverage * 100}%`}
+		data-model-shader={shaderId}
+		aria-hidden="true"
+	></canvas>
+)}
+<span
+	class="pointer-events-none absolute inset-0 bg-black opacity-0"
+	data-shader-darkness-overlay={shaderId}
+	aria-hidden="true"
+></span>
+
+<script define:vars={{ canvasId, shaderId, fragmentShader, vertexShader, layeredRenderer, maxFps, resolutionScale, canvasCoverage, startTime, defaults }}>
+	const shaderExportRegistry = globalThis.__jalShaderExports ??= {};
+	if (!shaderExportRegistry[shaderId]) {
+		const exportValues = { ...defaults };
+		shaderExportRegistry[shaderId] = {
+			source: fragmentShader,
+			values: exportValues,
+			canvasCoverage,
+			startTime,
+			layered: layeredRenderer,
+		};
+		document.addEventListener('input', (event) => {
+			const control = event.target;
+			if (!(control instanceof HTMLInputElement) || control.dataset.shaderControl !== shaderId) return;
+			const key = control.dataset.param;
+			if (key && key !== 'darkness') exportValues[key] = Number(control.value);
+		});
+		document.addEventListener('model-shader-preset', (event) => {
+			const detail = event.detail;
+			if (!detail || detail.shaderId !== shaderId || !detail.params) return;
+			Object.assign(exportValues, detail.params);
+		});
+	}
+	const canvas = document.getElementById(canvasId);
+	if (!layeredRenderer && canvas instanceof HTMLCanvasElement && !canvas.dataset.initialized) {
+		canvas.dataset.initialized = 'pending';
+		const initialize = () => {
+			if (canvas.dataset.initialized === 'true') return;
+			canvas.dataset.initialized = 'true';
+			canvas.addEventListener('webglcontextlost', (event) => {
+			event.preventDefault();
+			delete canvas.dataset.ready;
+			});
+			const gl = canvas.getContext('webgl2', { alpha: true, antialias: false, powerPreference: 'low-power' });
+			if (gl) {
+			const compile = (type, source) => {
+				const shader = gl.createShader(type);
+				gl.shaderSource(shader, source);
+				gl.compileShader(shader);
+				if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+				return shader;
+			};
+			const program = gl.createProgram();
+			gl.attachShader(program, compile(gl.VERTEX_SHADER, vertexShader));
+			gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragmentShader));
+			gl.linkProgram(program);
+			if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+			gl.useProgram(program);
+			const buffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+			const position = gl.getAttribLocation(program, 'a_position');
+			gl.enableVertexAttribArray(position);
+			gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+			const resolution = gl.getUniformLocation(program, 'u_resolution');
+			const layoutResolution = gl.getUniformLocation(program, 'u_layout_resolution');
+			const viewport = gl.getUniformLocation(program, 'u_viewport');
+			const time = gl.getUniformLocation(program, 'u_time');
+			const values = { ...defaults };
+			const presentationKeys = new Set(['render_scale', 'soft_focus', 'darkness']);
+			const locations = Object.fromEntries(
+				Object.keys(values)
+					.filter((key) => key !== 'speed' && !presentationKeys.has(key))
+					.map((key) => [key, gl.getUniformLocation(program, `u_${key}`)])
+			);
+			const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			let visible = true;
+			let frame = 0;
+			let lastFrame = -Infinity;
+			let sizeDirty = true;
+			let currentResolutionScale = Number(values.render_scale ?? resolutionScale);
+			let currentSoftFocus = Number(values.soft_focus ?? 0);
+			const startedAt = performance.now();
+
+			const updatePresentation = () => {
+				canvas.style.filter = currentSoftFocus > 0.001 ? `blur(${currentSoftFocus}px)` : 'none';
+				// A tiny overscan prevents a soft-focus setting from revealing the canvas edge.
+				canvas.style.transform = currentSoftFocus > 0.001 ? `scale(${1 + currentSoftFocus * 0.0025})` : 'none';
+			};
+			updatePresentation();
+
+			const updateControl = (control) => {
+				if (!(control instanceof HTMLInputElement) || control.dataset.shaderControl !== shaderId) return;
+				const key = control.dataset.param;
+				if (!key) return;
+				if (key === 'darkness') {
+					document.querySelectorAll(`[data-shader-darkness-overlay="${shaderId}"]`).forEach((overlay) => {
+						if (overlay instanceof HTMLElement) overlay.style.opacity = control.value;
+					});
+					const output = document.querySelector(`[data-shader-value="${shaderId}:${key}"]`);
+					if (output) output.textContent = `${Number(control.value).toFixed(Number(control.dataset.decimals ?? 2))}${output.dataset.unit ?? ''}`;
+					return;
+				}
+				if (!(key in values)) return;
+				values[key] = Number(control.value);
+				if (key === 'render_scale') {
+					currentResolutionScale = values[key];
+					sizeDirty = true;
+				}
+				if (key === 'soft_focus') {
+					currentSoftFocus = values[key];
+					updatePresentation();
+				}
+				const output = document.querySelector(`[data-shader-value="${shaderId}:${key}"]`);
+				if (output) output.textContent = `${Number(control.value).toFixed(Number(control.dataset.decimals ?? 2))}${output.dataset.unit ?? ''}`;
+			};
+			document.addEventListener('input', (event) => updateControl(event.target));
+			document.addEventListener('model-shader-preset', (event) => {
+				const detail = event.detail;
+				if (!detail || detail.shaderId !== shaderId || !detail.params) return;
+				Object.entries(detail.params).forEach(([key, value]) => {
+					if (key in values && typeof value === 'number') values[key] = value;
+				});
+				if (typeof detail.resolutionScale === 'number' && detail.resolutionScale > 0) {
+					currentResolutionScale = detail.resolutionScale;
+					if ('render_scale' in values) values.render_scale = detail.resolutionScale;
+					sizeDirty = true;
+				}
+			});
+			document.addEventListener('click', (event) => {
+				const resetButton = event.target instanceof Element ? event.target.closest(`[data-shader-reset="${shaderId}"]`) : null;
+				if (!(resetButton instanceof HTMLButtonElement)) return;
+				let resetValues = defaults;
+				try { resetValues = JSON.parse(resetButton.dataset.shaderResetValues || '{}'); } catch { /* retain component defaults */ }
+				document.querySelectorAll(`[data-shader-control="${shaderId}"]`).forEach((control) => {
+					if (!(control instanceof HTMLInputElement)) return;
+					const key = control.dataset.param;
+					if (!key || (!(key in resetValues) && key !== 'darkness')) return;
+					control.value = key === 'darkness' ? '0' : String(resetValues[key]);
+					control.dispatchEvent(new Event('input', { bubbles: true }));
+				});
+				document.dispatchEvent(new CustomEvent('model-shader-preset', { detail: { shaderId, params: resetValues } }));
+			});
+
+			const resize = () => {
+				if (!sizeDirty) return;
+				const bounds = canvas.getBoundingClientRect();
+				const width = Math.max(1, Math.round(bounds.width * currentResolutionScale));
+				const height = Math.max(1, Math.round(bounds.height * currentResolutionScale));
+				if (canvas.width !== width || canvas.height !== height) {
+					canvas.width = width;
+					canvas.height = height;
+					gl.viewport(0, 0, width, height);
+				}
+				sizeDirty = false;
+			};
+			const render = (now) => {
+				if (now - lastFrame >= 1000 / maxFps || reducedMotion) {
+					resize();
+					gl.uniform2f(resolution, canvas.width, canvas.height);
+					if (layoutResolution) gl.uniform2f(layoutResolution, canvas.width / canvasCoverage, canvas.height);
+					if (viewport) gl.uniform2f(viewport, 1 - canvasCoverage, canvasCoverage);
+					if (time) gl.uniform1f(time, startTime + (reducedMotion ? 0 : (now - startedAt) / 1000 * values.speed));
+					Object.entries(locations).forEach(([key, location]) => {
+						if (location) gl.uniform1f(location, values[key]);
+					});
+					gl.drawArrays(gl.TRIANGLES, 0, 3);
+					canvas.dataset.ready = 'true';
+					lastFrame = now;
+				}
+				if (!reducedMotion && visible) frame = requestAnimationFrame(render);
+			};
+
+			new ResizeObserver(() => { sizeDirty = true; }).observe(canvas);
+			new IntersectionObserver(([entry]) => {
+				visible = entry.isIntersecting;
+				cancelAnimationFrame(frame);
+				if (visible) frame = requestAnimationFrame(render);
+				}).observe(canvas);
+			}
+		};
+		// Delay WebGL allocation until this canvas is actually visible. The
+		// prototype contains many shader families, and eagerly allocating every
+		// context can evict the selected hero before its controls are used.
+		const activationObserver = new IntersectionObserver(([entry]) => {
+			if (!entry.isIntersecting) return;
+			activationObserver.disconnect();
+			initialize();
+		}, { rootMargin: '160px' });
+		activationObserver.observe(canvas);
+	}
+</script>
+
+<style>
+	canvas[data-model-shader] {
+		opacity: 0;
+		transition: opacity 300ms ease;
+	}
+	canvas[data-model-shader][data-ready='true'] {
+		opacity: 1;
+	}
+</style>

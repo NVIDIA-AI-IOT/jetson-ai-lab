@@ -4,6 +4,8 @@ slug: "Nemotron-3-5-Bolt-E4B-4GB"
 model_id: "nemotron-3-5-bolt"
 short_description: "NVIDIA's compact conversational model for local assistants, multi-turn tool use, and interactive characters. Run text chat on Jetson with llama.cpp."
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 is_new: true
 catalog_added_at: "2026-10-23"
 order: -8

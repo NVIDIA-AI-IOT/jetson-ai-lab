@@ -3,6 +3,7 @@ title: "GPT OSS 20B"
 model_id: "gpt-oss-20b"
 short_description: "OpenAI's open-source 20 billion parameter language model"
 family: "OpenAI GPT OSS"
+visual_family: "openai-gpt-oss"
 icon: "🤖"
 is_new: false
 order: 1

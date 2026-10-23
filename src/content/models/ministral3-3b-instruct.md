@@ -3,6 +3,7 @@ title: "Ministral 3 3B Instruct"
 model_id: "ministral3-3b-instruct"
 short_description: "Mistral AI's compact 3 billion parameter instruction-tuned model"
 family: "Mistral AI Ministral 3"
+visual_family: "mistral-ministral3"
 icon: "🌀"
 is_new: false
 order: 1

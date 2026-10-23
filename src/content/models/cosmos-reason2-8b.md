@@ -3,6 +3,8 @@ title: "Cosmos Reason 2 8B"
 model_id: "cosmos-reason2-8b"
 short_description: "NVIDIA's 8B parameter vision-language model with advanced chain-of-thought reasoning capabilities"
 family: "NVIDIA Cosmos"
+visual_family: "nvidia-cosmos"
+visual_variant: "2"
 icon: "🧠"
 is_new: false
 order: 4

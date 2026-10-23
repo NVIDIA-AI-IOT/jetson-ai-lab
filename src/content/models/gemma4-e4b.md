@@ -3,6 +3,8 @@ title: "Gemma 4 E4B"
 model_id: "gemma4-e4b"
 short_description: "Google's edge-focused Gemma 4 E4B with NVFP4, W4A16, and GGUF deployment paths on Jetson"
 family: "Google Gemma4"
+visual_family: "gemma"
+visual_variant: "4"
 icon: "💎"
 is_new: false
 order: 2

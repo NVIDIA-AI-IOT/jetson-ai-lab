@@ -3,6 +3,8 @@ title: "Gemma 4 12B"
 model_id: "gemma4-12b"
 short_description: "Google's mid-size dense Gemma 4 model — strong general reasoning and multimodal understanding for Jetson Thor and AGX Orin"
 family: "Google Gemma4"
+visual_family: "gemma"
+visual_variant: "4"
 icon: "💎"
 is_new: false
 order: 2

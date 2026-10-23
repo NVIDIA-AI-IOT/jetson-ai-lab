@@ -3,6 +3,8 @@ title: "Nemotron 3 Super 120B-A12B"
 model_id: "nemotron-3-super"
 short_description: "NVIDIA's large hybrid Mixture-of-Experts reasoning model — 120B total / 12B active — NVFP4 for Blackwell/Thor."
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 icon: "⚡"
 is_new: false
 order: 3

@@ -3,6 +3,8 @@ title: "Gemma 3 4B"
 model_id: "gemma3-4b"
 short_description: "Google's versatile 4 billion parameter model - the default Gemma 3 variant"
 family: "Google Gemma3"
+visual_family: "gemma"
+visual_variant: "3"
 icon: "💎"
 is_new: false
 order: 3

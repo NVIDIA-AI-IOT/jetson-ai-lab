@@ -3,6 +3,8 @@ title: "Nemotron3 Nano 30B-A3B"
 model_id: "nemotron-3-nano-30b-a3b"
 short_description: "NVIDIA's flagship hybrid MoE reasoning model with 30B total / 3.5B active parameters"
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 icon: "⚡"
 is_new: false
 order: 1

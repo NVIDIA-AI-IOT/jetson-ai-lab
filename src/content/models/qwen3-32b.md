@@ -3,6 +3,8 @@ title: "Qwen3 32B"
 model_id: "qwen3-32b"
 short_description: "Alibaba's flagship 32 billion parameter language model for advanced reasoning"
 family: "Alibaba Qwen3"
+visual_family: "qwen"
+visual_variant: "3"
 icon: "🔮"
 is_new: false
 order: 4

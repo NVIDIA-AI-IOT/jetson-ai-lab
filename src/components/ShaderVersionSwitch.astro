@@ -1,0 +1,120 @@
+---
+interface VersionPreset {
+	label: string;
+	params: Record<string, number>;
+	icon?: string;
+	iconAlt?: string;
+	iconDescription?: string;
+	description?: string;
+	resolutionScale?: number;
+}
+
+interface Props {
+	shaderId: string;
+	versions: VersionPreset[];
+	active: string;
+	labelPrefix?: string;
+	labelSuffix?: string;
+}
+
+const { shaderId, versions, active, labelPrefix = '', labelSuffix = '' } = Astro.props;
+---
+
+<div class="border-t border-nvidia-gray-200 bg-white px-6 py-4" data-version-switch={shaderId} data-label-prefix={labelPrefix} data-label-suffix={labelSuffix}>
+	<div class="flex flex-wrap items-center gap-3">
+		<span class="mr-1 text-xs font-bold uppercase tracking-wide text-nvidia-gray-500">Visual generation</span>
+		<div class="inline-flex overflow-hidden rounded-sm border border-nvidia-gray-300 bg-nvidia-gray-50 p-1" role="group" aria-label={`${shaderId} visual generation`}>
+			{versions.map((version) => (
+				<button
+					type="button"
+					class:list={[
+						'rounded-[1px] px-4 py-2 text-sm font-bold transition-colors',
+						version.label === active
+							? 'bg-nvidia-green text-black shadow-sm'
+							: 'text-nvidia-gray-600 hover:bg-white hover:text-black',
+					]}
+					data-version-button={shaderId}
+					data-version-label={version.label}
+					data-version-params={JSON.stringify(version.params)}
+					data-version-icon={version.icon}
+					data-version-icon-alt={version.iconAlt}
+					data-version-icon-description={version.iconDescription}
+					data-version-description={version.description}
+					data-version-resolution-scale={version.resolutionScale}
+					aria-pressed={version.label === active ? 'true' : 'false'}
+				>
+					{version.label}
+				</button>
+			))}
+		</div>
+		<span class="text-xs text-nvidia-gray-500">Concept treatment—not an official generation-specific brand asset.</span>
+	</div>
+</div>
+
+<script>
+	document.querySelectorAll('[data-version-button]').forEach((button) => {
+		if (!(button instanceof HTMLButtonElement) || button.dataset.bound === 'true') return;
+		button.dataset.bound = 'true';
+		button.addEventListener('click', () => {
+			const shaderId = button.dataset.versionButton;
+			if (!shaderId) return;
+			const params = JSON.parse(button.dataset.versionParams ?? '{}');
+			document.querySelectorAll(`[data-shader-save="${shaderId}"]`).forEach((candidate) => {
+				if (!(candidate instanceof HTMLButtonElement)) return;
+				candidate.dataset.shaderDefaultVariant = button.dataset.versionLabel ?? '';
+				candidate.dataset.shaderSavedValues = JSON.stringify(params);
+			});
+			document.querySelectorAll(`[data-shader-reset="${shaderId}"]`).forEach((candidate) => {
+				if (candidate instanceof HTMLButtonElement) candidate.dataset.shaderResetValues = JSON.stringify(params);
+			});
+			const group = button.closest('[data-version-switch]');
+			const prefix = group?.getAttribute('data-label-prefix') ?? '';
+			const suffix = group?.getAttribute('data-label-suffix') ?? '';
+			group?.querySelectorAll('[data-version-button]').forEach((candidate) => {
+				if (!(candidate instanceof HTMLButtonElement)) return;
+				const active = candidate === button;
+				candidate.setAttribute('aria-pressed', String(active));
+				candidate.classList.toggle('bg-nvidia-green', active);
+				candidate.classList.toggle('text-black', active);
+				candidate.classList.toggle('shadow-sm', active);
+				candidate.classList.toggle('text-nvidia-gray-600', !active);
+			});
+			document.querySelectorAll(`[data-version-display="${shaderId}"]`).forEach((target) => {
+				target.textContent = `${prefix}${button.dataset.versionLabel ?? ''}${suffix}`;
+			});
+			if (button.dataset.versionIcon) {
+				document.querySelectorAll(`[data-version-icon="${shaderId}"]`).forEach((target) => {
+					if (!(target instanceof HTMLImageElement)) return;
+					target.src = button.dataset.versionIcon ?? target.src;
+					target.alt = button.dataset.versionIconAlt ?? '';
+				});
+			}
+			if (button.dataset.versionIconDescription) {
+				document.querySelectorAll(`[data-version-icon-description="${shaderId}"]`).forEach((target) => {
+					target.textContent = button.dataset.versionIconDescription ?? '';
+				});
+			}
+			if (button.dataset.versionDescription) {
+				document.querySelectorAll(`[data-version-description="${shaderId}"]`).forEach((target) => {
+					target.textContent = button.dataset.versionDescription ?? '';
+				});
+			}
+
+			Object.entries(params).forEach(([key, value]) => {
+				const control = document.querySelector(`[data-shader-control="${shaderId}"][data-param="${key}"]`);
+				if (control instanceof HTMLInputElement) {
+					control.value = String(value);
+					control.dispatchEvent(new Event('input', { bubbles: true }));
+				}
+			});
+			const presetResolutionScale = Number(button.dataset.versionResolutionScale);
+			document.dispatchEvent(new CustomEvent('model-shader-preset', {
+				detail: {
+					shaderId,
+					params,
+					resolutionScale: Number.isFinite(presetResolutionScale) ? presetResolutionScale : undefined,
+				},
+			}));
+		});
+	});
+</script>

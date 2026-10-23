@@ -3,6 +3,8 @@ title: "DiffusionGemma 26B-A4B"
 model_id: "diffusiongemma-26b-a4b"
 short_description: "A diffusion language model with platform-specific NVFP4 and AWQ-INT4 checkpoints for Jetson Thor and Orin"
 family: "Google Gemma4"
+visual_family: "gemma"
+visual_variant: "4"
 icon: "💎"
 is_new: false
 order: 5
