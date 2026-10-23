@@ -12,6 +12,9 @@ memory_requirements: "8GB RAM"
 precision: "W4A16"
 parameters: "8B"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Apache 2.0"
 model_size: "4.5GB"
@@ -66,4 +69,3 @@ Qwen3 8B is a more powerful variant in Alibaba Cloud's latest generation of larg
 - **Subject Matter Experts**: Fine-tuning for domain-specific expertise
 - **Multilingual Instruction Following**: Following instructions across 100+ languages
 - **Translation**: High-quality translation between supported languages
-

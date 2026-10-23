@@ -12,6 +12,9 @@ memory_requirements: "24GB RAM"
 precision: "K-Quant (~4-bit) GGUF"
 parameters: "30B"
 modalities: ["Text", "Image"]
+input_modalities: ["text", "image"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "131K"
 license: "Apache 2.0"
 model_size: "17GB"

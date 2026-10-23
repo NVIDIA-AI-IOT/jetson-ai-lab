@@ -11,7 +11,10 @@ vision_capable: true
 memory_requirements: "16GB RAM"
 precision: "NVFP4 / Q4_0 QAT GGUF"
 parameters: "12B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video", "Audio"]
+input_modalities: ["text", "image", "video", "audio"]
+output_modalities: ["text"]
+tasks: ["text-generation", "automatic-speech-recognition"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "10GB"

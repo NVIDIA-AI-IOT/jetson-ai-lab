@@ -71,13 +71,36 @@ const benchmarkPlatformSchema = z.object({
 	ttftMs: z.number().optional(),
 });
 
+const modelTaskSchema = z.enum([
+	'text-generation',
+	'text-to-image',
+	'text-to-video',
+	'text-to-speech',
+	'audio-generation',
+	'automatic-speech-recognition',
+	'action-generation',
+	'classification',
+	'feature-extraction',
+	'text-ranking',
+]);
+
+const modelModalitySchema = z.enum(['text', 'image', 'video', 'audio', 'action', 'data']);
+
 const modelsSchema = z.object({
 	title: z.string(),
 	model_id: z.string().optional(),
 	short_description: z.string(),
 	family: z.string().optional(),
 	icon: z.string().optional(),
+	/**
+	 * Legacy manual New flag. Existing entries may keep this during migration;
+	 * newly added model files must provide `catalog_added_at` instead.
+	 */
 	is_new: z.boolean().optional(),
+	/** ISO date when the model was added to the Jetson AI Lab catalog. */
+	catalog_added_at: z.string().date().optional(),
+	/** Optional inclusive ISO date overriding the standard New-badge window. */
+	new_until: z.string().date().optional(),
 	hide_run_button: z.boolean().optional(),
 	order: z.number().optional(),
 	type: z.string().optional(),
@@ -93,6 +116,25 @@ const modelsSchema = z.object({
 	parameters: z.string().optional(),
 	/** Modalities the model supports, e.g. ["Text", "Image", "Audio"] */
 	modalities: z.array(z.string()).optional(),
+	/**
+	 * Multi-valued catalog tasks, stored as canonical Hugging Face-style slugs.
+	 * `action-generation` is a Jetson AI Lab extension for VLA models.
+	 */
+	tasks: z.array(modelTaskSchema).optional(),
+	/** Canonical Hugging Face representative task (`pipeline_tag` is singular on the Hub). */
+	hf_pipeline_tag: z.string().optional(),
+	/**
+	 * Directional data modalities for models where legacy `modalities` is ambiguous.
+	 * `action` covers embodied state/control vectors on input and action trajectories on output.
+	 */
+	input_modalities: z.array(modelModalitySchema).optional(),
+	output_modalities: z.array(modelModalitySchema).optional(),
+	/** ISO date of the latest deployment or benchmark update. */
+	updated_at: z.string().date().optional(),
+	/** Evidence level for device compatibility; intentionally separate from `is_new`. */
+	validation_status: z
+		.enum(['Experimental', 'Runnable', 'Replay Verified', 'Simulation Verified', 'Robot Verified', 'Quality Validated'])
+		.optional(),
 	/** Maximum context window, e.g. "128K" */
 	context_length: z.string().optional(),
 	/** License name, e.g. "Apache 2.0" or "NVIDIA AI Foundations" */
@@ -142,6 +184,20 @@ export type ModelCollectionData = z.infer<typeof modelsSchema>;
 const models = defineCollection({
 	type: 'content',
 	schema: modelsSchema.superRefine((data, ctx) => {
+		if (data.new_until && !data.catalog_added_at) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: 'new_until requires catalog_added_at.',
+				path: ['new_until'],
+			});
+		}
+		if (data.new_until && data.catalog_added_at && data.new_until < data.catalog_added_at) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: 'new_until cannot be earlier than catalog_added_at.',
+				path: ['new_until'],
+			});
+		}
 		if (data.hide_run_button) return;
 		const hasServing = (data.serving?.entries?.length ?? 0) > 0;
 		const hasLegacy = (data.supported_inference_engines?.length ?? 0) > 0;

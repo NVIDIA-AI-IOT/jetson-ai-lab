@@ -12,6 +12,9 @@ memory_requirements: "16GB RAM"
 precision: "W4A16"
 parameters: "30B total / 3.3B activated"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Apache 2.0"
 model_size: "16GB"
@@ -65,4 +68,3 @@ Qwen3 30B-A3B is a Mixture-of-Experts (MoE) model from Alibaba Cloud's Qwen3 fam
 - **Subject Matter Experts**: Fine-tuning for domain-specific expertise
 - **Multilingual Instruction Following**: Following instructions across 100+ languages
 - **Translation**: High-quality translation between supported languages
-

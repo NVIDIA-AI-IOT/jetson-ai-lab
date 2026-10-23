@@ -12,6 +12,9 @@ memory_requirements: "16GB RAM"
 precision: "NVFP4-QAD"
 parameters: "12B"
 modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "NVIDIA Open Model License"
 model_size: "8GB"
@@ -51,5 +54,4 @@ NVIDIA Nemotron Nano 12B VL is a vision-language model capable of understanding 
 ## Supported Languages
 
 English, German, Spanish, French, Italian, Korean, Portuguese, Russian, Japanese, Chinese.
-
 

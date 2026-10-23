@@ -12,6 +12,9 @@ memory_requirements: "128GB RAM"
 precision: "NVFP4"
 parameters: "120B total / 12B active"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "NVIDIA Open Model License"
 model_size: "60GB"

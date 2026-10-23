@@ -11,7 +11,10 @@ vision_capable: true
 memory_requirements: "16GB RAM"
 precision: "FP8"
 parameters: "14B"
-modalities: ["Text"]
+modalities: ["Text", "Image"]
+input_modalities: ["text", "image"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "262K"
 license: "Apache 2.0"
 model_size: "9GB"

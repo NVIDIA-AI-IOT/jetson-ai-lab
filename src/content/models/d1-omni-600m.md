@@ -11,6 +11,9 @@ vision_capable: true
 precision: "FP16"
 parameters: "587M"
 modalities: ["Text", "Image", "Audio"]
+input_modalities: ["text", "image", "audio"]
+output_modalities: ["data"]
+tasks: ["classification"]
 context_length: "16K"
 license: "LFM Open License v1.0"
 hf_checkpoint: "LiquidAI/d1-omni-600M"

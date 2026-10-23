@@ -12,6 +12,9 @@ memory_requirements: "32GB RAM"
 precision: "NVFP4 / AWQ"
 parameters: "30B total / 3B activated"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "NVIDIA Nemotron Open Model License"
 model_size: "17GB"

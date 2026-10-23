@@ -12,6 +12,9 @@ memory_requirements: "48GB RAM"
 precision: "W4A16"
 parameters: "70B"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Llama 3.1 Community License"
 model_size: "40GB"
@@ -68,5 +71,4 @@ one_shot_inference:
 Meta's Llama 3.1 70B Instruct is the flagship model in the Llama 3.1 family, featuring 70 billion parameters for state-of-the-art performance. This quantized version (W4A16) enables deployment on Jetson Thor.
 
 Ideal for complex reasoning tasks, detailed content generation, and applications requiring the highest quality outputs.
-
 

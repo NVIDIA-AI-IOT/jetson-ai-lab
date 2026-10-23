@@ -10,6 +10,11 @@ vision_capable: true
 precision: "BF16"
 parameters: "7B"
 modalities: ["Text", "Image", "Action"]
+input_modalities: ["text", "image", "action"]
+output_modalities: ["action", "video"]
+tasks:
+  - "action-generation"
+  - "text-to-video"
 huggingface_url: "https://huggingface.co/collections/black-forest-labs/flux-3-action"
 minimum_jetson: "Thor"
 hide_run_button: true

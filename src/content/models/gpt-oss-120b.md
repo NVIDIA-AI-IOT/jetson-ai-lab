@@ -12,6 +12,9 @@ memory_requirements: "64GB RAM"
 precision: "NVFP4"
 parameters: "117B total / 5.1B activated"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Apache 2.0"
 model_size: "60GB"

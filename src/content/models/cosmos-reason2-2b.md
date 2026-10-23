@@ -2,7 +2,7 @@
 title: "Cosmos Reason 2 2B"
 model_id: "cosmos-reason2-2b"
 short_description: "NVIDIA's compact 2B parameter vision-language model with built-in chain-of-thought reasoning for edge deployment"
-family: "NVIDIA Cosmos Reason"
+family: "NVIDIA Cosmos"
 icon: "🧠"
 is_new: false
 order: 3
@@ -12,6 +12,9 @@ memory_requirements: "8GB RAM"
 precision: "FP8"
 parameters: "2B"
 modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "NVIDIA Open Model License"
 model_size: "5GB"
@@ -245,4 +248,3 @@ sudo docker run -it --rm --pull always --runtime=nvidia --network host \
 
 - [NGC FP8 Checkpoint](https://catalog.ngc.nvidia.com/orgs/nim/teams/nvidia/models/cosmos-reason2-2b/files?version=1208-fp8-static-kv8) - FP8 quantized model for vLLM
 - [Live VLM WebUI](https://github.com/NVIDIA-AI-IOT/live-vlm-webui) - real-time webcam-to-VLM interface
-

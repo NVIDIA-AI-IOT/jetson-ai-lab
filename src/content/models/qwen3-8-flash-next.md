@@ -12,6 +12,9 @@ memory_requirements: "128GB RAM"
 precision: "NVFP4"
 parameters: "125B MoE / 6B activated"
 modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "262K"
 license: "Qwen Community 1.0"
 model_size: "106GB"

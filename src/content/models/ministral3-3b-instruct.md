@@ -11,7 +11,10 @@ vision_capable: true
 memory_requirements: "4GB RAM"
 precision: "FP8"
 parameters: "3B"
-modalities: ["Text"]
+modalities: ["Text", "Image"]
+input_modalities: ["text", "image"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "262K"
 license: "Apache 2.0"
 model_size: "2GB"
@@ -74,4 +77,3 @@ The Ministral 3 Instruct model offers the following capabilities:
 - **Edge-Optimized**: Delivers best-in-class performance at a small scale, deployable anywhere.
 - **Apache 2.0 License**: Open-source license allowing usage and modification for both commercial and non-commercial purposes.
 - **Large Context Window**: Supports a 256k context window.
-

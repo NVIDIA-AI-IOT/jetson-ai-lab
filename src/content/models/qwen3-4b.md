@@ -12,6 +12,9 @@ memory_requirements: "4GB RAM"
 precision: "W4A16"
 parameters: "4B"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Apache 2.0"
 model_size: "2.5GB"
@@ -67,4 +70,3 @@ Qwen3 is Alibaba Cloud's latest generation of large language models, offering st
 - **Subject Matter Experts**: Fine-tuning for domain-specific expertise
 - **Multilingual Instruction Following**: Following instructions across 100+ languages
 - **Translation**: High-quality translation between supported languages
-

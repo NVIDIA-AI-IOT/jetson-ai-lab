@@ -12,6 +12,13 @@ memory_requirements: "32GB RAM (Reasoner: 8GB)"
 precision: "BF16"
 parameters: "4B (2.4B reasoner + generator)"
 modalities: ["Text", "Image", "Video", "Action"]
+input_modalities: ["text", "image", "video", "action"]
+output_modalities: ["text", "image", "video", "action"]
+tasks:
+  - "text-generation"
+  - "text-to-image"
+  - "text-to-video"
+  - "action-generation"
 license: "OpenMDW 1.1"
 model_size: "9.2GB"
 hf_checkpoint: "nvidia/Cosmos3-Edge"

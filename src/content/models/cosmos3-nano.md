@@ -12,6 +12,9 @@ memory_requirements: "16GB RAM"
 precision: "NVFP4"
 parameters: "16B"
 modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "NVIDIA Open Model License"
 model_size: "7GB"

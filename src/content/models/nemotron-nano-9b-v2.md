@@ -12,6 +12,9 @@ memory_requirements: "12GB RAM"
 precision: "NVFP4"
 parameters: "9B"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "NVIDIA Open Model License"
 model_size: "6GB"
@@ -65,5 +68,4 @@ The model uses a hybrid architecture:
 English, German, Spanish, French, Italian, Japanese, and coding languages.
 
 *This model is ready for commercial use.*
-
 

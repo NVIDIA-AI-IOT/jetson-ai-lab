@@ -6,6 +6,8 @@ import ModelCallSection from '../../components/ModelCallSection.astro';
 import ModelBenchmarkSection from '../../components/ModelBenchmarkSection.astro';
 import ModelOneShotSection from '../../components/ModelOneShotSection.astro';
 import { getSupportedInferenceEngines, sortEnginesForUi } from '../../lib/modelFrontmatterAdapter';
+import { isModelNew, MODEL_NEW_WINDOW_DAYS } from '../../lib/modelFreshness';
+import { modalityIcon, modalityLabel } from '../../lib/modelModalities';
 import benchmarksData from '../../data/benchmarks.json';
 
 export async function getStaticPaths() {
@@ -19,6 +21,8 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content } = await entry.render();
 const { data } = entry;
+const modelIsNew = isModelNew(data);
+const hasFreshnessMetadata = data.catalog_added_at !== undefined || data.is_new !== undefined;
 
 // Generate HuggingFace URL from hf_checkpoint if huggingface_url not provided
 const huggingfaceUrl = data.huggingface_url || (data.hf_checkpoint ? `https://huggingface.co/${data.hf_checkpoint}` : null);
@@ -53,16 +57,17 @@ function precisionPill(token: string) {
 }
 const precisionTokens = data.precision.split(/[\/,]/).map((t: string) => t.trim()).filter(Boolean);
 
-// Modality icon SVG path data (heroicons 20px solid)
-function modalityIcon(modality: string): string {
-  const icons: Record<string, string> = {
-    'Text':  '<path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>',
-    'Image': '<path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>',
-    'Audio': '<path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>',
-    'Video': '<path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>',
-  };
-  return icons[modality] ?? '';
-}
+const inputModalities = data.input_modalities?.length
+  ? data.input_modalities
+  : data.modalities?.map((modality: string) => modality.toLowerCase())
+    ?? (data.vision_capable ? ['text', 'image'] : ['text']);
+const outputModalities = data.output_modalities?.length
+  ? data.output_modalities
+  : data.type === 'Image'
+    ? ['image']
+    : data.type === 'Audio'
+      ? ['audio']
+      : ['text'];
 
 const inferenceNeedsHfToken = sortedEngines.some((e) => {
   const cmds = [
@@ -83,8 +88,15 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
       <div class="grid md:grid-cols-2 gap-12 items-center">
         <div>
           <div class="flex items-center space-x-3 mb-6">
-            {data.is_new && (
-              <span class="bg-nvidia-green text-nvidia-black px-4 py-2 rounded-full text-sm font-semibold">New</span>
+            {hasFreshnessMetadata && (
+              <span
+                data-model-new-badge
+                data-catalog-added-at={data.catalog_added_at}
+                data-new-until={data.new_until}
+                data-legacy-is-new={String(data.is_new === true)}
+                data-new-window-days={MODEL_NEW_WINDOW_DAYS}
+                class:list={["bg-nvidia-green text-nvidia-black px-4 py-2 rounded-full text-sm font-semibold", { hidden: !modelIsNew }]}
+              >New</span>
             )}
             {data.type && (
               <span class="text-nvidia-gray-300 font-semibold text-lg">{data.type}</span>
@@ -141,20 +153,30 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
               </div>
             )}
 
-            {/* Modalities */}
-            {(data.modalities?.length > 0 || data.vision_capable !== undefined) && (
+            {/* Directional modalities */}
+            {inputModalities.length > 0 && (
               <div class="flex justify-between items-center py-3 gap-4">
-                <span class="text-nvidia-gray-300 font-medium shrink-0">Modalities</span>
+                <span class="text-nvidia-gray-300 font-medium shrink-0">Inputs</span>
                 <div class="flex flex-wrap gap-1.5 justify-end">
-                  {data.modalities
-                    ? (data.modalities as string[]).map((m) => (
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:#94A3B8">
-                          <svg class="w-3 h-3 shrink-0" viewBox="0 0 20 20" fill="currentColor"><Fragment set:html={modalityIcon(m)}/></svg>
-                          {m}
-                        </span>
-                      ))
-                    : <span class="font-bold text-nvidia-white">{data.vision_capable ? 'Text, Image' : 'Text'}</span>
-                  }
+                  {inputModalities.map((modality: string) => (
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:#94A3B8">
+                      <svg class="w-3 h-3 shrink-0" viewBox="0 0 20 20" fill="currentColor"><Fragment set:html={modalityIcon(modality)}/></svg>
+                      {modalityLabel(modality, 'input')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {outputModalities.length > 0 && (
+              <div class="flex justify-between items-center py-3 gap-4">
+                <span class="text-nvidia-gray-300 font-medium shrink-0">Outputs</span>
+                <div class="flex flex-wrap gap-1.5 justify-end">
+                  {outputModalities.map((modality: string) => (
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:#94A3B8">
+                      <svg class="w-3 h-3 shrink-0" viewBox="0 0 20 20" fill="currentColor"><Fragment set:html={modalityIcon(modality)}/></svg>
+                      {modalityLabel(modality, 'output')}
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
@@ -289,6 +311,35 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
 </Layout>
 
 <script>
+  function refreshModelNewBadge() {
+    const badge = document.querySelector<HTMLElement>('[data-model-new-badge]');
+    if (!badge) return;
+
+    const addedDate = badge.dataset.catalogAddedAt;
+    const newUntilDate = badge.dataset.newUntil;
+    const dayMs = 24 * 60 * 60 * 1000;
+    let isNew = badge.dataset.legacyIsNew === 'true';
+
+    if (addedDate) {
+      const addedAt = Date.parse(`${addedDate}T00:00:00Z`);
+      const now = Date.now();
+      if (!Number.isFinite(addedAt) || now < addedAt) {
+        isNew = false;
+      } else if (newUntilDate) {
+        const newUntil = Date.parse(`${newUntilDate}T00:00:00Z`);
+        isNew = Number.isFinite(newUntil) && now < newUntil + dayMs;
+      } else {
+        const windowDays = Number(badge.dataset.newWindowDays || '60');
+        isNew = now < addedAt + windowDays * dayMs;
+      }
+    }
+
+    badge.classList.toggle('hidden', !isNew);
+  }
+
+  refreshModelNewBadge();
+  document.addEventListener('astro:page-load', refreshModelNewBadge);
+
   // Body content device tabs (inside markdown-rendered sections)
   document.querySelectorAll('.device-tabs').forEach(group => {
     const buttons = group.querySelectorAll('.device-tab');

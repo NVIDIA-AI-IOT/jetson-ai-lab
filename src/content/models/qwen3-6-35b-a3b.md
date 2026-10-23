@@ -6,8 +6,12 @@ family: "Alibaba Qwen3.6"
 icon: "🔮"
 is_new: false
 order: 1
-type: "Text"
-vision_capable: false
+type: "Multimodal"
+vision_capable: true
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 memory_requirements: "20GB RAM"
 precision: "NVFP4 / AWQ-4bit"
 model_size: "24GB"

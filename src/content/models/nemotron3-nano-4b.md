@@ -12,6 +12,9 @@ memory_requirements: "4GB RAM"
 precision: "Q4_K_M GGUF"
 parameters: "4B"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "NVIDIA Nemotron Open Model License"
 model_size: "2.5GB"
@@ -76,4 +79,3 @@ This model is currently configured for `llama.cpp` using the GGUF checkpoint `NV
 
 - The provided command uses `--alias my_model`; you can change that alias to match your application if needed.
 - `--n-gpu-layers 999` keeps the full model on GPU when memory allows for best performance.
-

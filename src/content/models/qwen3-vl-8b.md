@@ -11,7 +11,10 @@ vision_capable: true
 memory_requirements: "8GB RAM"
 precision: "AWQ 4-bit"
 parameters: "8B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "5GB"
@@ -59,4 +62,3 @@ Available in Dense and MoE architectures that scale from edge to cloud, with Ins
 - **Text Understanding on par with pure LLMs**: Seamless text–vision fusion for lossless, unified comprehension.
 
 *Referenced from the [Qwen3-VL model card](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct).*
-

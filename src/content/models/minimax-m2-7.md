@@ -12,6 +12,9 @@ memory_requirements: "128GB unified memory (Thor T5000)"
 precision: "UD-IQ4_XS GGUF"
 parameters: "229B total / 10B activated"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "196K"
 license: "MiniMax Model License"
 model_size: "100.96 GiB"

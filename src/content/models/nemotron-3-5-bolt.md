@@ -5,6 +5,7 @@ model_id: "nemotron-3-5-bolt"
 short_description: "NVIDIA's compact conversational model for local assistants, multi-turn tool use, and interactive characters. Run text chat on Jetson with llama.cpp."
 family: "NVIDIA Nemotron"
 is_new: true
+catalog_added_at: "2026-10-23"
 order: -8
 type: "Text"
 vision_capable: false

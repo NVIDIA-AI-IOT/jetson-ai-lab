@@ -12,6 +12,9 @@ memory_requirements: "16GB RAM"
 precision: "W4A16"
 parameters: "21B total / 3.6B activated"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Apache 2.0"
 model_size: "12GB"

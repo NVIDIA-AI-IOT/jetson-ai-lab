@@ -11,7 +11,10 @@ vision_capable: true
 memory_requirements: "8GB RAM"
 precision: "NVFP4 / W4A16"
 parameters: "9B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "5GB"

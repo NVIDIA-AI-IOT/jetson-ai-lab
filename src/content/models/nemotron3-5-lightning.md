@@ -12,6 +12,9 @@ memory_requirements: "64GB RAM"
 precision: "NVFP4"
 parameters: "30B total / 3B active"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "1M"
 license: "OpenMDW 1.1"
 hf_checkpoint: "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"

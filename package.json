@@ -8,8 +8,12 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
+    "prebuild": "npm run check:model-metadata && npm run test:model-freshness",
     "build": "astro build",
     "preview": "astro preview",
+    "check:model-metadata": "node scripts/check-model-catalog-metadata.mjs",
+    "test:model-freshness": "node scripts/test-model-freshness.mjs",
+    "test:models-ui": "node scripts/test-model-catalog.mjs",
     "astro": "astro"
   },
   "dependencies": {

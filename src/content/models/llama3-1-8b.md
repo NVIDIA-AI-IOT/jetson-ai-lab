@@ -12,6 +12,9 @@ memory_requirements: "8GB RAM"
 precision: "W4A16"
 parameters: "8B"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Llama 3.1 Community License"
 model_size: "4.5GB"
@@ -72,5 +75,4 @@ one_shot_inference:
 Meta's Llama 3.1 8B Instruct is a powerful instruction-tuned language model with 8 billion parameters. This quantized version (W4A16) provides excellent performance while being memory efficient for edge deployment on Jetson devices.
 
 The model excels at following instructions, answering questions, and generating coherent text across a wide range of tasks.
-
 

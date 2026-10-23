@@ -11,7 +11,10 @@ vision_capable: true
 memory_requirements: "32GB RAM"
 precision: "NVFP4 / W4A16 / Q4_K_M GGUF"
 parameters: "31B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "18.7GB"
