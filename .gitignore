@@ -73,7 +73,9 @@ coverage/
 screenshots/
 .screenshots/
 
+# Local high-resolution image-generation masters; commit optimized site assets instead.
+artwork/model-family-visuals/*/*master*.png
+
 # Merge/rebase scratch dirs and AI working files
 _merge_backup/
 *.md.bak
-

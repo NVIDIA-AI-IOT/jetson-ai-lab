@@ -3,6 +3,8 @@ title: "Gemma 4 31B"
 model_id: "gemma4-31b"
 short_description: "Google's flagship Gemma 4 model with NVFP4, W4A16, and GGUF deployment paths on Jetson"
 family: "Google Gemma4"
+visual_family: "gemma"
+visual_variant: "4"
 icon: "💎"
 is_new: false
 order: 4
@@ -11,7 +13,10 @@ vision_capable: true
 memory_requirements: "32GB RAM"
 precision: "NVFP4 / W4A16 / Q4_K_M GGUF"
 parameters: "31B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "18.7GB"

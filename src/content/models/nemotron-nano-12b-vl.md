@@ -3,6 +3,8 @@ title: "Nemotron Nano 12B VL"
 model_id: "nemotron-nano-12b-vl"
 short_description: "NVIDIA's vision-language model for image understanding and multimodal reasoning"
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 icon: "⚡"
 is_new: false
 order: 3
@@ -12,6 +14,9 @@ memory_requirements: "16GB RAM"
 precision: "NVFP4-QAD"
 parameters: "12B"
 modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "NVIDIA Open Model License"
 model_size: "8GB"
@@ -51,5 +56,3 @@ NVIDIA Nemotron Nano 12B VL is a vision-language model capable of understanding 
 ## Supported Languages
 
 English, German, Spanish, French, Italian, Korean, Portuguese, Russian, Japanese, Chinese.
-
-

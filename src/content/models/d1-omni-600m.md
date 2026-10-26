@@ -4,6 +4,7 @@ slug: "d1-omni-600M"
 model_id: "d1-omni-600m"
 short_description: "Liquid AI's compact zero-shot classification model for text, images, and audio, with a guide to running it on Jetson using PyTorch."
 family: "Liquid AI d1"
+visual_family: "liquid-d1"
 is_new: false
 order: -6
 type: "Multimodal"
@@ -11,6 +12,9 @@ vision_capable: true
 precision: "FP16"
 parameters: "587M"
 modalities: ["Text", "Image", "Audio"]
+input_modalities: ["text", "image", "audio"]
+output_modalities: ["data"]
+tasks: ["classification"]
 context_length: "16K"
 license: "LFM Open License v1.0"
 hf_checkpoint: "LiquidAI/d1-omni-600M"

@@ -3,6 +3,8 @@ title: "Gemma 4 26B-A4B"
 model_id: "gemma4-26b-a4b"
 short_description: "Google's 26B MoE frontier Gemma 4 model for fast high-end reasoning and multimodal workflows"
 family: "Google Gemma4"
+visual_family: "gemma"
+visual_variant: "4"
 icon: "💎"
 is_new: false
 order: 3
@@ -11,7 +13,10 @@ vision_capable: true
 memory_requirements: "24GB RAM"
 precision: "NVFP4 / W4A16 / Q4_K_M GGUF"
 parameters: "3.8B active (25.8B total, MoE)"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "16.8GB"

@@ -3,6 +3,7 @@ title: "Ministral 3 8B Instruct"
 model_id: "ministral3-8b-instruct"
 short_description: "Mistral AI's versatile 8 billion parameter instruction-tuned model"
 family: "Mistral AI Ministral 3"
+visual_family: "mistral-ministral3"
 icon: "🌀"
 is_new: false
 order: 2
@@ -11,7 +12,10 @@ vision_capable: true
 memory_requirements: "8GB RAM"
 precision: "FP8"
 parameters: "8B"
-modalities: ["Text"]
+modalities: ["Text", "Image"]
+input_modalities: ["text", "image"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "262K"
 license: "Apache 2.0"
 model_size: "5GB"
@@ -72,4 +76,3 @@ The Ministral 3 Instruct model offers the following capabilities:
 - **Edge-Optimized**: Delivers best-in-class performance at a small scale, deployable anywhere.
 - **Apache 2.0 License**: Open-source license allowing usage and modification for both commercial and non-commercial purposes.
 - **Large Context Window**: Supports a 256k context window.
-

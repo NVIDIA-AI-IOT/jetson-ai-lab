@@ -3,6 +3,8 @@ title: "Qwen3 VL 4B"
 model_id: "qwen3-vl-4b"
 short_description: "Alibaba's 4 billion parameter vision-language model for multimodal understanding"
 family: "Alibaba Qwen3"
+visual_family: "qwen"
+visual_variant: "3"
 icon: "🔮"
 is_new: false
 order: 5
@@ -11,7 +13,10 @@ vision_capable: true
 memory_requirements: "6GB RAM"
 precision: "AWQ 4-bit"
 parameters: "4B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "3GB"
@@ -60,4 +65,3 @@ Available in Dense and MoE architectures that scale from edge to cloud, with Ins
 - **Text Understanding on par with pure LLMs**: Seamless text–vision fusion for lossless, unified comprehension.
 
 *Referenced from the [Qwen3-VL model card](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct).*
-

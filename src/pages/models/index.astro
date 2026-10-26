@@ -8,6 +8,10 @@ import llmBenchmarks from '../../data/benchmarks.json';
 import { JETSON_MATRIX_MODULES } from '../../lib/inferenceCommands';
 import { oneShotHasRunModalContent } from '../../lib/evalRunModal';
 import { getSupportedInferenceEngines, sortEnginesForUi } from '../../lib/modelFrontmatterAdapter';
+import { isModelNew, MODEL_NEW_WINDOW_DAYS } from '../../lib/modelFreshness';
+import { modalityIcon, modalityLabel } from '../../lib/modelModalities';
+import { modelFamilyVisual } from '../../data/modelVisuals';
+import { MODEL_VISUAL_PRESENTATION } from '../../data/modelVisualPresentation';
 import {
   CATALOG_ENGINE_FILTERS,
   catalogEngineUiIdsForModel,
@@ -20,13 +24,127 @@ function modelTypeToInferenceCategory(type: string | undefined): InferenceCatego
   return 'Text';
 }
 
+const catalogInputDefinitions = [
+  { id: 'text', label: 'Text' },
+  { id: 'image', label: 'Image / vision' },
+  { id: 'video', label: 'Video' },
+  { id: 'audio', label: 'Audio' },
+  { id: 'action', label: 'Robot state / action' },
+] as const;
+const catalogOutputDefinitions = [
+  { id: 'text-generation', label: 'Text generation' },
+  { id: 'image-generation', label: 'Image generation' },
+  { id: 'video-generation', label: 'Video generation' },
+  { id: 'speech-generation', label: 'Speech generation' },
+  { id: 'audio-generation', label: 'Audio generation' },
+  { id: 'speech-recognition', label: 'Speech recognition' },
+  { id: 'action-generation', label: 'Action generation / VLA' },
+  { id: 'classification', label: 'Classification / decision' },
+  { id: 'feature-extraction', label: 'Feature extraction' },
+  { id: 'text-ranking', label: 'Text ranking' },
+] as const;
+const catalogOutputLabels = new Map<string, string>(catalogOutputDefinitions.map((output) => [output.id, output.label]));
+const catalogOutputLabel = (output: string) => catalogOutputLabels.get(output) || output;
+function inferCatalogInputs(data: {
+  tasks?: string[];
+  type?: string;
+  vision_capable?: boolean;
+  modalities?: string[];
+  input_modalities?: string[];
+}): string[] {
+  const inputs = new Set(
+    (data.input_modalities?.length ? data.input_modalities : data.modalities || [])
+      .map((value) => value.toLowerCase())
+  );
+  const tasks = new Set(data.tasks || []);
+  const type = (data.type || '').toLowerCase();
+
+  if (data.vision_capable) inputs.add('image');
+  if (tasks.has('automatic-speech-recognition')) inputs.add('audio');
+  if (tasks.has('text-to-speech') || tasks.has('text-to-image') || tasks.has('text-to-video')) inputs.add('text');
+  if (inputs.size === 0 && (type === 'text' || type === 'multimodal' || type === 'image')) inputs.add('text');
+
+  return [...inputs].filter((input) => catalogInputDefinitions.some((definition) => definition.id === input));
+}
+
+function inferCatalogOutputs(data: {
+  tasks?: string[];
+  type?: string;
+  modalities?: string[];
+  output_modalities?: string[];
+}): string[] {
+  const legacyModalities = new Set((data.modalities || []).map((value) => value.toLowerCase()));
+  const modalities = new Set((data.output_modalities || []).map((value) => value.toLowerCase()));
+  const tasks = new Set(data.tasks || []);
+  const outputs = new Set<string>();
+  const type = (data.type || '').toLowerCase();
+
+  if (tasks.has('text-generation')) outputs.add('text-generation');
+  if (tasks.has('text-to-image')) outputs.add('image-generation');
+  if (tasks.has('text-to-video')) outputs.add('video-generation');
+  if (tasks.has('text-to-speech')) outputs.add('speech-generation');
+  if (tasks.has('audio-generation')) outputs.add('audio-generation');
+  if (tasks.has('automatic-speech-recognition')) outputs.add('speech-recognition');
+  if (tasks.has('action-generation')) outputs.add('action-generation');
+  if (tasks.has('classification')) outputs.add('classification');
+  if (tasks.has('feature-extraction')) outputs.add('feature-extraction');
+  if (tasks.has('text-ranking')) outputs.add('text-ranking');
+
+  if (modalities.has('text')) outputs.add('text-generation');
+  if (modalities.has('image')) outputs.add('image-generation');
+  if (modalities.has('video')) outputs.add('video-generation');
+  if (modalities.has('audio')) outputs.add('audio-generation');
+  if (modalities.has('data')) outputs.add('classification');
+  if (modalities.has('action') || legacyModalities.has('action')) outputs.add('action-generation');
+
+  if (outputs.size === 0) {
+    if (type === 'image') outputs.add('image-generation');
+    else if (type === 'audio') outputs.add('speech-generation');
+    else outputs.add('text-generation');
+  }
+
+  return [...outputs];
+}
+
+function inferOutputModalities(data: { type?: string; output_modalities?: string[] }): string[] {
+  if (data.output_modalities?.length) return data.output_modalities.map((value) => value.toLowerCase());
+  if (data.type === 'Image') return ['image'];
+  if (data.type === 'Audio') return ['audio'];
+  return ['text'];
+}
+
+type CatalogModelType = 'llm' | 'vlm' | 'vla';
+
+function inferCatalogModelType(inputs: string[], outputs: string[]): CatalogModelType {
+  // Action generation takes precedence because VLAs also commonly accept vision input.
+  if (outputs.includes('action-generation')) return 'vla';
+  if (inputs.includes('image') || inputs.includes('video')) return 'vlm';
+  return 'llm';
+}
+
 /** Matrix tabs only — same ids as Serve / Run UI. */
 const moduleFilterOptions = JETSON_MATRIX_MODULES.filter((m) => m.showInMatrixUi !== false);
 
 const modelEntries = await getCollection('models');
+
+// Official source assets use different transparent safe areas. Keep the source
+// artwork intact and normalize only its optical size inside the catalog frame.
+const catalogIconOpticalScales: Record<string, number> = {
+  '/images/model-families/nvidia-nemotron/icon-official.svg': 1.2,
+  '/images/model-families/nvidia-cosmos/icon-official.png': 1.07,
+};
+
+function catalogIconOpticalScale(icon?: string): number {
+  return icon ? (catalogIconOpticalScales[icon] ?? 1) : 1;
+}
+
 const collectionModels = modelEntries.map(entry => {
   const engines = getSupportedInferenceEngines(entry.data);
   const category = modelTypeToInferenceCategory(entry.data.type);
+  const inputs = inferCatalogInputs(entry.data);
+  const outputs = inferCatalogOutputs(entry.data);
+  const outputModalities = inferOutputModalities(entry.data);
+  const catalogType = inferCatalogModelType(inputs, outputs);
   const catalog_modules = catalogModuleIdsForModel(
     category,
     engines,
@@ -39,6 +157,9 @@ const collectionModels = modelEntries.map(entry => {
     entry.data.matrix_modules_disabled,
     entry.data.one_shot_inference
   );
+  const modelIsNew = isModelNew(entry.data);
+  const familyVisual = modelFamilyVisual(entry.data.visual_family, entry.data.visual_variant);
+  const visualIcon = familyVisual?.assets.icon;
   return {
     id: entry.slug,
     name: entry.data.title,
@@ -48,9 +169,21 @@ const collectionModels = modelEntries.map(entry => {
     minimumJetson: entry.data.minimum_jetson || 'Orin NX',
     memory: entry.data.memory_requirements,
     size: entry.data.model_size,
+    parameters: entry.data.parameters,
     order: entry.data.order ?? 999,
-    status: entry.data.is_new ? 'new' : 'stable',
-    highlighted: entry.data.is_new,
+    status: modelIsNew ? 'new' : 'stable',
+    highlighted: modelIsNew,
+    hasFreshnessMetadata: entry.data.catalog_added_at !== undefined || entry.data.is_new !== undefined,
+    catalogAddedAt: entry.data.catalog_added_at,
+    newUntil: entry.data.new_until,
+    legacyIsNew: entry.data.is_new === true,
+    inputs,
+    outputs,
+    primaryOutput: outputs.includes('action-generation') ? 'action-generation' : outputs[0] || 'text-generation',
+    outputModalities,
+    catalogType,
+    updatedAt: entry.data.updated_at,
+    validationStatus: entry.data.validation_status,
     supported_inference_engines: sortEnginesForUi(engines),
     catalog_modules,
     catalog_engine_ui_ids,
@@ -59,6 +192,10 @@ const collectionModels = modelEntries.map(entry => {
     matrix_modules_disabled: entry.data.matrix_modules_disabled,
     vision_capable: entry.data.vision_capable,
     one_shot_inference: entry.data.one_shot_inference,
+    visualHero: familyVisual?.assets.catalog,
+    visualIcon,
+    visualIconScale: catalogIconOpticalScale(visualIcon),
+    visualFamily: entry.data.visual_family,
   };
 });
 
@@ -73,7 +210,7 @@ const familyOrder: Record<string, number> = {
   'Meta Muse': -1,
   'Alibaba Qwen3.6': 0,
   'Google Gemma4': 1,
-  'NVIDIA Cosmos Reason': 3,
+  'NVIDIA Cosmos': 3,
   'Alibaba Qwen3.5': 4,
   'OpenAI GPT OSS': 5,
   'Alibaba Qwen3': 6,
@@ -84,65 +221,163 @@ const familyOrder: Record<string, number> = {
 const families = Array.from(new Set(models.map(m => m.family)))
   .sort((a, b) => (familyOrder[a] ?? 99) - (familyOrder[b] ?? 99));
 
+const catalogFamilyLabel = (family: string) => {
+  if (family.startsWith('Alibaba Qwen')) return family.replace(/^Alibaba Qwen/, 'Qwen ');
+  if (family.startsWith('Google Gemma')) return family.replace(/^Google Gemma/, 'Gemma ');
+  if (family.startsWith('NVIDIA Cosmos ')) return family.replace(/^NVIDIA /, '');
+  if (family.startsWith('Meta Llama ')) return family.replace(/^Meta /, '');
+  if (family === 'Mistral AI Ministral 3') return 'Ministral 3';
+  if (family === 'Meta Muse') return 'Meta Muse Glimmer';
+  if (family === 'Black Forest Labs') return 'FLUX.3 Action';
+  return family;
+};
+
+const catalogFamilySection = (visualFamily?: string) => {
+  if (visualFamily?.startsWith('nvidia-')) return 'NVIDIA models';
+  if (visualFamily === 'flux3-action') return 'Physical AI & action';
+  if (visualFamily === 'meta-muse-glimmer' || visualFamily === 'liquid-d1' || visualFamily === 'minimax-m2') {
+    return 'Agentic & decision';
+  }
+  return 'General & multimodal';
+};
+
+const familyArtwork = new Map(
+  families.map((family) => {
+    const familyModels = models.filter((model) => model.family === family);
+    const visualFamily = familyModels.find((model) => model.visualFamily)?.visualFamily;
+    return [family, {
+      hero: familyModels.find((model) => model.visualHero)?.visualHero,
+      icon: familyModels.find((model) => model.visualIcon)?.visualIcon,
+      iconScale: familyModels.find((model) => model.visualIcon)?.visualIconScale ?? 1,
+      visualFamily,
+      label: catalogFamilyLabel(family),
+      section: catalogFamilySection(visualFamily),
+    }];
+  })
+);
+const inputFilterOptions = catalogInputDefinitions.filter((input) =>
+  models.some((model) => model.inputs.includes(input.id))
+);
+const inputCounts = new Map(
+  inputFilterOptions.map((input) => [
+    input.id,
+    models.filter((model) => model.inputs.includes(input.id)).length,
+  ])
+);
+const outputFilterOptions = catalogOutputDefinitions.filter((output) =>
+  models.some((model) => model.outputs.includes(output.id))
+);
+const outputCounts = new Map(
+  outputFilterOptions.map((output) => [
+    output.id,
+    models.filter((model) => model.outputs.includes(output.id)).length,
+  ])
+);
+const moduleCounts = new Map(
+  moduleFilterOptions.map((module) => [
+    module.id,
+    models.filter((model) => model.catalog_modules.includes(module.id)).length,
+  ])
+);
+const engineCounts = new Map(
+  CATALOG_ENGINE_FILTERS.map((engine) => [
+    engine.uiId,
+    models.filter((model) => model.catalog_engine_ui_ids.includes(engine.uiId)).length,
+  ])
+);
+const newModelCount = models.filter((model) => model.status === 'new').length;
+const catalogTypeDefinitions = [
+  { id: 'all', label: 'All models', description: 'Every model' },
+  { id: 'llm', label: 'LLM', description: 'Text models' },
+  { id: 'vlm', label: 'VLM', description: 'Vision models' },
+  { id: 'vla', label: 'VLA', description: 'Robot action models' },
+] as const;
+const catalogTypeCounts = new Map(
+  catalogTypeDefinitions.map((type) => [
+    type.id,
+    type.id === 'all' ? models.length : models.filter((model) => model.catalogType === type.id).length,
+  ])
+);
+
 ---
 
 <Layout title="Models" description="Discover all generative AI models optimized for Jetson">
-  <!-- Hero Section -->
-  <section class="bg-nvidia-black text-nvidia-white py-20">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center">
-        <h1 class="text-5xl font-bold mb-6">Supported Models</h1>
-        <p class="text-xl text-nvidia-gray-300 max-w-3xl mx-auto">
-          Run the latest generative AI models on your Jetson device
-        </p>
-      </div>
-    </div>
-  </section>
-
   <!-- Featured Models -->
   {models.filter(m => m.highlighted).length > 0 && (
-    <section class="py-12 bg-nvidia-gray-50 border-b border-nvidia-gray-200" id="featured-models-section">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-8">
+    <section class="border-b border-nvidia-gray-200 bg-nvidia-gray-50 py-12" id="featured-models-section">
+      <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="relative mb-8 text-center">
           <h2 class="text-2xl font-bold text-nvidia-black">Featured Models</h2>
-          <p class="text-nvidia-gray-600 mt-1">Latest releases with day-0 support on Jetson</p>
+          <p class="mt-1 text-nvidia-gray-600">Latest releases with day-0 support on Jetson</p>
+          <div class="mt-4 flex justify-center gap-1.5 sm:absolute sm:right-0 sm:top-1/2 sm:mt-0 sm:-translate-y-1/2" aria-label="Featured model carousel controls">
+            <button
+              type="button"
+              id="featured-models-previous"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-nvidia-gray-200 bg-white text-nvidia-gray-700 transition-colors hover:border-nvidia-gray-400 hover:text-nvidia-black disabled:cursor-default disabled:opacity-35"
+              aria-label="Previous featured models"
+            >
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              id="featured-models-next"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-nvidia-gray-200 bg-white text-nvidia-gray-700 transition-colors hover:border-nvidia-gray-400 hover:text-nvidia-black disabled:cursor-default disabled:opacity-35"
+              aria-label="Next featured models"
+            >
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div class="relative -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div class="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide [justify-content:safe_center]">
+          <div id="featured-models-track" class="scrollbar-hide flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4 scroll-smooth [justify-content:safe_center]">
             {models.filter(m => m.highlighted).map(model => (
               <div
-                class="model-catalog-card w-[280px] sm:w-[300px] md:w-[320px] snap-center flex-shrink-0"
+                class="model-catalog-card w-[280px] flex-shrink-0 snap-center sm:w-[300px] md:w-[320px]"
                 data-catalog-modules={model.catalog_modules.join(',')}
                 data-catalog-engines={model.catalog_engine_ui_ids.join(',')}
                 data-name={model.name.toLowerCase()}
+                data-search={`${model.name} ${model.family} ${model.description}`.toLowerCase()}
+                data-catalog-inputs={model.inputs.join(',')}
+                data-catalog-outputs={model.outputs.join(',')}
+                data-catalog-type={model.catalogType}
+                data-status={model.status}
+                data-model-freshness
+                data-catalog-added-at={model.catalogAddedAt}
+                data-new-until={model.newUntil}
+                data-legacy-is-new={String(model.legacyIsNew)}
                 data-category={model.category}
               >
-                <article class="group flex flex-col h-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-shadow duration-200 overflow-hidden">
-                  <div class="p-6 flex flex-col h-full">
-                    <div class="mb-4 flex flex-wrap items-center gap-2">
-                      <h3 class="text-lg font-bold text-slate-900 group-hover:text-nvidia-green transition-colors line-clamp-1">
-                        {model.name}
+                <article class="group flex h-full flex-col overflow-hidden rounded-xl border border-nvidia-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-nvidia-green hover:shadow-lg">
+                  <div class="flex h-full flex-col p-6">
+                    <div class="mb-4 flex min-w-0 items-center gap-2">
+                      <h3 class="min-w-0 flex-1 truncate text-lg font-bold">
+                        <a
+                          href={`/models/${model.id}`}
+                          data-model-link
+                          class="text-nvidia-black transition-colors hover:text-nvidia-green hover:underline hover:underline-offset-2"
+                        >
+                          {model.name}
+                        </a>
                       </h3>
-                      {(model.vision_capable || model.category === 'Text') && (
-                        <span class="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide shrink-0" title={model.vision_capable ? 'Vision-language model' : 'Large language model'}>{model.vision_capable ? 'VLM' : 'LLM'}</span>
-                      )}
+                      <span class="shrink-0 rounded bg-nvidia-gray-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-nvidia-gray-700">
+                        {model.catalogType.toUpperCase()}
+                      </span>
                     </div>
 
-                    <p class="text-slate-600 text-sm leading-relaxed mb-6 line-clamp-3 flex-grow">
+                    <p class="mb-6 h-[4.5rem] overflow-hidden text-sm leading-relaxed text-nvidia-gray-600">
                       {model.description}
                     </p>
 
-                    <div class="mt-auto pt-4 border-t border-gray-100">
-                      <div class="flex items-center gap-2">
-                        {!model.hideRunButton &&
-                          (model.supported_inference_engines.length > 0 || oneShotHasRunModalContent(model.one_shot_inference)) && (
+                    <div class="mt-auto flex min-h-10 items-center border-t border-nvidia-gray-100 pt-4">
+                      {!model.hideRunButton &&
+                        (model.supported_inference_engines.length > 0 || oneShotHasRunModalContent(model.one_shot_inference)) && (
                           <RunCommand modelId={model.id} modelName={model.name} category={model.category} forceModal={model.category === 'Image'} supportedEngines={model.supported_inference_engines} hfCheckpoint={model.hf_checkpoint} matrixModulesDisabled={model.matrix_modules_disabled} oneShotInference={model.one_shot_inference} />
                         )}
-                        <a href={`/models/${model.id}`} class="px-3 py-1.5 rounded-md bg-nvidia-gray-100 text-nvidia-gray-900 hover:bg-nvidia-green hover:text-nvidia-black text-xs font-semibold transition-colors">
-                          Details
-                        </a>
-                      </div>
                     </div>
                   </div>
                 </article>
@@ -155,50 +390,296 @@ const families = Array.from(new Set(models.map(m => m.family)))
   )}
 
   <!-- All Models Directory -->
-  <section class="py-20 bg-nvidia-white" id="directory">
+  <section class="py-10 bg-nvidia-white" id="directory" data-new-window-days={MODEL_NEW_WINDOW_DAYS}>
     <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="mb-12 max-w-3xl">
-        <h2 class="text-4xl font-bold text-nvidia-black mb-4">All Models</h2>
-        <p class="text-xl text-nvidia-gray-600">
+      <div class="mb-6 max-w-3xl">
+        <h1 class="text-3xl font-bold text-nvidia-black mb-2">All Models</h1>
+        <p class="text-base text-nvidia-gray-600">
           Browse by family cards or switch to a sortable table.
         </p>
       </div>
 
+      <button
+        type="button"
+        id="models-mobile-filter-toggle"
+        class="lg:hidden mb-5 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-nvidia-gray-200 bg-nvidia-gray-50 px-4 py-2.5 text-sm font-semibold text-nvidia-black"
+        aria-expanded="false"
+        aria-controls="models-filter-panel"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M6 10h12M10 16h4" />
+        </svg>
+        Filters
+        <span id="models-mobile-filter-count" class="hidden min-w-5 rounded-full bg-nvidia-green px-1.5 py-0.5 text-[10px] font-bold text-nvidia-black">0</span>
+      </button>
+
+      <div class="flex flex-col gap-6 lg:flex-row">
+        <aside id="models-filter-panel" class="hidden lg:block lg:w-80 lg:flex-shrink-0">
+          <div class="lg:sticky lg:top-24 rounded-xl border border-nvidia-gray-200 bg-nvidia-gray-50/60 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-lg font-bold text-nvidia-black">Filters</h3>
+              <button type="button" id="models-filter-reset" class="hidden text-xs font-semibold text-nvidia-green hover:underline">
+                Clear all
+              </button>
+            </div>
+            <p class="text-xs text-nvidia-gray-500 mb-5">Start with a model type, or switch to advanced capability filters.</p>
+
+            <div class="border-b border-nvidia-gray-200 pb-5 mb-4">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <h4 class="text-xs font-bold text-nvidia-gray-500 uppercase tracking-wider">Jetson device</h4>
+                <button
+                  type="button"
+                  data-device-icon-toggle
+                  aria-pressed="false"
+                  class="group inline-flex items-center gap-1.5 rounded px-1.5 py-1 text-[10px] font-semibold text-nvidia-gray-500 transition-colors hover:text-nvidia-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nvidia-green"
+                >
+                  Icon
+                  <span aria-hidden="true" class="relative inline-flex h-4 w-7 rounded bg-nvidia-gray-300 shadow-inner transition-colors group-aria-pressed:bg-nvidia-green">
+                    <span class="absolute left-0.5 top-0.5 h-3 w-3 rounded-sm bg-white shadow-sm transition-transform group-aria-pressed:translate-x-3"></span>
+                  </span>
+                </button>
+              </div>
+
+              <div data-device-compact-filters class="space-y-2.5">
+                {moduleFilterOptions.map((module) => (
+                  <label class="flex cursor-pointer items-center gap-2 group">
+                    <input type="checkbox" value={module.id} data-catalog-module-filter class="rounded border-nvidia-gray-300 text-nvidia-green focus:ring-nvidia-green" />
+                    <span data-catalog-filter-label class="min-w-0 flex-1 text-sm text-nvidia-gray-700 group-hover:text-nvidia-black">{module.shortLabel}</span>
+                    <span class="text-xs tabular-nums text-nvidia-gray-400">{moduleCounts.get(module.id)}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div data-device-icon-filters class="hidden grid-cols-2 gap-2">
+                {moduleFilterOptions.map((module) => (
+                  <label class="group relative min-w-0 cursor-pointer">
+                    <input type="checkbox" value={module.id} data-catalog-module-filter class="peer sr-only" />
+                    <span class="flex min-h-[68px] items-center gap-2 rounded-md border-2 border-nvidia-gray-200 bg-white p-2 transition-colors group-hover:border-nvidia-green peer-focus-visible:ring-2 peer-focus-visible:ring-nvidia-green peer-focus-visible:ring-offset-2 peer-checked:border-nvidia-green peer-checked:bg-nvidia-green/10">
+                      <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded bg-nvidia-gray-50 p-1">
+                        {module.iconSrc ? (
+                          <img src={module.iconSrc} alt="" class="h-full w-full object-contain" loading="lazy" />
+                        ) : (
+                          <svg class="h-5 w-5 text-nvidia-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
+                        )}
+                      </span>
+                      <span class="min-w-0 flex-1">
+                        <span data-catalog-filter-label class="block text-xs font-bold leading-tight text-nvidia-gray-800">{module.shortLabel}</span>
+                        <span class="mt-1 block text-[10px] tabular-nums text-nvidia-gray-400">{moduleCounts.get(module.id)} models</span>
+                      </span>
+                    </span>
+                    <svg class="absolute right-2 top-2 hidden h-3.5 w-3.5 rounded-sm bg-nvidia-green p-0.5 text-nvidia-black peer-checked:block" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div class="border-b border-nvidia-gray-200 pb-5 mb-4">
+              <div class="mb-4 flex rounded-md border border-nvidia-gray-200 bg-nvidia-gray-100 p-0.5" role="group" aria-label="Filter detail">
+                <button
+                  type="button"
+                  data-catalog-filter-mode="simple"
+                  aria-pressed="true"
+                  class="flex-1 rounded px-2 py-1.5 text-xs font-semibold text-nvidia-gray-600 transition-colors aria-pressed:bg-white aria-pressed:text-nvidia-black aria-pressed:shadow-sm"
+                >
+                  Simple
+                </button>
+                <button
+                  type="button"
+                  data-catalog-filter-mode="advanced"
+                  aria-pressed="false"
+                  class="flex-1 rounded px-2 py-1.5 text-xs font-semibold text-nvidia-gray-600 transition-colors aria-pressed:bg-white aria-pressed:text-nvidia-black aria-pressed:shadow-sm"
+                >
+                  Advanced
+                </button>
+              </div>
+
+              <div data-catalog-simple-filters>
+                <h4 class="text-xs font-bold text-nvidia-gray-500 uppercase tracking-wider mb-3">Model type</h4>
+                <div class="grid grid-cols-2 gap-2">
+                  {catalogTypeDefinitions.map((type) => (
+                    <button
+                      type="button"
+                      data-catalog-type-filter={type.id}
+                      aria-pressed={type.id === 'all' ? 'true' : 'false'}
+                      class="group flex min-h-[74px] flex-col items-start justify-between rounded-md border-2 border-nvidia-gray-200 bg-white p-2.5 text-left transition-colors hover:border-nvidia-green aria-pressed:border-nvidia-green aria-pressed:bg-nvidia-green/10"
+                    >
+                      <span class="flex w-full items-start justify-between gap-2">
+                        <span class="inline-flex h-7 w-7 items-center justify-center rounded bg-nvidia-gray-100 text-nvidia-gray-700 group-aria-pressed:bg-nvidia-green group-aria-pressed:text-nvidia-black">
+                          {type.id === 'all' && (
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                          )}
+                          {type.id === 'llm' && (
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/></svg>
+                          )}
+                          {type.id === 'vlm' && (
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+                          )}
+                          {type.id === 'vla' && (
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20h6M8 20v-4l4-3 2-5 4 2-2 5-4 2v3M14 8l1-3 4 2-1 3M18 17h3v3h-3z"/></svg>
+                          )}
+                        </span>
+                        <span class="text-[10px] tabular-nums text-nvidia-gray-400">{catalogTypeCounts.get(type.id)}</span>
+                      </span>
+                      <span>
+                        <span class="block text-sm font-bold text-nvidia-black">{type.label}</span>
+                        <span class="block text-[10px] leading-tight text-nvidia-gray-500">{type.description}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p class="mt-3 text-[11px] leading-relaxed text-nvidia-gray-500">Audio-capable multimodal models are included under VLM. Use Advanced to filter by audio input.</p>
+              </div>
+
+              <div data-catalog-advanced-filters class="hidden">
+              <h4 class="text-xs font-bold text-nvidia-gray-500 uppercase tracking-wider mb-4">Capabilities</h4>
+              {inputFilterOptions.length > 0 && (
+                <div class="mb-5">
+                  <h5 class="mb-2 text-xs font-semibold text-nvidia-gray-700">Input modalities</h5>
+                  <div class="space-y-2.5">
+                    {inputFilterOptions.map((input) => (
+                      <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" value={input.id} data-catalog-input-filter class="rounded border-nvidia-gray-300 text-nvidia-green focus:ring-nvidia-green" />
+                        <span data-catalog-filter-label class="min-w-0 flex-1 text-sm text-nvidia-gray-700 group-hover:text-nvidia-black">{input.label}</span>
+                        <span class="text-xs tabular-nums text-nvidia-gray-400">{inputCounts.get(input.id)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {outputFilterOptions.length > 0 && (
+                <div>
+                  <h5 class="mb-2 text-xs font-semibold text-nvidia-gray-700">Output capabilities</h5>
+                <div class="space-y-2.5">
+                  {outputFilterOptions.map((output) => (
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                      <input type="checkbox" value={output.id} data-catalog-output-filter class="rounded border-nvidia-gray-300 text-nvidia-green focus:ring-nvidia-green" />
+                      <span data-catalog-filter-label class="min-w-0 flex-1 text-sm text-nvidia-gray-700 group-hover:text-nvidia-black">{output.label}</span>
+                      <span class="text-xs tabular-nums text-nvidia-gray-400">{outputCounts.get(output.id)}</span>
+                    </label>
+                  ))}
+                </div>
+                </div>
+              )}
+              </div>
+            </div>
+
+            <div>
+              <h4 class="text-xs font-bold text-nvidia-gray-500 uppercase tracking-wider mb-3">Runtime</h4>
+              <div class="space-y-2.5">
+                {CATALOG_ENGINE_FILTERS.map((engine) => (
+                  <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="checkbox" value={engine.uiId} data-catalog-engine-filter class="rounded border-nvidia-gray-300 text-nvidia-green focus:ring-nvidia-green" />
+                    <span data-catalog-filter-label class="min-w-0 flex-1 text-sm text-nvidia-gray-700 group-hover:text-nvidia-black">{engine.label}</span>
+                    <span class="text-xs tabular-nums text-nvidia-gray-400">{engineCounts.get(engine.uiId)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="flex-1 min-w-0">
       <div
         id="models-directory-toolbar"
         class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end sm:justify-between gap-3 mb-3"
       >
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="flex flex-col gap-1">
           <span class="text-xs font-bold text-nvidia-gray-500 uppercase tracking-wider">Directory view</span>
           <div
             class="inline-flex rounded-lg border border-nvidia-gray-200 bg-nvidia-gray-50 p-1"
             role="group"
             aria-label="Directory view mode"
           >
-            <button
-              type="button"
-              id="models-view-cards"
-              class="models-view-toggle inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors bg-white text-nvidia-black shadow-sm"
-              data-view="cards"
-              aria-pressed="true"
-            >
-              <svg
-                class="w-3.5 h-3.5 shrink-0 opacity-90"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
+            <div id="models-cards-view-control" class="relative inline-flex rounded-md bg-white text-nvidia-black shadow-sm">
+              <button
+                type="button"
+                id="models-view-cards"
+                class="models-view-toggle inline-flex items-center gap-1.5 rounded-l-md py-1.5 pl-3 pr-2 text-xs font-semibold transition-colors"
+                data-view="cards"
+                aria-pressed="true"
               >
-                <rect width="7" height="7" x="3" y="3" rx="1" />
-                <rect width="7" height="7" x="14" y="3" rx="1" />
-                <rect width="7" height="7" x="14" y="14" rx="1" />
-                <rect width="7" height="7" x="3" y="14" rx="1" />
-              </svg>
-              Cards
-            </button>
+                <svg
+                  class="w-3.5 h-3.5 shrink-0 opacity-90"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <rect width="7" height="7" x="3" y="3" rx="1" />
+                  <rect width="7" height="7" x="14" y="3" rx="1" />
+                  <rect width="7" height="7" x="14" y="14" rx="1" />
+                  <rect width="7" height="7" x="3" y="14" rx="1" />
+                </svg>
+                Cards
+              </button>
+              <button
+                type="button"
+                id="models-card-columns-menu-button"
+                class="inline-flex w-7 items-center justify-center rounded-r-md border-l border-nvidia-gray-200/80 text-nvidia-gray-500 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-nvidia-green"
+                aria-label="Card column options"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                aria-controls="models-card-columns-menu"
+              >
+                <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <div
+                id="models-card-columns-menu"
+                class="absolute left-0 top-[calc(100%+0.4rem)] z-30 hidden w-52 rounded-lg border border-nvidia-gray-200 bg-white p-1.5 text-left shadow-lg"
+                role="menu"
+                aria-label="Card columns"
+              >
+                <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-nvidia-gray-500">Card columns</div>
+                <button type="button" class="models-card-columns-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-black transition-colors hover:bg-nvidia-gray-100" data-card-columns="4" role="menuitemradio" aria-checked="true">
+                  <span>4 columns</span>
+                  <svg data-card-columns-check class="h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                </button>
+                <button type="button" class="models-card-columns-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-gray-600 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black" data-card-columns="3" role="menuitemradio" aria-checked="false">
+                  <span>3 columns</span>
+                  <svg data-card-columns-check class="hidden h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                </button>
+                <div class="mx-2 my-1 border-t border-nvidia-gray-200"></div>
+                <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-nvidia-gray-500">Card layout</div>
+                <button type="button" class="models-card-fit-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-black transition-colors hover:bg-nvidia-gray-100" data-card-fit="aligned" role="menuitemradio" aria-checked="true">
+                  <span>Aligned rows</span>
+                  <svg data-card-fit-check class="h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                </button>
+                <button type="button" class="models-card-fit-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-gray-600 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black" data-card-fit="content" role="menuitemradio" aria-checked="false">
+                  <span>Content fit</span>
+                  <svg data-card-fit-check class="hidden h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                </button>
+              </div>
+            </div>
+            <div id="models-compact-view-control" class="relative inline-flex rounded-md text-nvidia-gray-600">
+              <button
+                type="button"
+                id="models-view-compact"
+                class="models-view-toggle inline-flex items-center gap-1.5 rounded-l-md py-1.5 pl-3 pr-2 text-xs font-semibold transition-colors hover:text-nvidia-black"
+                data-view="compact"
+                aria-pressed="false"
+              >
+                <svg class="h-3.5 w-3.5 shrink-0 opacity-90" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect width="8" height="5" x="2" y="3" rx="1" /><rect width="8" height="5" x="14" y="3" rx="1" />
+                  <rect width="8" height="5" x="2" y="10" rx="1" /><rect width="8" height="5" x="14" y="10" rx="1" />
+                  <rect width="8" height="5" x="2" y="17" rx="1" /><rect width="8" height="5" x="14" y="17" rx="1" />
+                </svg>
+                Compact
+              </button>
+              <button type="button" id="models-compact-art-menu-button" class="inline-flex w-7 items-center justify-center rounded-r-md border-l border-nvidia-gray-200/80 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black" aria-label="Model visual style" aria-haspopup="menu" aria-expanded="false" aria-controls="models-compact-art-menu">
+                <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
+              </button>
+              <div id="models-compact-art-menu" class="absolute left-0 top-[calc(100%+0.4rem)] z-30 hidden w-52 rounded-lg border border-nvidia-gray-200 bg-white p-1.5 text-left shadow-lg" role="menu" aria-label="Compact model visual style">
+                <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-nvidia-gray-500">Model visual style</div>
+                <button type="button" class="models-compact-art-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-black transition-colors hover:bg-nvidia-gray-100" data-compact-art="model" role="menuitemradio" aria-checked="true"><span>By model</span><svg data-compact-art-check class="h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></button>
+                <button type="button" class="models-compact-art-toggle flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-semibold text-nvidia-gray-600 transition-colors hover:bg-nvidia-gray-100 hover:text-nvidia-black" data-compact-art="family" role="menuitemradio" aria-checked="false"><span>By family</span><svg data-compact-art-check class="hidden h-3.5 w-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></button>
+              </div>
+            </div>
             <button
               type="button"
               id="models-view-table"
@@ -224,72 +705,199 @@ const families = Array.from(new Set(models.map(m => m.family)))
               Table
             </button>
           </div>
+          </div>
+          <div id="models-card-rearrange-control" class="hidden items-center self-end pb-0.5">
+            <div class="inline-flex items-center gap-1 rounded-lg border border-nvidia-green/50 bg-nvidia-green/10 p-1">
+              <button type="button" id="models-card-rearrange" class="inline-flex items-center gap-1.5 rounded-md bg-nvidia-green px-3 py-1.5 text-xs font-bold text-nvidia-black shadow-sm transition-colors hover:bg-nvidia-green/80" aria-pressed="false">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m5 12 4 4L19 6" />
+                </svg>
+                <span data-rearrange-label>Done</span>
+              </button>
+              <button type="button" id="models-card-order-reset" class="hidden rounded-md px-2.5 py-1.5 text-xs font-semibold text-nvidia-gray-500 transition-colors hover:bg-white hover:text-nvidia-black disabled:cursor-default disabled:opacity-40" title="Restore the default family order">Reset</button>
+            </div>
+          </div>
         </div>
-        <div id="models-search-cards-bar" class="relative w-full sm:w-64 sm:max-w-xs">
-          <label class="sr-only" for="model-search-cards">Filter by model name</label>
-          <input
-            type="text"
-            id="model-search-cards"
-            class="model-directory-search w-full pl-9 pr-3 py-2 rounded-lg border border-nvidia-gray-200 text-sm focus:border-nvidia-green focus:ring-1 focus:ring-nvidia-green outline-none transition-colors"
-            placeholder="Filter by model name…"
-            autocomplete="off"
-          />
-          <svg
-            class="w-4 h-4 text-nvidia-gray-400 absolute left-3 top-2.5 pointer-events-none"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
+        <div class="flex w-full items-center gap-2 sm:w-auto">
+          <div id="models-search-cards-bar" class="relative min-w-0 flex-1 sm:w-80 sm:max-w-sm">
+            <label class="sr-only" for="model-search-cards">Search models, families, or descriptions</label>
+            <input
+              type="text"
+              id="model-search-cards"
+              class="model-directory-search w-full pl-9 pr-3 py-2 rounded-lg border border-nvidia-gray-200 text-sm focus:border-nvidia-green focus:ring-1 focus:ring-nvidia-green outline-none transition-colors"
+              placeholder="Search models or families…"
+              autocomplete="off"
+            />
+            <svg
+              class="w-4 h-4 text-nvidia-gray-400 absolute left-3 top-2.5 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+          {newModelCount > 0 && (
+            <button
+              type="button"
+              data-catalog-new-toggle
+              aria-pressed="false"
+              class="group inline-flex shrink-0 items-center gap-2 rounded-md border border-nvidia-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-nvidia-gray-700 transition-colors hover:border-nvidia-green hover:text-nvidia-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nvidia-green focus-visible:ring-offset-2 aria-pressed:border-nvidia-green"
+            >
+              New only
+              <span data-catalog-new-count class="min-w-5 rounded-sm bg-nvidia-gray-100 px-1.5 py-0.5 text-center text-[10px] tabular-nums">{newModelCount}</span>
+              <span
+                aria-hidden="true"
+                class="relative inline-flex h-6 w-11 shrink-0 rounded-md bg-nvidia-gray-300 shadow-inner transition-colors duration-200 group-aria-pressed:bg-nvidia-green"
+              >
+                <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded bg-white shadow-sm transition-transform duration-200 group-aria-pressed:translate-x-5"></span>
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="models-directory-cards">
+      <div class="scrollbar-hide mb-3 flex h-8 items-center gap-2 overflow-x-auto whitespace-nowrap">
+        <p id="models-result-count" class="shrink-0 text-sm font-medium text-nvidia-gray-500" aria-live="polite">
+          {models.length} models
+        </p>
+        <div
+          id="models-active-filters"
+          class="flex min-w-0 items-center gap-2"
+          aria-live="polite"
+          aria-label="Active filters"
+        ></div>
+      </div>
+
+      <div
+        class="models-card-directory"
+        id="models-directory-cards"
+        data-card-layout="legacy"
+        data-card-columns="4"
+        data-card-fit="aligned"
+        data-cards-art="family"
+        data-compact-art="model"
+        data-visuals-enabled="true"
+        data-art-intensity={String(MODEL_VISUAL_PRESENTATION.catalogArtworkIntensityPercent)}
+        data-art-contrast={MODEL_VISUAL_PRESENTATION.catalogArtworkIntensityPercent >= 90 ? 'light' : 'dark'}
+        data-rearranging="false"
+        style={`--catalog-art-intensity:${(MODEL_VISUAL_PRESENTATION.catalogArtworkIntensityPercent / 100).toFixed(2)};--catalog-art-boost:${(1 + Math.max(0, MODEL_VISUAL_PRESENTATION.catalogArtworkIntensityPercent - 100) / 100).toFixed(2)}`}
+      >
         {families.map(family => (
-          <div class="model-family-group bg-nvidia-white rounded-xl border border-nvidia-gray-200 h-full flex flex-col" data-family={family}>
-            <div class="px-5 py-4 border-b border-nvidia-gray-100 bg-nvidia-gray-50/50 rounded-t-xl">
-              <h3 class="text-lg font-bold text-nvidia-black">{family}</h3>
+          <section
+            class="model-family-group scroll-mt-24"
+            data-family={family}
+            data-has-family-art={familyArtwork.get(family)?.hero ? 'true' : 'false'}
+            style={familyArtwork.get(family)?.hero ? `--family-visual-image:url("${familyArtwork.get(family)?.hero}")` : undefined}
+          >
+            <div class="model-family-header">
+              {familyArtwork.get(family)?.icon && (
+                <span class="model-family-icon-frame" data-icon-family={familyArtwork.get(family)?.visualFamily} aria-hidden="true">
+                  <img
+                    class="model-family-icon"
+                    src={familyArtwork.get(family)?.icon}
+                    style={`--model-icon-optical-scale:${familyArtwork.get(family)?.iconScale ?? 1}`}
+                    alt=""
+                    width="28"
+                    height="28"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </span>
+              )}
+              <div class="model-family-heading min-w-0">
+                <p class="model-family-section">{familyArtwork.get(family)?.section}</p>
+                <h3 class="model-family-title font-bold text-nvidia-black">{familyArtwork.get(family)?.label || family}</h3>
+              </div>
+              <span class="model-family-divider h-px flex-1 bg-nvidia-gray-200" aria-hidden="true"></span>
+              <span class="model-family-count shrink-0 text-xs tabular-nums text-nvidia-gray-400">
+                {models.filter(m => m.family === family).length}
+              </span>
+              <button type="button" class="model-family-drag-handle" data-family-drag-handle aria-label={`Move ${family}`} title="Drag to rearrange; use arrow keys for precise movement">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+                  <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+                  <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+                </svg>
+              </button>
             </div>
-            <div class="p-3 space-y-2 flex-1">
-              {models.filter(m => m.family === family).map(model => (
+            <div class="model-family-grid" data-family-model-grid>
+              {models.filter(m => m.family === family).map((model, index) => (
                 <div
-                  class="model-card p-3 rounded-lg border border-transparent hover:border-nvidia-green hover:bg-nvidia-gray-50 transition-all group"
+                  class="model-card group transition-colors hover:border-nvidia-green hover:bg-nvidia-gray-50"
+                  data-family-model-index={index}
                   data-category={model.category}
                   data-name={model.name.toLowerCase()}
+                  data-search={`${model.name} ${model.family} ${model.description}`.toLowerCase()}
+                  data-catalog-inputs={model.inputs.join(',')}
+                  data-catalog-outputs={model.outputs.join(',')}
+                  data-catalog-type={model.catalogType}
+                  data-status={model.status}
+                  data-model-freshness
+                  data-catalog-added-at={model.catalogAddedAt}
+                  data-new-until={model.newUntil}
+                  data-legacy-is-new={String(model.legacyIsNew)}
                   data-catalog-modules={model.catalog_modules.join(',')}
                   data-catalog-engines={model.catalog_engine_ui_ids.join(',')}
+                  data-has-model-art={model.visualHero ? 'true' : 'false'}
+                  style={model.visualHero ? `--model-visual-image:url("${model.visualHero}")` : undefined}
                 >
-                  <div class="flex w-full min-w-0 items-center justify-between gap-3">
-                    <div class="flex items-center gap-2 min-w-0">
-                      <span class="text-sm font-bold text-nvidia-black group-hover:text-nvidia-green transition-colors">{model.name}</span>
-                      {model.status === 'new' && (
-                        <span class="bg-nvidia-green text-nvidia-black px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wide shrink-0">New</span>
+                  <div class="flex min-h-7 w-full min-w-0 items-center justify-between gap-3">
+                    <div class="flex min-w-0 flex-1 items-center gap-2">
+                      {model.visualIcon && (
+                        <span class="model-card-icon-frame" data-icon-family={model.visualFamily} aria-hidden="true">
+                          <img
+                            class="model-card-icon"
+                            src={model.visualIcon}
+                            style={`--model-icon-optical-scale:${model.visualIconScale}`}
+                            alt=""
+                            width="22"
+                            height="22"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </span>
+                      )}
+                      <a
+                        href={`/models/${model.id}`}
+                        data-model-link
+                        class="min-w-0 whitespace-normal break-words text-sm font-bold leading-tight text-nvidia-black transition-colors hover:text-nvidia-green hover:underline hover:underline-offset-2"
+                        title={model.name}
+                      >
+                        {model.name}
+                      </a>
+                      {model.hasFreshnessMetadata && (
+                        <span data-model-new-badge class:list={["bg-nvidia-green text-nvidia-black px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wide shrink-0", { hidden: model.status !== 'new' }]}>New</span>
                       )}
                     </div>
-                    <div class="flex items-center gap-2 shrink-0">
+                    <div data-model-supporting-info class="flex min-w-0 max-w-[48%] shrink items-center gap-2">
+                      <span class="model-card-capability rounded-sm bg-nvidia-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-nvidia-gray-600">
+                        {catalogOutputLabel(model.primaryOutput)}
+                      </span>
                       {!model.hideRunButton &&
                         (model.supported_inference_engines.length > 0 || oneShotHasRunModalContent(model.one_shot_inference)) && (
                         <RunCommand modelId={model.id} modelName={model.name} category={model.category} forceModal={model.category === 'Image'} supportedEngines={model.supported_inference_engines} hfCheckpoint={model.hf_checkpoint} matrixModulesDisabled={model.matrix_modules_disabled} oneShotInference={model.one_shot_inference} />
                       )}
-                      <a href={`/models/${model.id}`} class="px-3 py-1.5 rounded-md bg-nvidia-gray-100 text-nvidia-gray-900 hover:bg-nvidia-green hover:text-nvidia-black text-xs font-semibold transition-colors">
-                        Details
-                      </a>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+            <button type="button" class="model-family-more hidden" data-family-expand aria-expanded="false">
+              <span data-family-more-label></span>
+              <span data-family-more-arrow aria-hidden="true">↓</span>
+            </button>
+          </section>
         ))}
       </div>
+      <p id="models-card-order-status" class="sr-only" aria-live="polite"></p>
 
       <div id="models-directory-table" class="hidden -mx-4 sm:mx-0">
         <div class="max-h-[70vh] overflow-auto border border-nvidia-gray-200 rounded-xl bg-white shadow-sm">
           <table class="min-w-[76rem] w-full text-left text-sm">
             <caption class="sr-only">
-              All models: filter by model name in the Model column; sort Model, Family, or VLM; use Modules and Inference
+              All models: filter by model name in the Model column; sort Model, Family, or Output; use Modules and Inference
               engines checkboxes to filter further.
             </caption>
             <thead class="bg-nvidia-gray-50 border-b border-nvidia-gray-200 sticky top-0 z-[1] shadow-sm">
@@ -327,9 +935,9 @@ const families = Array.from(new Set(models.map(m => m.family)))
                     <span class="models-sort-ind text-nvidia-gray-400 font-normal" aria-hidden="true"></span>
                   </button>
                 </th>
-                <th scope="col" rowspan="2" class="px-3 py-3 font-bold text-nvidia-black whitespace-nowrap text-center align-bottom">
-                  <button type="button" class="models-sort-btn inline-flex items-center gap-1 hover:text-nvidia-green mx-auto" data-sort="vision">
-                    VLM
+                <th scope="col" rowspan="2" class="min-w-[10rem] px-3 py-3 font-bold text-nvidia-black whitespace-nowrap text-center align-bottom">
+                  <button type="button" class="models-sort-btn inline-flex items-center gap-1 hover:text-nvidia-green mx-auto" data-sort="output" aria-label="Sort by input and output">
+                    Input <span aria-hidden="true">→</span> Output
                     <span class="models-sort-ind text-nvidia-gray-400 font-normal" aria-hidden="true"></span>
                   </button>
                 </th>
@@ -345,7 +953,7 @@ const families = Array.from(new Set(models.map(m => m.family)))
                 {moduleFilterOptions.map((mod) => (
                   <th scope="col" class="px-1.5 py-2 text-center align-bottom border-l border-nvidia-gray-200 border-t border-nvidia-gray-100 min-w-[4.5rem]">
                     <label class="flex flex-col items-center gap-1.5 cursor-pointer select-none">
-                      <span class="text-[10px] font-bold text-nvidia-gray-700 leading-tight text-center">{mod.shortLabel}</span>
+                      <span data-catalog-filter-label class="text-[10px] font-bold text-nvidia-gray-700 leading-tight text-center">{mod.shortLabel}</span>
                       <input
                         type="checkbox"
                         value={mod.id}
@@ -359,7 +967,7 @@ const families = Array.from(new Set(models.map(m => m.family)))
                 {CATALOG_ENGINE_FILTERS.map((eng) => (
                   <th scope="col" class="px-1.5 py-2 text-center align-bottom border-l border-nvidia-gray-200 border-t border-nvidia-gray-100 min-w-[4.5rem]">
                     <label class="flex flex-col items-center gap-1.5 cursor-pointer select-none">
-                      <span class="text-[10px] font-bold text-nvidia-gray-700 leading-tight text-center">{eng.label}</span>
+                      <span data-catalog-filter-label class="text-[10px] font-bold text-nvidia-gray-700 leading-tight text-center">{eng.label}</span>
                       <input
                         type="checkbox"
                         value={eng.uiId}
@@ -377,28 +985,64 @@ const families = Array.from(new Set(models.map(m => m.family)))
                 <tr
                   class="model-table-row hover:bg-nvidia-gray-50/60"
                   data-name={model.name.toLowerCase()}
+                  data-search={`${model.name} ${model.family} ${model.description}`.toLowerCase()}
+                  data-catalog-inputs={model.inputs.join(',')}
+                  data-catalog-outputs={model.outputs.join(',')}
+                  data-catalog-type={model.catalogType}
+                  data-status={model.status}
+                  data-model-freshness
+                  data-catalog-added-at={model.catalogAddedAt}
+                  data-new-until={model.newUntil}
+                  data-legacy-is-new={String(model.legacyIsNew)}
                   data-catalog-modules={model.catalog_modules.join(',')}
                   data-catalog-engines={model.catalog_engine_ui_ids.join(',')}
                   data-category={model.category}
                   data-sort-name={model.name.toLowerCase()}
                   data-sort-family={model.family}
-                  data-sort-vision={model.vision_capable ? '1' : '0'}
+                  data-sort-output={model.outputs.join(',')}
                 >
                   <td class="px-3 py-2.5 align-middle">
                     <div class="flex flex-wrap items-center gap-2 min-w-0">
-                      <span class="font-semibold text-nvidia-black">{model.name}</span>
-                      {model.status === 'new' && (
-                        <span class="bg-nvidia-green text-nvidia-black px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wide shrink-0">New</span>
+                      <a
+                        href={`/models/${model.id}`}
+                        data-model-link
+                        class="font-semibold text-nvidia-black transition-colors hover:text-nvidia-green hover:underline hover:underline-offset-2"
+                      >
+                        {model.name}
+                      </a>
+                      {model.hasFreshnessMetadata && (
+                        <span data-model-new-badge class:list={["bg-nvidia-green text-nvidia-black px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wide shrink-0", { hidden: model.status !== 'new' }]}>New</span>
                       )}
                     </div>
                   </td>
                   <td class="px-3 py-2.5 align-middle text-nvidia-gray-700 whitespace-nowrap">{model.family}</td>
-                  <td class="px-3 py-2.5 align-middle text-center">
-                    {model.vision_capable ? (
-                      <span class="inline-block bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase">VLM</span>
-                    ) : (
-                      <span class="text-nvidia-gray-400">—</span>
-                    )}
+                  <td class="px-3 py-2.5 align-middle">
+                    <div
+                      class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-nvidia-gray-500"
+                      aria-label={`Inputs: ${model.inputs.map((input) => modalityLabel(input, 'input')).join(', ')}; outputs: ${model.outputModalities.map((output) => modalityLabel(output, 'output')).join(', ')}`}
+                    >
+                      <div class="flex min-w-0 items-center justify-end gap-1" aria-label="Inputs">
+                        {model.inputs.map((input) => (
+                          <span
+                            class="inline-flex h-6 w-6 items-center justify-center rounded border border-nvidia-gray-200 bg-white text-nvidia-gray-600"
+                            title={`Input: ${modalityLabel(input, 'input')}`}
+                          >
+                            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><Fragment set:html={modalityIcon(input)} /></svg>
+                          </span>
+                        ))}
+                      </div>
+                      <span data-modality-flow-arrow class="w-4 text-center text-xs text-nvidia-gray-400" aria-hidden="true">→</span>
+                      <div class="flex min-w-0 items-center justify-start gap-1" aria-label="Outputs">
+                        {model.outputModalities.map((output) => (
+                          <span
+                            class="inline-flex h-6 w-6 items-center justify-center rounded border border-nvidia-green/40 bg-nvidia-green/10 text-nvidia-gray-700"
+                            title={`Output: ${modalityLabel(output, 'output')}`}
+                          >
+                            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><Fragment set:html={modalityIcon(output)} /></svg>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </td>
                   {moduleFilterOptions.map((mod) => (
                     <td class="px-1 py-2 align-middle text-center border-l border-nvidia-gray-100">
@@ -424,9 +1068,6 @@ const families = Array.from(new Set(models.map(m => m.family)))
                         (model.supported_inference_engines.length > 0 || oneShotHasRunModalContent(model.one_shot_inference)) && (
                           <RunCommand modelId={model.id} modelName={model.name} category={model.category} forceModal={model.category === 'Image'} supportedEngines={model.supported_inference_engines} hfCheckpoint={model.hf_checkpoint} matrixModulesDisabled={model.matrix_modules_disabled} oneShotInference={model.one_shot_inference} />
                         )}
-                      <a href={`/models/${model.id}`} class="px-3 py-1.5 rounded-md bg-nvidia-gray-100 text-nvidia-gray-900 hover:bg-nvidia-green hover:text-nvidia-black text-xs font-semibold transition-colors">
-                        Details
-                      </a>
                     </div>
                   </td>
                 </tr>
@@ -438,7 +1079,12 @@ const families = Array.from(new Set(models.map(m => m.family)))
       <div id="no-results" class="hidden py-20 text-center">
         <div class="text-6xl mb-4">🔍</div>
         <h3 class="text-xl font-bold text-nvidia-black mb-2">No models found</h3>
-        <p class="text-nvidia-gray-600">Try a different model name filter or clear column checkboxes in the table header</p>
+        <p class="text-nvidia-gray-600">Try a different search or clear one of the active filters.</p>
+        <button type="button" data-clear-model-filters class="mt-4 px-4 py-2 rounded-lg bg-nvidia-black text-white text-sm font-semibold hover:bg-nvidia-gray-800">
+          Clear all filters
+        </button>
+      </div>
+        </div>
       </div>
     </div>
   </section>
@@ -458,12 +1104,46 @@ const families = Array.from(new Set(models.map(m => m.family)))
 
 <script>
   const MODELS_DIRECTORY_VIEW_KEY = 'jetson-ai-lab-models-directory-view';
+  const MODELS_DEVICE_FILTER_VIEW_KEY = 'jetson-ai-lab-models-device-filter-view';
+  const MODELS_DIRECTORY_COLUMNS_KEY = 'jetson-ai-lab-models-card-columns';
+  const MODELS_DIRECTORY_FIT_KEY = 'jetson-ai-lab-models-card-fit';
+  const MODELS_DIRECTORY_ORDER_KEY = 'jetson-ai-lab-model-family-order-v1';
+  const MODELS_COMPACT_ART_KEY = 'jetson-ai-lab-models-compact-artwork';
+  const MODEL_VISUALS_KEY = 'jetson-ai-lab:model-visuals';
 
   const SORT_ATTR: Record<string, string> = {
     name: 'data-sort-name',
     family: 'data-sort-family',
-    vision: 'data-sort-vision',
+    output: 'data-sort-output',
   };
+
+  function initFeaturedModelsCarousel() {
+    const track = document.getElementById('featured-models-track');
+    const previous = document.getElementById('featured-models-previous') as HTMLButtonElement | null;
+    const next = document.getElementById('featured-models-next') as HTMLButtonElement | null;
+    if (!track || !previous || !next || track.dataset.carouselListeners === '1') return;
+
+    track.dataset.carouselListeners = '1';
+
+    const updateControls = () => {
+      const maxScroll = Math.max(0, track.scrollWidth - track.clientWidth);
+      previous.disabled = track.scrollLeft <= 2;
+      next.disabled = track.scrollLeft >= maxScroll - 2;
+    };
+    const scrollFeaturedModels = (direction: -1 | 1) => {
+      track.scrollBy({
+        left: direction * Math.max(260, Math.min(track.clientWidth * 0.75, 840)),
+        behavior: 'smooth',
+      });
+    };
+
+    previous.addEventListener('click', () => scrollFeaturedModels(-1));
+    next.addEventListener('click', () => scrollFeaturedModels(1));
+    track.addEventListener('scroll', updateControls, { passive: true });
+    track.addEventListener('featured-models:updated', updateControls);
+    window.addEventListener('resize', updateControls);
+    requestAnimationFrame(updateControls);
+  }
 
   function initModelDirectoryFilters() {
     const directory = document.getElementById('directory');
@@ -471,14 +1151,314 @@ const families = Array.from(new Set(models.map(m => m.family)))
 
     const noResults = document.getElementById('no-results');
     const cardsSearchBar = document.getElementById('models-search-cards-bar');
-    const featuredSection = document.getElementById('featured-models-section');
     const cardsArea = document.getElementById('models-directory-cards');
     const tableArea = document.getElementById('models-directory-table');
     const tableBody = document.getElementById('models-table-body');
     const btnCards = document.getElementById('models-view-cards');
+    const btnCompact = document.getElementById('models-view-compact');
     const btnTable = document.getElementById('models-view-table');
+    const cardsViewControl = document.getElementById('models-cards-view-control');
+    const compactViewControl = document.getElementById('models-compact-view-control');
+    const cardColumnsMenuButton = document.getElementById('models-card-columns-menu-button') as HTMLButtonElement | null;
+    const cardColumnsMenu = document.getElementById('models-card-columns-menu');
+    const compactArtMenuButton = document.getElementById('models-compact-art-menu-button') as HTMLButtonElement | null;
+    const compactArtMenu = document.getElementById('models-compact-art-menu');
+    const cardRearrangeControl = document.getElementById('models-card-rearrange-control');
+    const cardRearrangeButton = document.getElementById('models-card-rearrange') as HTMLButtonElement | null;
+    const cardOrderReset = document.getElementById('models-card-order-reset') as HTMLButtonElement | null;
+    const cardOrderStatus = document.getElementById('models-card-order-status');
+    const cardColumnButtons = Array.from(directory.querySelectorAll<HTMLButtonElement>('.models-card-columns-toggle[data-card-columns]'));
+    const cardFitButtons = Array.from(directory.querySelectorAll<HTMLButtonElement>('.models-card-fit-toggle[data-card-fit]'));
+    const compactArtButtons = Array.from(directory.querySelectorAll<HTMLButtonElement>('.models-compact-art-toggle[data-compact-art]'));
+    const filterPanel = document.getElementById('models-filter-panel');
+    const mobileFilterToggle = document.getElementById('models-mobile-filter-toggle');
+    const mobileFilterCount = document.getElementById('models-mobile-filter-count');
+    const filterReset = document.getElementById('models-filter-reset');
+    const activeFilters = document.getElementById('models-active-filters');
+    const resultCount = document.getElementById('models-result-count');
 
     let currentSearch = '';
+    let catalogFilterMode: 'simple' | 'advanced' = 'simple';
+    const defaultFamilyOrder = cardsArea
+      ? Array.from(cardsArea.querySelectorAll<HTMLElement>('.model-family-group')).map((group) => group.dataset.family || '')
+      : [];
+    let rearrangingFamilies = false;
+    let draggedFamily: HTMLElement | null = null;
+    let activePointerId: number | null = null;
+    let lastDropTarget: HTMLElement | null = null;
+    let familyOrderChanged = false;
+    let familyDragGhost: HTMLElement | null = null;
+    let familyDragOffsetX = 0;
+    let familyDragOffsetY = 0;
+    const reduceFamilyMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let familyLayoutFrame = 0;
+
+    function layoutFamilyCards() {
+      if (!cardsArea) return;
+      cancelAnimationFrame(familyLayoutFrame);
+      familyLayoutFrame = requestAnimationFrame(() => {
+        const groups = familyCards();
+        groups.forEach((group) => { group.style.gridRowEnd = 'auto'; });
+        if (cardsArea.dataset.cardLayout !== 'legacy' || cardsArea.dataset.cardFit !== 'content') return;
+        const styles = getComputedStyle(cardsArea);
+        const rowHeight = Number.parseFloat(styles.gridAutoRows) || 4;
+        const rowGap = Number.parseFloat(styles.rowGap) || 24;
+        groups.forEach((group) => {
+          if (group.style.display === 'none') return;
+          const span = Math.ceil((group.getBoundingClientRect().height + rowGap) / (rowHeight + rowGap));
+          group.style.gridRowEnd = `span ${span}`;
+        });
+      });
+    }
+
+    function familyCards(): HTMLElement[] {
+      return cardsArea ? Array.from(cardsArea.querySelectorAll<HTMLElement>('.model-family-group')) : [];
+    }
+
+    function announceFamilyOrder(message: string) {
+      if (cardOrderStatus) cardOrderStatus.textContent = message;
+    }
+
+    function hasSavedFamilyOrder(): boolean {
+      try {
+        return !!localStorage.getItem(MODELS_DIRECTORY_ORDER_KEY);
+      } catch {
+        return false;
+      }
+    }
+
+    function persistFamilyOrder() {
+      try {
+        localStorage.setItem(
+          MODELS_DIRECTORY_ORDER_KEY,
+          JSON.stringify(familyCards().map((group) => group.dataset.family).filter(Boolean))
+        );
+      } catch {
+        /* ignore */
+      }
+      cardOrderReset?.classList.remove('hidden');
+      if (cardOrderReset) cardOrderReset.disabled = false;
+    }
+
+    function applyFamilyOrder(order: string[]) {
+      if (!cardsArea) return;
+      const groups = familyCards();
+      const byFamily = new Map(groups.map((group) => [group.dataset.family || '', group]));
+      const used = new Set<string>();
+      order.forEach((family) => {
+        const group = byFamily.get(family);
+        if (group && !used.has(family)) {
+          cardsArea.appendChild(group);
+          used.add(family);
+        }
+      });
+      groups.forEach((group) => {
+        const family = group.dataset.family || '';
+        if (!used.has(family)) cardsArea.appendChild(group);
+      });
+      layoutFamilyCards();
+    }
+
+    function restoreFamilyOrder() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(MODELS_DIRECTORY_ORDER_KEY) || '[]');
+        if (Array.isArray(stored) && stored.every((family) => typeof family === 'string')) applyFamilyOrder(stored);
+      } catch {
+        /* ignore malformed local preference */
+      }
+      const hasSavedOrder = hasSavedFamilyOrder();
+      cardOrderReset?.classList.toggle('hidden', !hasSavedOrder);
+      if (cardOrderReset) cardOrderReset.disabled = !hasSavedOrder;
+    }
+
+    function setFamilyRearrangeMode(active: boolean) {
+      if (!active && draggedFamily) finishFamilyDrag();
+      rearrangingFamilies = active;
+      if (cardsArea) cardsArea.dataset.rearranging = active ? 'true' : 'false';
+      cardRearrangeButton?.setAttribute('aria-pressed', active ? 'true' : 'false');
+      const label = cardRearrangeButton?.querySelector<HTMLElement>('[data-rearrange-label]');
+      if (label) label.textContent = 'Done';
+      cardRearrangeControl?.classList.toggle('hidden', !active);
+      cardRearrangeControl?.classList.toggle('flex', active);
+      const hasSavedOrder = hasSavedFamilyOrder();
+      cardOrderReset?.classList.toggle('hidden', !active || !hasSavedOrder);
+      if (active) announceFamilyOrder('Rearrange mode enabled. Drag family handles or use the arrow keys.');
+    }
+
+    function clearFamilyDropTarget() {
+      lastDropTarget?.classList.remove('model-family-drop-target');
+      lastDropTarget = null;
+    }
+
+    function visibleFamilyCards(): HTMLElement[] {
+      return familyCards().filter((group) => group.style.display !== 'none');
+    }
+
+    function captureFamilyRects(): Map<HTMLElement, DOMRect> {
+      return new Map(
+        visibleFamilyCards()
+          .filter((group) => group !== draggedFamily)
+          .map((group) => [group, group.getBoundingClientRect()])
+      );
+    }
+
+    function animateFamilyReflow(before: Map<HTMLElement, DOMRect>) {
+      if (reduceFamilyMotion) return;
+      requestAnimationFrame(() => {
+        before.forEach((oldBounds, group) => {
+          if (!group.isConnected || group.style.display === 'none') return;
+          const newBounds = group.getBoundingClientRect();
+          const deltaX = oldBounds.left - newBounds.left;
+          const deltaY = oldBounds.top - newBounds.top;
+          if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+          group.animate(
+            [
+              { transform: `translate3d(${deltaX}px, ${deltaY}px, 0)` },
+              { transform: 'translate3d(0, 0, 0)' },
+            ],
+            { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }
+          );
+        });
+      });
+    }
+
+    function createFamilyDragGhost(group: HTMLElement, clientX: number, clientY: number) {
+      const bounds = group.getBoundingClientRect();
+      const ghost = group.cloneNode(true) as HTMLElement;
+      ghost.classList.add('model-family-drag-ghost');
+      ghost.removeAttribute('data-family');
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.style.width = `${bounds.width}px`;
+      ghost.style.height = `${bounds.height}px`;
+      ghost.querySelectorAll<HTMLElement>('a, button, [tabindex]').forEach((element) => element.setAttribute('tabindex', '-1'));
+      familyDragOffsetX = clientX - bounds.left;
+      familyDragOffsetY = clientY - bounds.top;
+      ghost.style.left = `${clientX - familyDragOffsetX}px`;
+      ghost.style.top = `${clientY - familyDragOffsetY}px`;
+      (cardsArea || document.body).appendChild(ghost);
+      familyDragGhost = ghost;
+    }
+
+    function positionFamilyDragGhost(clientX: number, clientY: number) {
+      if (!familyDragGhost) return;
+      familyDragGhost.style.left = `${clientX - familyDragOffsetX}px`;
+      familyDragGhost.style.top = `${clientY - familyDragOffsetY}px`;
+    }
+
+    function finishFamilyDrag() {
+      if (!draggedFamily) return;
+      const droppedGroup = draggedFamily;
+      const ghost = familyDragGhost;
+      document.documentElement.classList.remove('model-family-drag-active');
+      clearFamilyDropTarget();
+      if (familyOrderChanged) {
+        persistFamilyOrder();
+        announceFamilyOrder(`${droppedGroup.dataset.family || 'Model family'} moved. New order saved in this browser.`);
+      }
+      draggedFamily = null;
+      familyDragGhost = null;
+      activePointerId = null;
+      familyOrderChanged = false;
+      const revealGroup = () => {
+        ghost?.remove();
+        droppedGroup.classList.remove('model-family-dragging');
+      };
+      if (ghost && !reduceFamilyMotion) {
+        const destination = droppedGroup.getBoundingClientRect();
+        const animation = ghost.animate(
+          [
+            { left: ghost.style.left, top: ghost.style.top, opacity: 0.96, transform: 'rotate(0.6deg) scale(1.01)' },
+            { left: `${destination.left}px`, top: `${destination.top}px`, opacity: 0.3, transform: 'rotate(0deg) scale(1)' },
+          ],
+          { duration: 170, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' }
+        );
+        animation.finished.then(revealGroup).catch(revealGroup);
+      } else {
+        revealGroup();
+      }
+    }
+
+    function moveFamilyByKeyboard(handle: HTMLButtonElement, key: string) {
+      if (!cardsArea || !rearrangingFamilies) return;
+      const group = handle.closest<HTMLElement>('.model-family-group');
+      if (!group) return;
+      const groups = visibleFamilyCards();
+      const currentIndex = groups.indexOf(group);
+      if (currentIndex < 0) return;
+      const columnCount = Math.max(1, getComputedStyle(cardsArea).gridTemplateColumns.split(/\s+/).length);
+      const offsets: Record<string, number> = {
+        ArrowLeft: -1,
+        ArrowRight: 1,
+        ArrowUp: -columnCount,
+        ArrowDown: columnCount,
+      };
+      let nextIndex = key === 'Home' ? 0 : key === 'End' ? groups.length - 1 : currentIndex + (offsets[key] || 0);
+      nextIndex = Math.max(0, Math.min(groups.length - 1, nextIndex));
+      if (nextIndex === currentIndex) return;
+      const before = captureFamilyRects();
+      const target = groups[nextIndex];
+      if (nextIndex > currentIndex) target.after(group);
+      else target.before(group);
+      persistFamilyOrder();
+      animateFamilyReflow(before);
+      handle.focus();
+      announceFamilyOrder(`${group.dataset.family || 'Model family'} moved to position ${nextIndex + 1} of ${groups.length}.`);
+    }
+
+    function setDeviceFilterIconView(iconView: boolean) {
+      directory.querySelectorAll<HTMLButtonElement>('[data-device-icon-toggle]').forEach((button) => {
+        button.setAttribute('aria-pressed', iconView ? 'true' : 'false');
+      });
+      directory.querySelectorAll<HTMLElement>('[data-device-compact-filters]').forEach((panel) => {
+        panel.classList.toggle('hidden', iconView);
+      });
+      directory.querySelectorAll<HTMLElement>('[data-device-icon-filters]').forEach((panel) => {
+        panel.classList.toggle('hidden', !iconView);
+        panel.classList.toggle('grid', iconView);
+      });
+      try {
+        localStorage.setItem(MODELS_DEVICE_FILTER_VIEW_KEY, iconView ? 'icons' : 'compact');
+      } catch {
+        /* ignore */
+      }
+    }
+
+    function refreshModelFreshness() {
+      const windowDays = Number(directory.dataset.newWindowDays || '60');
+      const dayMs = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+
+      document.querySelectorAll<HTMLElement>('[data-model-freshness]').forEach((element) => {
+        const addedDate = element.dataset.catalogAddedAt;
+        const newUntilDate = element.dataset.newUntil;
+        let isNew = element.dataset.legacyIsNew === 'true';
+
+        if (addedDate) {
+          const addedAt = Date.parse(`${addedDate}T00:00:00Z`);
+          if (!Number.isFinite(addedAt) || now < addedAt) {
+            isNew = false;
+          } else if (newUntilDate) {
+            const newUntil = Date.parse(`${newUntilDate}T00:00:00Z`);
+            isNew = Number.isFinite(newUntil) && now < newUntil + dayMs;
+          } else {
+            isNew = now < addedAt + windowDays * dayMs;
+          }
+        }
+
+        element.dataset.status = isNew ? 'new' : 'stable';
+        element.querySelectorAll<HTMLElement>('[data-model-new-badge]').forEach((badge) => {
+          badge.classList.toggle('hidden', !isNew);
+        });
+      });
+
+      const newCount = directory.querySelectorAll('.model-card[data-status="new"]').length;
+      directory.querySelectorAll<HTMLElement>('[data-catalog-new-count]').forEach((count) => {
+        count.textContent = String(newCount);
+      });
+      directory.querySelectorAll<HTMLElement>('[data-catalog-new-toggle]').forEach((toggle) => {
+        toggle.classList.toggle('hidden', newCount === 0);
+      });
+    }
     let tableSortCol = '';
     let tableSortDir: 'asc' | 'desc' = 'asc';
 
@@ -498,12 +1478,113 @@ const families = Array.from(new Set(models.map(m => m.family)))
       return s;
     }
 
+    function selectedCatalogInputIds(): Set<string> {
+      const s = new Set<string>();
+      directory.querySelectorAll<HTMLInputElement>('[data-catalog-input-filter]').forEach((cb) => {
+        if (cb.checked && cb.value) s.add(cb.value);
+      });
+      return s;
+    }
+
+    function selectedCatalogOutputIds(): Set<string> {
+      const s = new Set<string>();
+      directory.querySelectorAll<HTMLInputElement>('[data-catalog-output-filter]').forEach((cb) => {
+        if (cb.checked && cb.value) s.add(cb.value);
+      });
+      return s;
+    }
+
+    function selectedCatalogType(): string | null {
+      const selected = directory.querySelector<HTMLButtonElement>(
+        '[data-catalog-type-filter]:not([data-catalog-type-filter="all"])[aria-pressed="true"]'
+      );
+      return selected?.dataset.catalogTypeFilter || null;
+    }
+
+    function setCatalogType(type: string | null) {
+      const selectedType = type || 'all';
+      directory.querySelectorAll<HTMLButtonElement>('[data-catalog-type-filter]').forEach((button) => {
+        button.setAttribute('aria-pressed', button.dataset.catalogTypeFilter === selectedType ? 'true' : 'false');
+      });
+    }
+
+    function setCatalogFilterMode(mode: 'simple' | 'advanced', clearOtherMode = false) {
+      catalogFilterMode = mode;
+      directory.querySelectorAll<HTMLButtonElement>('[data-catalog-filter-mode]').forEach((button) => {
+        button.setAttribute('aria-pressed', button.dataset.catalogFilterMode === mode ? 'true' : 'false');
+      });
+      directory.querySelectorAll<HTMLElement>('[data-catalog-simple-filters]').forEach((panel) => {
+        panel.classList.toggle('hidden', mode !== 'simple');
+      });
+      directory.querySelectorAll<HTMLElement>('[data-catalog-advanced-filters]').forEach((panel) => {
+        panel.classList.toggle('hidden', mode !== 'advanced');
+      });
+
+      if (!clearOtherMode) return;
+      if (mode === 'simple') {
+        directory
+          .querySelectorAll<HTMLInputElement>('[data-catalog-input-filter], [data-catalog-output-filter]')
+          .forEach((input) => { input.checked = false; });
+      } else {
+        setCatalogType(null);
+      }
+    }
+
+    function newModelsOnly(): boolean {
+      return Array.from(directory.querySelectorAll<HTMLButtonElement>('[data-catalog-new-toggle]')).some(
+        (button) => button.getAttribute('aria-pressed') === 'true'
+      );
+    }
+
+    function setNewModelsOnly(active: boolean) {
+      directory.querySelectorAll<HTMLButtonElement>('[data-catalog-new-toggle]').forEach((button) => {
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
+
     function rowMatchesFilters(el: Element): boolean {
-      const name = el.getAttribute('data-name') || '';
-      const matchesSearch = !currentSearch || name.includes(currentSearch);
+      const searchText = el.getAttribute('data-search') || el.getAttribute('data-name') || '';
+      const matchesSearch = !currentSearch || searchText.includes(currentSearch);
+      const selectedType = selectedCatalogType();
+      const matchesType = catalogFilterMode !== 'simple' || !selectedType || el.getAttribute('data-catalog-type') === selectedType;
+      const matchesInputs = elementMatchesCatalogInputFilter(el);
+      const matchesOutputs = elementMatchesCatalogOutputFilter(el);
       const matchesModules = elementMatchesCatalogModuleFilter(el);
       const matchesEngines = elementMatchesCatalogEngineFilter(el);
-      return matchesSearch && matchesModules && matchesEngines;
+      const matchesRelease = !newModelsOnly() || el.getAttribute('data-status') === 'new';
+      return matchesSearch && matchesType && matchesInputs && matchesOutputs && matchesModules && matchesEngines && matchesRelease;
+    }
+
+    function elementMatchesCatalogInputFilter(el: Element): boolean {
+      const sel = selectedCatalogInputIds();
+      if (sel.size === 0) return true;
+      const raw = el.getAttribute('data-catalog-inputs') || '';
+      const ids = new Set(
+        raw
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean)
+      );
+      for (const id of sel) {
+        if (ids.has(id)) return true;
+      }
+      return false;
+    }
+
+    function elementMatchesCatalogOutputFilter(el: Element): boolean {
+      const sel = selectedCatalogOutputIds();
+      if (sel.size === 0) return true;
+      const raw = el.getAttribute('data-catalog-outputs') || '';
+      const ids = new Set(
+        raw
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean)
+      );
+      for (const id of sel) {
+        if (ids.has(id)) return true;
+      }
+      return false;
     }
 
     function elementMatchesCatalogModuleFilter(el: Element): boolean {
@@ -542,7 +1623,7 @@ const families = Array.from(new Set(models.map(m => m.family)))
       return !!(tableArea && !tableArea.classList.contains('hidden'));
     }
 
-    function setViewMode(mode: 'cards' | 'table') {
+    function setViewMode(mode: 'cards' | 'compact' | 'table') {
       try {
         localStorage.setItem(MODELS_DIRECTORY_VIEW_KEY, mode);
       } catch {
@@ -556,20 +1637,116 @@ const families = Array.from(new Set(models.map(m => m.family)))
           tableArea.classList.add('hidden');
           cardsArea.classList.remove('hidden');
         }
+        cardsArea.dataset.cardLayout = mode === 'compact' ? 'compact' : 'legacy';
+        layoutFamilyCards();
       }
-      btnCards?.classList.toggle('bg-white', mode === 'cards');
-      btnCards?.classList.toggle('shadow-sm', mode === 'cards');
-      btnCards?.classList.toggle('text-nvidia-black', mode === 'cards');
-      btnCards?.classList.toggle('text-nvidia-gray-600', mode !== 'cards');
-      btnTable?.classList.toggle('bg-white', mode === 'table');
-      btnTable?.classList.toggle('shadow-sm', mode === 'table');
-      btnTable?.classList.toggle('text-nvidia-black', mode === 'table');
-      btnTable?.classList.toggle('text-nvidia-gray-600', mode !== 'table');
-      btnCards?.setAttribute('aria-pressed', mode === 'cards' ? 'true' : 'false');
-      btnTable?.setAttribute('aria-pressed', mode === 'table' ? 'true' : 'false');
+      [btnCompact, btnTable].forEach((button) => {
+        const selected = button?.dataset.view === mode;
+        button?.classList.toggle('bg-white', selected);
+        button?.classList.toggle('shadow-sm', selected);
+        button?.classList.toggle('text-nvidia-black', selected);
+        button?.classList.toggle('text-nvidia-gray-600', !selected);
+        button?.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      });
+      const cardsSelected = mode === 'cards';
+      btnCards?.classList.toggle('text-nvidia-black', cardsSelected);
+      btnCards?.classList.toggle('text-nvidia-gray-600', !cardsSelected);
+      btnCards?.setAttribute('aria-pressed', cardsSelected ? 'true' : 'false');
+      cardsViewControl?.classList.toggle('bg-white', cardsSelected);
+      cardsViewControl?.classList.toggle('shadow-sm', cardsSelected);
+      cardsViewControl?.classList.toggle('text-nvidia-black', cardsSelected);
+      cardsViewControl?.classList.toggle('text-nvidia-gray-600', !cardsSelected);
+      const compactSelected = mode === 'compact';
+      compactViewControl?.classList.toggle('bg-white', compactSelected);
+      compactViewControl?.classList.toggle('shadow-sm', compactSelected);
+      compactViewControl?.classList.toggle('text-nvidia-black', compactSelected);
+      compactViewControl?.classList.toggle('text-nvidia-gray-600', !compactSelected);
       if (cardsSearchBar) {
         cardsSearchBar.classList.toggle('hidden', mode === 'table');
       }
+      if (!cardsSelected) setCardColumnsMenu(false);
+      if (!compactSelected) {
+        compactArtMenu?.classList.add('hidden');
+        compactArtMenuButton?.setAttribute('aria-expanded', 'false');
+      }
+      if (mode !== 'cards' && rearrangingFamilies) setFamilyRearrangeMode(false);
+    }
+
+    function setCardColumnsMenu(open: boolean) {
+      cardColumnsMenu?.classList.toggle('hidden', !open);
+      cardColumnsMenuButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function setCardColumns(columns: '3' | '4') {
+      try {
+        localStorage.setItem(MODELS_DIRECTORY_COLUMNS_KEY, columns);
+      } catch {
+        /* ignore */
+      }
+      if (cardsArea) cardsArea.dataset.cardColumns = columns;
+      cardColumnButtons.forEach((button) => {
+        const selected = button.dataset.cardColumns === columns;
+        button.classList.toggle('bg-nvidia-gray-100', selected);
+        button.classList.toggle('text-nvidia-black', selected);
+        button.classList.toggle('text-nvidia-gray-600', !selected);
+        button.setAttribute('aria-checked', selected ? 'true' : 'false');
+        button.querySelector('[data-card-columns-check]')?.classList.toggle('hidden', !selected);
+      });
+      layoutFamilyCards();
+    }
+
+    function setCardFit(fit: 'aligned' | 'content') {
+      try {
+        localStorage.setItem(MODELS_DIRECTORY_FIT_KEY, fit);
+      } catch {
+        /* ignore */
+      }
+      if (cardsArea) cardsArea.dataset.cardFit = fit;
+      cardFitButtons.forEach((button) => {
+        const selected = button.dataset.cardFit === fit;
+        button.classList.toggle('text-nvidia-black', selected);
+        button.classList.toggle('text-nvidia-gray-600', !selected);
+        button.setAttribute('aria-checked', selected ? 'true' : 'false');
+        button.querySelector('[data-card-fit-check]')?.classList.toggle('hidden', !selected);
+      });
+      layoutFamilyCards();
+    }
+
+    function setCompactArtwork(mode: 'model' | 'family') {
+      try {
+        localStorage.setItem(MODELS_COMPACT_ART_KEY, mode);
+      } catch {
+        /* ignore */
+      }
+      if (cardsArea) cardsArea.dataset.compactArt = mode;
+      compactArtButtons.forEach((button) => {
+        const selected = button.dataset.compactArt === mode;
+        button.classList.toggle('text-nvidia-black', selected);
+        button.classList.toggle('text-nvidia-gray-600', !selected);
+        button.setAttribute('aria-checked', selected ? 'true' : 'false');
+        button.querySelector('[data-compact-art-check]')?.classList.toggle('hidden', !selected);
+      });
+    }
+
+    function applySharedVisualPreference() {
+      let enabled = true;
+      try {
+        enabled = localStorage.getItem(MODEL_VISUALS_KEY) !== 'off';
+      } catch {
+        /* retain the visible default */
+      }
+      if (cardsArea) cardsArea.dataset.visualsEnabled = enabled ? 'true' : 'false';
+      compactArtMenuButton?.classList.toggle('hidden', !enabled);
+      btnCompact?.classList.toggle('rounded-r-md', !enabled);
+      if (!enabled) {
+        compactArtMenu?.classList.add('hidden');
+        compactArtMenuButton?.setAttribute('aria-expanded', 'false');
+      }
+      compactArtButtons.forEach((button) => {
+        button.disabled = !enabled;
+        button.classList.toggle('opacity-40', !enabled);
+        button.title = enabled ? '' : 'Model visual is off';
+      });
     }
 
     function updateSortIndicators(activeCol: string, dir: 'asc' | 'desc') {
@@ -611,26 +1788,145 @@ const families = Array.from(new Set(models.map(m => m.family)))
       updateSortIndicators(col, tableSortDir);
     }
 
+    function displayLabelForFilter(selector: string, value: string): string {
+      const input = Array.from(directory.querySelectorAll<HTMLInputElement>(selector)).find((item) => item.value === value);
+      const label = input?.closest('label')?.querySelector('[data-catalog-filter-label]');
+      return label?.textContent?.trim() || value;
+    }
+
+    function renderActiveFilters() {
+      if (!activeFilters) return;
+      activeFilters.replaceChildren();
+
+      const filters: Array<{ kind: string; value: string; label: string }> = [];
+      const selectedType = selectedCatalogType();
+      if (catalogFilterMode === 'simple' && selectedType) {
+        filters.push({ kind: 'type', value: selectedType, label: selectedType.toUpperCase() });
+      }
+      selectedCatalogInputIds().forEach((value) => {
+        filters.push({ kind: 'input', value, label: `Input: ${displayLabelForFilter('[data-catalog-input-filter]', value)}` });
+      });
+      selectedCatalogOutputIds().forEach((value) => {
+        filters.push({ kind: 'output', value, label: `Output: ${displayLabelForFilter('[data-catalog-output-filter]', value)}` });
+      });
+      selectedCatalogModuleIds().forEach((value) => {
+        filters.push({ kind: 'module', value, label: displayLabelForFilter('[data-catalog-module-filter]', value) });
+      });
+      selectedCatalogEngineIds().forEach((value) => {
+        filters.push({ kind: 'engine', value, label: displayLabelForFilter('[data-catalog-engine-filter]', value) });
+      });
+      if (newModelsOnly()) filters.push({ kind: 'new', value: 'new', label: 'New models' });
+
+      for (const filter of filters) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className =
+          'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-nvidia-green/40 bg-nvidia-green/10 px-3 py-1 text-xs font-semibold text-nvidia-gray-800 hover:bg-nvidia-green/20';
+        chip.dataset.removeCatalogFilter = filter.kind;
+        chip.dataset.filterValue = filter.value;
+        chip.textContent = `${filter.label} ×`;
+        chip.setAttribute('aria-label', `Remove ${filter.label} filter`);
+        activeFilters.appendChild(chip);
+      }
+
+      filterReset?.classList.toggle('hidden', filters.length === 0 && !currentSearch);
+      mobileFilterCount?.classList.toggle('hidden', filters.length === 0);
+      if (mobileFilterCount) mobileFilterCount.textContent = String(filters.length);
+    }
+
+    function syncFilterUrl() {
+      const url = new URL(window.location.href);
+      for (const key of ['task', 'capability', 'mode', 'type', 'input', 'output', 'device', 'runtime', 'new', 'q']) url.searchParams.delete(key);
+      if (catalogFilterMode === 'advanced') url.searchParams.set('mode', 'advanced');
+      const selectedType = selectedCatalogType();
+      if (catalogFilterMode === 'simple' && selectedType) url.searchParams.set('type', selectedType);
+      selectedCatalogInputIds().forEach((value) => url.searchParams.append('input', value));
+      selectedCatalogOutputIds().forEach((value) => url.searchParams.append('output', value));
+      selectedCatalogModuleIds().forEach((value) => url.searchParams.append('device', value));
+      selectedCatalogEngineIds().forEach((value) => url.searchParams.append('runtime', value));
+      if (newModelsOnly()) url.searchParams.set('new', '1');
+      if (currentSearch) url.searchParams.set('q', currentSearch);
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+
+    function setCheckedForFilter(selector: string, value: string, checked: boolean) {
+      directory.querySelectorAll<HTMLInputElement>(selector).forEach((input) => {
+        if (input.value === value) input.checked = checked;
+      });
+    }
+
+    function restoreFiltersFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      params.getAll('input').forEach((value) => setCheckedForFilter('[data-catalog-input-filter]', value, true));
+      params.getAll('output').forEach((value) => setCheckedForFilter('[data-catalog-output-filter]', value, true));
+      params.getAll('device').forEach((value) => setCheckedForFilter('[data-catalog-module-filter]', value, true));
+      params.getAll('runtime').forEach((value) => setCheckedForFilter('[data-catalog-engine-filter]', value, true));
+      const requestedType = params.get('type');
+      if (requestedType && ['llm', 'vlm', 'vla'].includes(requestedType)) setCatalogType(requestedType);
+      const hasCapabilityFilters = params.has('input') || params.has('output');
+      setCatalogFilterMode(params.get('mode') === 'advanced' || hasCapabilityFilters ? 'advanced' : 'simple');
+      setNewModelsOnly(params.get('new') === '1');
+      const query = params.get('q') || '';
+      currentSearch = query.toLowerCase().trim();
+      directory.querySelectorAll<HTMLInputElement>('.model-directory-search').forEach((input) => {
+        input.value = query;
+      });
+    }
+
+    function clearAllFilters() {
+      directory
+        .querySelectorAll<HTMLInputElement>(
+          '[data-catalog-input-filter], [data-catalog-output-filter], [data-catalog-module-filter], [data-catalog-engine-filter]'
+        )
+        .forEach((input) => {
+          input.checked = false;
+        });
+      setCatalogType(null);
+      setNewModelsOnly(false);
+      currentSearch = '';
+      directory.querySelectorAll<HTMLInputElement>('.model-directory-search').forEach((input) => {
+        input.value = '';
+      });
+      filterModels();
+    }
+
     function filterModels() {
       const modelGroups = document.querySelectorAll('.model-family-group');
       let hasVisibleInCards = false;
+      let visibleModelCount = 0;
 
       modelGroups.forEach((group) => {
-        const cards = group.querySelectorAll('.model-card');
+        const cards = Array.from(group.querySelectorAll<HTMLElement>('.model-card'));
+        const matchingCards = cards.filter((card) => rowMatchesFilters(card));
+        const expanded = (group as HTMLElement).dataset.familyExpanded === 'true';
+        const collapseFamily = cardsArea?.dataset.cardLayout === 'legacy' && !expanded;
         let visibleCardsInGroup = 0;
 
         cards.forEach((card) => {
-          const el = card as HTMLElement;
-          if (rowMatchesFilters(card)) {
-            el.style.display = '';
+          const matchIndex = matchingCards.indexOf(card);
+          if (matchIndex >= 0) {
+            card.style.display = !collapseFamily || matchIndex < 4 ? '' : 'none';
             visibleCardsInGroup++;
+            visibleModelCount++;
             hasVisibleInCards = true;
           } else {
-            el.style.display = 'none';
+            card.style.display = 'none';
           }
         });
 
-        (group as HTMLElement).style.display = visibleCardsInGroup > 0 ? 'flex' : 'none';
+        (group as HTMLElement).style.display = visibleCardsInGroup > 0 ? '' : 'none';
+        const moreButton = group.querySelector<HTMLButtonElement>('[data-family-expand]');
+        const moreLabel = group.querySelector<HTMLElement>('[data-family-more-label]');
+        const moreArrow = group.querySelector<HTMLElement>('[data-family-more-arrow]');
+        if (moreButton) {
+          moreButton.classList.toggle('hidden', cardsArea?.dataset.cardLayout !== 'legacy' || matchingCards.length <= 4);
+          moreButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        }
+        if (moreLabel) {
+          const remaining = Math.max(0, matchingCards.length - 4);
+          moreLabel.textContent = expanded ? 'Show fewer' : `+${remaining} ${remaining === 1 ? 'model' : 'models'}`;
+        }
+        if (moreArrow) moreArrow.textContent = expanded ? '↑' : '↓';
       });
 
       let hasVisibleInTable = false;
@@ -643,35 +1939,49 @@ const families = Array.from(new Set(models.map(m => m.family)))
         }
       });
 
-      if (featuredSection) {
-        let anyFeatured = false;
-        featuredSection.querySelectorAll<HTMLElement>('.model-catalog-card').forEach((wrap) => {
-          const name = wrap.getAttribute('data-name') || '';
-          const matchesSearch = !currentSearch || name.includes(currentSearch);
-          const matchesModules = elementMatchesCatalogModuleFilter(wrap);
-          const matchesEngines = elementMatchesCatalogEngineFilter(wrap);
-          const show = matchesSearch && matchesModules && matchesEngines;
-          wrap.style.display = show ? '' : 'none';
-          if (show) anyFeatured = true;
-        });
-        featuredSection.classList.toggle('hidden', !anyFeatured);
-      }
-
       const activeHasModels = isTableView() ? hasVisibleInTable : hasVisibleInCards;
-      const anyShown = activeHasModels || (featuredSection && !featuredSection.classList.contains('hidden'));
-      noResults?.classList.toggle('hidden', anyShown);
+      noResults?.classList.toggle('hidden', activeHasModels);
+      if (resultCount) resultCount.textContent = `${visibleModelCount} ${visibleModelCount === 1 ? 'model' : 'models'}`;
+      renderActiveFilters();
+      syncFilterUrl();
+      layoutFamilyCards();
     }
+
+    refreshModelFreshness();
 
     if (directory.dataset.modelsFilterListeners !== '1') {
       directory.dataset.modelsFilterListeners = '1';
 
-      let initial: 'cards' | 'table' = 'cards';
+      let initial: 'cards' | 'compact' | 'table' = 'cards';
+      let initialCardColumns: '3' | '4' = '4';
+      let initialCardFit: 'aligned' | 'content' = 'aligned';
+      let initialCompactArtwork: 'model' | 'family' = 'model';
       try {
         const v = localStorage.getItem(MODELS_DIRECTORY_VIEW_KEY);
-        if (v === 'table' || v === 'cards') initial = v;
+        if (v === 'table' || v === 'compact' || v === 'cards') initial = v;
+        const columns = localStorage.getItem(MODELS_DIRECTORY_COLUMNS_KEY);
+        if (columns === '3' || columns === '4') initialCardColumns = columns;
+        const fit = localStorage.getItem(MODELS_DIRECTORY_FIT_KEY);
+        if (fit === 'aligned' || fit === 'content') initialCardFit = fit;
+        const compactArtwork = localStorage.getItem(MODELS_COMPACT_ART_KEY);
+        if (compactArtwork === 'family') initialCompactArtwork = 'family';
+        else if (compactArtwork === 'model' || compactArtwork === 'card' || compactArtwork === 'off') initialCompactArtwork = 'model';
       } catch {
         /* ignore */
       }
+      let deviceIconView = false;
+      try {
+        deviceIconView = localStorage.getItem(MODELS_DEVICE_FILTER_VIEW_KEY) === 'icons';
+      } catch {
+        /* ignore */
+      }
+      setDeviceFilterIconView(deviceIconView);
+      restoreFiltersFromUrl();
+      restoreFamilyOrder();
+      setCardColumns(initialCardColumns);
+      setCardFit(initialCardFit);
+      setCompactArtwork(initialCompactArtwork);
+      applySharedVisualPreference();
       setViewMode(initial);
 
       directory.querySelectorAll<HTMLInputElement>('.model-directory-search').forEach((input) => {
@@ -684,20 +1994,169 @@ const families = Array.from(new Set(models.map(m => m.family)))
           filterModels();
         });
       });
-      const firstSearch = directory.querySelector<HTMLInputElement>('.model-directory-search');
-      if (firstSearch) currentSearch = firstSearch.value.toLowerCase().trim();
 
       btnCards?.addEventListener('click', () => {
+        setCardColumnsMenu(false);
         setViewMode('cards');
+        filterModels();
+      });
+      cardColumnsMenuButton?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const willOpen = cardColumnsMenu?.classList.contains('hidden') ?? false;
+        if (btnCards?.getAttribute('aria-pressed') !== 'true') {
+          setViewMode('cards');
+          filterModels();
+        }
+        setCardColumnsMenu(willOpen);
+      });
+      btnCompact?.addEventListener('click', () => {
+        setViewMode('compact');
         filterModels();
       });
       btnTable?.addEventListener('click', () => {
         setViewMode('table');
         filterModels();
       });
+      cardColumnButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const columns = button.dataset.cardColumns;
+          if (columns === '3' || columns === '4') {
+            setCardColumns(columns);
+            setCardColumnsMenu(false);
+            cardColumnsMenuButton?.focus();
+          }
+        });
+      });
+      cardFitButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const fit = button.dataset.cardFit;
+          if (fit === 'aligned' || fit === 'content') {
+            setCardFit(fit);
+            setCardColumnsMenu(false);
+            cardColumnsMenuButton?.focus();
+          }
+        });
+      });
+      compactArtButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const mode = button.dataset.compactArt;
+          if (mode === 'model' || mode === 'family') {
+            setCompactArtwork(mode);
+            compactArtMenu?.classList.add('hidden');
+            compactArtMenuButton?.setAttribute('aria-expanded', 'false');
+            compactArtMenuButton?.focus();
+          }
+        });
+      });
+      compactArtMenuButton?.addEventListener('click', () => {
+        const open = compactArtMenu?.classList.contains('hidden') ?? true;
+        compactArtMenu?.classList.toggle('hidden', !open);
+        compactArtMenuButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) setCardColumnsMenu(false);
+      });
+      window.addEventListener('storage', (event) => {
+        if (event.key === MODEL_VISUALS_KEY) applySharedVisualPreference();
+      });
+      window.addEventListener('resize', layoutFamilyCards, { passive: true });
+      document.addEventListener('click', (event) => {
+        if (!cardsViewControl?.contains(event.target as Node)) setCardColumnsMenu(false);
+        if (!compactViewControl?.contains(event.target as Node)) {
+          compactArtMenu?.classList.add('hidden');
+          compactArtMenuButton?.setAttribute('aria-expanded', 'false');
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || cardColumnsMenu?.classList.contains('hidden')) return;
+        setCardColumnsMenu(false);
+        cardColumnsMenuButton?.focus();
+      });
+      cardRearrangeButton?.addEventListener('click', () => {
+        setFamilyRearrangeMode(false);
+      });
+      cardOrderReset?.addEventListener('click', () => {
+        try {
+          localStorage.removeItem(MODELS_DIRECTORY_ORDER_KEY);
+        } catch {
+          /* ignore */
+        }
+        applyFamilyOrder(defaultFamilyOrder);
+        cardOrderReset.disabled = true;
+        cardOrderReset.classList.add('hidden');
+        announceFamilyOrder('Default model family order restored.');
+      });
+      cardsArea?.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0 || cardsArea.dataset.cardLayout !== 'legacy') return;
+        const handle = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-family-drag-handle]');
+        const group = handle?.closest<HTMLElement>('.model-family-group');
+        if (!handle || !group) return;
+        event.preventDefault();
+        if (!rearrangingFamilies) setFamilyRearrangeMode(true);
+        draggedFamily = group;
+        activePointerId = event.pointerId;
+        familyOrderChanged = false;
+        createFamilyDragGhost(group, event.clientX, event.clientY);
+        group.classList.add('model-family-dragging');
+        document.documentElement.classList.add('model-family-drag-active');
+        handle.setPointerCapture(event.pointerId);
+      });
+      cardsArea?.addEventListener('pointermove', (event) => {
+        if (!draggedFamily || event.pointerId !== activePointerId) return;
+        event.preventDefault();
+        positionFamilyDragGhost(event.clientX, event.clientY);
+        if (event.clientY < 72) window.scrollBy(0, -12);
+        else if (event.clientY > window.innerHeight - 72) window.scrollBy(0, 12);
+        const hit = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
+        const target = hit?.closest<HTMLElement>('.model-family-group');
+        if (!target || target === draggedFamily || target.style.display === 'none') {
+          clearFamilyDropTarget();
+          return;
+        }
+        const bounds = target.getBoundingClientRect();
+        const verticalEdge = Math.min(48, bounds.height * 0.25);
+        const placeBefore = event.clientY < bounds.top + verticalEdge
+          ? true
+          : event.clientY > bounds.bottom - verticalEdge
+            ? false
+            : event.clientX < bounds.left + bounds.width / 2;
+        if (lastDropTarget !== target) clearFamilyDropTarget();
+        target.classList.add('model-family-drop-target');
+        lastDropTarget = target;
+        const alreadyPlaced = placeBefore
+          ? draggedFamily.nextElementSibling === target
+          : draggedFamily.previousElementSibling === target;
+        if (alreadyPlaced) return;
+        const before = captureFamilyRects();
+        if (placeBefore) target.before(draggedFamily);
+        else target.after(draggedFamily);
+        familyOrderChanged = true;
+        animateFamilyReflow(before);
+      });
+      cardsArea?.addEventListener('pointerup', (event) => {
+        if (event.pointerId === activePointerId) finishFamilyDrag();
+      });
+      cardsArea?.addEventListener('pointercancel', (event) => {
+        if (event.pointerId === activePointerId) finishFamilyDrag();
+      });
+      cardsArea?.addEventListener('keydown', (event) => {
+        const handle = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-family-drag-handle]');
+        if (!handle || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        if (!rearrangingFamilies) setFamilyRearrangeMode(true);
+        moveFamilyByKeyboard(handle, event.key);
+      });
       directory.addEventListener('change', (e) => {
         const t = e.target as HTMLInputElement | null;
-        if (t?.matches?.('[data-catalog-module-filter]')) {
+        if (t?.matches?.('[data-catalog-input-filter]')) {
+          const v = t.value;
+          directory.querySelectorAll<HTMLInputElement>('[data-catalog-input-filter]').forEach((cb) => {
+            if (cb.value === v) cb.checked = t.checked;
+          });
+        } else if (t?.matches?.('[data-catalog-output-filter]')) {
+          const v = t.value;
+          directory.querySelectorAll<HTMLInputElement>('[data-catalog-output-filter]').forEach((cb) => {
+            if (cb.value === v) cb.checked = t.checked;
+          });
+        } else if (t?.matches?.('[data-catalog-module-filter]')) {
           const v = t.value;
           directory.querySelectorAll<HTMLInputElement>('[data-catalog-module-filter]').forEach((cb) => {
             if (cb.value === v) cb.checked = t.checked;
@@ -708,9 +2167,69 @@ const families = Array.from(new Set(models.map(m => m.family)))
             if (cb.value === v) cb.checked = t.checked;
           });
         }
-        if (t?.matches?.('[data-catalog-module-filter], [data-catalog-engine-filter]')) {
+        if (t?.matches?.('[data-catalog-input-filter], [data-catalog-output-filter], [data-catalog-module-filter], [data-catalog-engine-filter]')) {
           filterModels();
         }
+      });
+      directory.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement | null;
+        const familyExpand = target?.closest<HTMLButtonElement>('[data-family-expand]');
+        if (familyExpand) {
+          const family = familyExpand.closest<HTMLElement>('.model-family-group');
+          if (family) family.dataset.familyExpanded = family.dataset.familyExpanded === 'true' ? 'false' : 'true';
+          filterModels();
+          return;
+        }
+        const deviceIconToggle = target?.closest<HTMLButtonElement>('[data-device-icon-toggle]');
+        if (deviceIconToggle) {
+          setDeviceFilterIconView(deviceIconToggle.getAttribute('aria-pressed') !== 'true');
+          return;
+        }
+        const modeButton = target?.closest<HTMLButtonElement>('[data-catalog-filter-mode]');
+        if (modeButton) {
+          const mode = modeButton.dataset.catalogFilterMode === 'advanced' ? 'advanced' : 'simple';
+          if (mode !== catalogFilterMode) {
+            setCatalogFilterMode(mode, true);
+            filterModels();
+          }
+          return;
+        }
+        const typeButton = target?.closest<HTMLButtonElement>('[data-catalog-type-filter]');
+        if (typeButton) {
+          setCatalogType(typeButton.dataset.catalogTypeFilter === 'all' ? null : typeButton.dataset.catalogTypeFilter || null);
+          filterModels();
+          return;
+        }
+        const newToggle = target?.closest<HTMLButtonElement>('[data-catalog-new-toggle]');
+        if (newToggle) {
+          setNewModelsOnly(!newModelsOnly());
+          filterModels();
+          return;
+        }
+        const chip = target?.closest<HTMLButtonElement>('[data-remove-catalog-filter]');
+        if (chip) {
+          const kind = chip.dataset.removeCatalogFilter;
+          const value = chip.dataset.filterValue || '';
+          const selectors: Record<string, string> = {
+            input: '[data-catalog-input-filter]',
+            output: '[data-catalog-output-filter]',
+            module: '[data-catalog-module-filter]',
+            engine: '[data-catalog-engine-filter]',
+          };
+          const selector = kind ? selectors[kind] : '';
+          if (kind === 'new') setNewModelsOnly(false);
+          else if (kind === 'type') setCatalogType(null);
+          else if (selector) setCheckedForFilter(selector, value, false);
+          filterModels();
+          return;
+        }
+        if (target?.closest('[data-clear-model-filters]')) clearAllFilters();
+      });
+      filterReset?.addEventListener('click', clearAllFilters);
+      mobileFilterToggle?.addEventListener('click', () => {
+        const isOpen = mobileFilterToggle.getAttribute('aria-expanded') === 'true';
+        mobileFilterToggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        filterPanel?.classList.toggle('hidden', isOpen);
       });
       directory.querySelectorAll('.models-sort-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -723,11 +2242,501 @@ const families = Array.from(new Set(models.map(m => m.family)))
     filterModels();
   }
 
-  document.addEventListener('DOMContentLoaded', initModelDirectoryFilters);
-  document.addEventListener('astro:page-load', initModelDirectoryFilters);
+  function initModelsPage() {
+    initFeaturedModelsCarousel();
+    initModelDirectoryFilters();
+  }
+
+  document.addEventListener('DOMContentLoaded', initModelsPage);
+  document.addEventListener('astro:page-load', initModelsPage);
 </script>
 
 <style>
+  .models-card-directory.hidden {
+    display: none !important;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'][data-card-fit='content'] {
+    grid-auto-flow: dense;
+    grid-auto-rows: 4px;
+    align-items: start;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-group {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e5e5e5;
+    border-radius: 0.75rem;
+    background: #fff;
+  }
+
+  .model-family-group,
+  .model-card {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* RunCommand is rendered inside each card. Lift its complete stacking chain while
+     the fixed modal is open so later masonry cards cannot paint over the overlay. */
+  .model-family-group:has([data-run-modal]:not(.hidden)),
+  .model-card:has([data-run-modal]:not(.hidden)) {
+    z-index: 70;
+  }
+
+  .model-family-group > *,
+  .model-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='legacy'][data-cards-art='family'] .model-family-group[data-has-family-art='true']::before,
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true']::before,
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: var(--family-visual-image);
+    background-position: center;
+    background-size: cover;
+    opacity: var(--catalog-art-intensity, 0.4);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']::before {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 72%)), var(--model-visual-image);
+    background-position: 70% 50%;
+    opacity: var(--catalog-art-intensity, 0.4);
+    filter: saturate(0.92) contrast(0.95);
+    transition: opacity 160ms ease;
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true']::before {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 72%)), var(--family-visual-image);
+    background-position: 70% 50%;
+    filter: saturate(0.92) contrast(0.95);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']:hover::before {
+    opacity: var(--catalog-art-intensity, 0.4);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='legacy'][data-cards-art='family'] .model-family-group[data-has-family-art='true']::before {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 72%)), var(--family-visual-image);
+    background-position: 70% 50%;
+    opacity: var(--catalog-art-intensity, 0.4);
+    filter: saturate(0.92) contrast(0.95);
+  }
+
+  /* At strong artwork levels, use a dark glass treatment so labels stay legible. */
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'][data-cards-art='family'] .model-family-group[data-has-family-art='true']::before {
+    background-image: linear-gradient(180deg, rgb(0 0 0 / 20%), rgb(0 0 0 / 48%)), var(--family-visual-image);
+    filter: saturate(var(--catalog-art-boost, 1)) contrast(var(--catalog-art-boost, 1));
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true']::before {
+    background-image: linear-gradient(rgb(0 0 0 / 42%), rgb(0 0 0 / 42%)), var(--family-visual-image);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']::before {
+    background-image: linear-gradient(rgb(0 0 0 / 42%), rgb(0 0 0 / 42%)), var(--model-visual-image);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'] .model-family-group[data-has-family-art='true'] :is(.model-family-title, .model-family-section, .model-family-more, [data-model-link]),
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] :is(.model-family-title, [data-model-link]),
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'] .model-card[data-has-model-art='true'] [data-model-link] {
+    color: #fff;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'] .model-family-group[data-has-family-art='true'] .model-card,
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] .model-card,
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true'] {
+    border-color: rgb(255 255 255 / 32%);
+    background: rgb(12 12 12 / 58%);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'] .model-family-group[data-has-family-art='true'] .model-card:hover,
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] .model-card:hover,
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true']:hover {
+    border-color: #76b900;
+    background: rgb(12 12 12 / 72%);
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='legacy'] .model-family-group[data-has-family-art='true'] :is(.model-family-count, .model-family-drag-handle, [data-run-open]),
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] :is(.model-family-count, [data-run-open]),
+  .models-card-directory[data-visuals-enabled='true'][data-art-contrast='light'][data-card-layout='compact'][data-compact-art='model'] .model-card[data-has-model-art='true'] [data-run-open] {
+    border-color: rgb(255 255 255 / 30%);
+    background: rgb(0 0 0 / 42%);
+    color: #fff;
+  }
+
+  .models-card-directory[data-card-layout='legacy'][data-card-fit='content'] .model-family-group {
+    height: auto;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f1f1f1;
+    background: rgb(250 250 250 / 0.5);
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-title {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-count,
+  .models-card-directory[data-card-layout='legacy'] .model-family-divider,
+  .models-card-directory[data-card-layout='legacy'] .model-card-capability {
+    display: none;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-grid {
+    flex: 1 1 0%;
+    padding: 0.75rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-card {
+    padding: 0.75rem;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-card + .model-card {
+    margin-top: 0.5rem;
+  }
+
+  /* Rich card treatment carried forward from the model-visual prototype. */
+  .models-card-directory[data-card-layout='legacy'] .model-family-group {
+    align-self: start;
+    height: auto;
+    border-color: #d9d9d9;
+    background: #f4f4f4;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-header {
+    min-height: 4.1rem;
+    padding: 0.9rem 1rem 0.7rem;
+    border-bottom: 0;
+    background: transparent;
+  }
+
+  .model-family-heading {
+    flex: 1;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-section {
+    overflow: hidden;
+    color: #737373;
+    font-size: 0.625rem;
+    font-weight: 750;
+    line-height: 0.85rem;
+    letter-spacing: 0.09em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-title {
+    font-size: 1.05rem;
+    line-height: 1.3rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-count {
+    display: inline-flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 82%);
+    color: #525252;
+    font-size: 0.7rem;
+  }
+
+  .model-family-icon-frame {
+    display: inline-flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .model-family-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: scale(var(--model-icon-optical-scale, 1));
+    transform-origin: center;
+  }
+
+  .model-card-icon-frame {
+    display: none;
+    width: 1.375rem;
+    height: 1.375rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .model-card-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: scale(var(--model-icon-optical-scale, 1));
+    transform-origin: center;
+  }
+
+  .model-family-icon-frame[data-icon-family='nvidia-nemotron'],
+  .model-card-icon-frame[data-icon-family='nvidia-nemotron'] {
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 0.25rem;
+  }
+
+  .model-family-icon-frame[data-icon-family='nvidia-nemotron'],
+  .model-card-icon-frame[data-icon-family='nvidia-nemotron'] {
+    border-color: rgb(118 185 0 / 34%);
+    background: linear-gradient(145deg, #10180c, #030604);
+    box-shadow: inset 0 0 0 1px rgb(118 185 0 / 5%);
+  }
+
+  .model-family-icon-frame[data-icon-family='nvidia-nemotron'] .model-family-icon,
+  .model-card-icon-frame[data-icon-family='nvidia-nemotron'] .model-card-icon {
+    width: 82%;
+    height: 82%;
+  }
+
+  .model-family-icon-frame[data-icon-family='nvidia-nemotron'] .model-family-icon,
+  .model-card-icon-frame[data-icon-family='nvidia-nemotron'] .model-card-icon {
+    filter: drop-shadow(0 0 1px rgb(118 185 0 / 72%));
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-grid {
+    flex: none;
+    padding: 0 0.75rem 0.65rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-card {
+    min-height: 3rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid rgb(205 205 205 / 86%);
+    border-radius: 0.4rem;
+    background: rgb(255 255 255 / 88%);
+    box-shadow: 0 1px 1px rgb(0 0 0 / 2%);
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-card:hover {
+    border-color: #76b900;
+    background: rgb(255 255 255 / 96%);
+  }
+
+  .model-card [data-model-supporting-info] {
+    overflow: hidden;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-more {
+    display: flex;
+    width: calc(100% - 1.5rem);
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0.75rem 0.65rem;
+    border-top: 1px solid rgb(0 0 0 / 8%);
+    padding: 0.55rem 0.1rem 0;
+    color: #333;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-more:hover {
+    color: #5f9500;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-more.hidden,
+  .models-card-directory[data-card-layout='compact'] .model-family-more,
+  .models-card-directory[data-card-layout='compact'] .model-family-section,
+  .models-card-directory[data-card-layout='compact'] .model-family-icon-frame {
+    display: none;
+  }
+
+  .models-card-directory[data-card-layout='compact'] .model-family-group + .model-family-group {
+    margin-top: 1.25rem;
+  }
+
+  .models-card-directory[data-visuals-enabled='true'][data-card-layout='compact'][data-compact-art='family'] .model-family-group[data-has-family-art='true'] {
+    overflow: hidden;
+    border: 1px solid #e5e5e5;
+    border-radius: 0.625rem;
+    padding: 0.75rem;
+    background: #fff;
+  }
+
+  .models-card-directory[data-card-layout='compact'] .model-family-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .models-card-directory[data-card-layout='compact'] .model-family-title {
+    flex-shrink: 0;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  .models-card-directory[data-card-layout='compact'] .model-card-icon-frame {
+    display: inline-flex;
+  }
+
+  .models-card-directory[data-card-layout='compact'] .model-family-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .models-card-directory[data-card-layout='compact'] .model-card {
+    padding: 0.625rem 0.75rem;
+    border: 1px solid #e5e5e5;
+    border-radius: 0.375rem;
+    background: #fff;
+  }
+
+  .models-card-directory[data-card-layout='compact'] .model-card-capability {
+    display: none;
+  }
+
+  .model-family-drag-handle {
+    display: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    touch-action: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(0 0 0 / 12%);
+    border-radius: 0.375rem;
+    background: rgb(255 255 255 / 74%);
+    color: #666;
+    cursor: grab;
+    opacity: 0.28;
+    transition: opacity 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .model-family-drag-handle:hover,
+  .model-family-drag-handle:focus-visible {
+    border-color: #76b900;
+    color: #111;
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(118 185 0 / 18%);
+    opacity: 1;
+  }
+
+  .model-family-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  html.model-family-drag-active,
+  html.model-family-drag-active * {
+    cursor: grabbing !important;
+  }
+
+  .model-family-drag-handle svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-drag-handle {
+    display: inline-flex;
+  }
+
+  .models-card-directory[data-card-layout='legacy'][data-rearranging='true'] .model-family-drag-handle {
+    opacity: 0.82;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .models-card-directory[data-card-layout='legacy'] .model-family-title {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .models-card-directory[data-rearranging='true'] .model-family-group {
+    user-select: none;
+    box-shadow: 0 0 0 1px rgb(118 185 0 / 12%);
+  }
+
+  .model-family-group.model-family-dragging {
+    border: 2px dashed rgb(118 185 0 / 72%);
+    background: rgb(118 185 0 / 4%);
+    box-shadow: inset 0 0 0 3px rgb(255 255 255 / 62%);
+  }
+
+  .model-family-group.model-family-dragging > * {
+    opacity: 0;
+  }
+
+  .model-family-drag-ghost {
+    position: fixed !important;
+    z-index: 100;
+    margin: 0 !important;
+    pointer-events: none;
+    opacity: 0.96;
+    transform: rotate(0.6deg) scale(1.01);
+    transform-origin: center;
+    box-shadow: 0 18px 42px rgb(0 0 0 / 24%), 0 0 0 2px rgb(118 185 0 / 55%);
+    will-change: left, top, transform;
+  }
+
+  .model-family-group.model-family-drop-target {
+    box-shadow: 0 0 0 3px rgb(118 185 0 / 58%), 0 8px 24px rgb(0 0 0 / 10%);
+  }
+
+  @media (min-width: 640px) {
+    .models-card-directory[data-card-layout='compact'] .model-family-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 768px) {
+    .models-card-directory[data-card-layout='legacy'] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .models-card-directory[data-card-layout='legacy'] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .models-card-directory[data-card-layout='compact'] .model-card-capability {
+      display: inline-flex;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .models-card-directory[data-card-layout='legacy'][data-card-columns='4'] {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .models-card-directory[data-card-layout='legacy'][data-card-columns='3'] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
   /* Hide scrollbar for Chrome, Safari and Opera */
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

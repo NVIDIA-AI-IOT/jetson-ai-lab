@@ -3,6 +3,8 @@ title: "Nemotron Nano 9B v2"
 model_id: "nemotron-nano-9b-v2"
 short_description: "NVIDIA's efficient 9B hybrid architecture model with Mamba-2 and attention layers"
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 icon: "⚡"
 is_new: false
 order: 2
@@ -12,6 +14,9 @@ memory_requirements: "12GB RAM"
 precision: "NVFP4"
 parameters: "9B"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "NVIDIA Open Model License"
 model_size: "6GB"
@@ -65,5 +70,3 @@ The model uses a hybrid architecture:
 English, German, Spanish, French, Italian, Japanese, and coding languages.
 
 *This model is ready for commercial use.*
-
-
