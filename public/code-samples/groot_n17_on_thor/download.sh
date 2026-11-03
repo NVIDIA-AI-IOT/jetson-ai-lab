@@ -18,11 +18,11 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 [ -d scripts/deployment ] || die "scripts/deployment not found — is this Isaac-GR00T?"
 
 HEAD_SHA="$(git rev-parse HEAD)"
+# This download contains only the legacy patch for 9c7e746, not the updated recipe.
 if [ "$HEAD_SHA" != "$BASE_COMMIT" ]; then
-    echo "WARNING: HEAD is $(git rev-parse --short HEAD), not the validated commit ${BASE_COMMIT:0:7}."
-    echo "         The patch may not apply. To pin:"
-    echo "           git checkout $BASE_COMMIT && git lfs pull"
-    echo
+    die "this downloadable patch requires HEAD $BASE_COMMIT (legacy 9c7e746).
+       The updated 944fe70 recipe requires a separately approved patch,
+       which is not distributed by this downloader. No files were changed."
 fi
 
 # The Thor torchcodec wheel is a Git LFS object. If it is still a pointer, the
