@@ -27,11 +27,15 @@ The recommended public-preview path now runs on **Jetson Orin Nano, Jetson AGX O
 
 ## Choose a deployment path
 
+<div style="overflow-x: auto;">
+
 | Path | Devices | ASR | LLM / VLM | TTS | Best for |
 | --- | --- | --- | --- | --- | --- |
 | **Recommended quick start** | Orin Nano, AGX Orin, AGX Thor | Faster-Whisper tiny.en | Gemma 4 E2B | Kokoro | Public setup, hackathons, voice-agent prototypes |
 | **NVIDIA open speech models** | AGX Orin, AGX Thor | Nemotron 3.5 ASR | Any OpenAI-compatible LLM | Magpie | Direct NVIDIA model and REST/Realtime API evaluation |
 | **Riva + Cosmos-Reason2** | AGX Thor | Riva Parakeet | Cosmos-Reason2 VLM | Riva Magpie | Advanced voice + vision and existing Riva deployments |
+
+</div>
 
 ## Recommended Quick Start: Orin Nano to Thor
 
@@ -87,11 +91,15 @@ If creating the environment fails because `ensurepip` is missing, install your O
 
 The launcher pulls the pinned dual-architecture CUDA image and installs these starter models in a persistent Docker volume:
 
+<div style="overflow-x: auto;">
+
 | Stage | Model |
 | --- | --- |
 | ASR | `Systran/faster-whisper-tiny.en` |
 | TTS | `speaches-ai/Kokoro-82M-v1.0-ONNX-fp16` |
 | Default voice | `af_heart` |
+
+</div>
 
 `verify` synthesizes a short sample through the TTS API and transcribes it through the ASR API. Do not continue until it prints `Speech API smoke test passed`.
 
