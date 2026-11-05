@@ -1,5 +1,5 @@
 ---
-title: "Multi-Modal AI Studio on Jetson"
+title: "Voice AI Workbench on Jetson"
 description: "Build and measure a local conversational AI pipeline on Jetson Orin Nano, AGX Orin, or AGX Thor."
 category: "Applications"
 section: "Conversational AI"
@@ -17,13 +17,12 @@ import Note from '../../../components/admonition/Note.astro';
 import Tip from '../../../components/admonition/Tip.astro';
 import Warning from '../../../components/admonition/Warning.astro';
 
-[Multi-Modal AI Studio](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio) is a conversational AI workbench for building, comparing, and tuning voice and vision pipelines. It connects independent ASR, LLM/VLM, and TTS services through standard APIs, records sessions with full configuration snapshots, and visualizes time to first audio, turn-taking, barge-in, audio playback, and device utilization.
+[Voice AI Workbench](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio), formerly **Multi-modal AI Studio (MMAS)**, helps developers give a robot a voice and a character. Compare independent ASR, LLM/VLM, and TTS services through standard APIs, tune the LLM's system prompt, and inspect recorded transcripts, latency, barge-in, audio playback, and device utilization. Optional vision input remains supported. The GitHub repository and existing session formats retain their original names; the recommended package and CLI name is now `voice-ai-workbench`.
 
 The recommended public-preview path now runs on **Jetson Orin Nano, Jetson AGX Orin, and Jetson AGX Thor** without requiring an NGC entitlement or a Riva installation. It combines Faster-Whisper and Kokoro through Speaches with a text-only Gemma 4 E2B LLM. The original Riva and Cosmos-Reason2 voice-and-vision configuration remains available below as an advanced Thor workflow.
 
-<Note title="Public preview">
-  The recommended Speaches Jetson image and this end-to-end configuration are release-candidate software intended for evaluation and demos. They are not a production or GA claim.
-  Review the [v0.2.0-rc.1 release notes and known limitations](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/releases/tag/v0.2.0-rc.1) before using the stack in a demo or evaluation.
+<Note title="Application and backend versions">
+  Voice AI Workbench 0.2.0 is being prepared for release. Check [GitHub Releases](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/releases) for the published tag, artifacts, checksums, and limitations before following the version-pinned installation below. The independently versioned Speaches backend remains pinned to 0.9.0-rc.3; publishing the workbench does not make that backend a GA release. Use the REST quick start for initial evaluation.
 </Note>
 
 ## Choose a deployment path
@@ -59,17 +58,24 @@ Speaches exposes OpenAI-compatible speech APIs. Gemma is a separate OpenAI-compa
   On an 8 GB Orin Nano, stop unrelated GPU workloads before starting the pipeline. A 16 GB swap file is strongly recommended to absorb transient CPU-side allocations while the models load. Swap does not increase GPU memory; the default tiny ASR model, 2048-token Gemma context, and text-only `--no-mmproj` configuration keep the active pipeline small enough for this device.
 </Warning>
 
-### 1. Install Multi-Modal AI Studio
+### 1. Install Voice AI Workbench
+
+After the release notes confirm publication on PyPI, install the application in an isolated Python 3.11+ environment. Clone the matching release only for the backend launcher scripts; the installed wheel supplies the Web UI and built-in presets.
 
 ```bash
+python3 -m venv ~/voice-workbench-venv
+source ~/voice-workbench-venv/bin/activate
+python -m pip install voice-ai-workbench==0.2.0
+voice-ai-workbench --version
+
 git clone https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio.git
 cd multi_modal_ai_studio
-
-./scripts/setup_dev.sh
-source .venv/bin/activate
+git checkout v0.2.0
 ```
 
-Browser audio does not require the optional PyAudio package. Install that extra only when you need a server-connected PyAudio device.
+Until publication, use a verified candidate wheel and its matching source commit from the [release preparation instructions](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/release/v0.2.0/docs/development/releasing.md). Do not assume an unreleased version or tag is downloadable.
+
+If creating the environment fails because `ensurepip` is missing, install your OS's matching venv package, such as `sudo apt install python3-venv`. Browser audio does not require the optional PyAudio package. Keep earlier `multi-modal-ai-studio` installations in a separate environment; see the [upgrade instructions](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/development/releasing.md#upgrading-an-earlier-mmas-installation) before reusing one.
 
 ### 2. Start and verify speech
 
@@ -99,10 +105,10 @@ The launcher pulls the pinned dual-architecture CUDA image and installs these st
 
 The launcher selects the Jetson Orin or Thor llama.cpp image automatically and serves `unsloth/gemma-4-E2B-it-GGUF:Q4_K_S`. It enables Gemma's MTP draft, disables hidden reasoning for lower time to first speech, limits context to 2048 tokens, and skips the multimodal projector because this starter configuration uses Gemma as a text LLM.
 
-### 4. Start the Studio
+### 4. Start the workbench
 
 ```bash
-multi-modal-ai-studio --preset speaches-jetson --port 8092
+voice-ai-workbench --preset speaches-jetson --port 8092
 ```
 
 Open the URL printed by the server, normally:
@@ -127,21 +133,35 @@ Stop. What is one plus one?
 
 When you stop the session, select it in the left sidebar to review the transcript, audio waveforms, pipeline timeline, time-to-first-audio measurements, and Jetson system information.
 
-![Multi-Modal AI Studio session timeline](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/raw/main/docs/images/screenshot_example_2.png)
+![Voice AI Workbench session timeline (earlier MMAS interface)](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/raw/main/docs/images/screenshot_example_2.png)
+
+### From a browser test to a robot's audio devices
+
+Start with the **Browser / WebRTC** microphone and speaker selections in the **Devices** tab. They use the computer that opened the page, while model inference runs on Jetson. This is the simplest way to compare models, adjust the system prompt, and measure responsiveness without attaching audio hardware to the robot.
+
+Once the conversation works, connect a USB microphone and speaker to Jetson and select the **Server USB** devices instead. Save a separate preset with those device choices so the robot uses its own audio hardware, not the laptop's. Recheck capture, playback, and barge-in: acoustic echo, device sample rates, and microphone levels differ between the two paths. A speakerphone with acoustic echo cancellation or a headset is useful during testing.
+
+The CLI also offers experimental headless operation using a saved configuration. See the [device and headless setup instructions](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/INSTALL.md) before deploying without a browser; a successful browser test alone does not qualify the server-local device path.
 
 ### REST and Realtime speech paths
 
-The default `speaches-jetson` preset uses the portable REST transcription and speech APIs. To evaluate WebSocket endpointing and barge-in with the same models, start MMAS with:
+The default `speaches-jetson` preset uses REST transcription and speech APIs. The workbench detects speech boundaries locally and sends each completed utterance as a WAV request. Its Realtime ASR adapter instead sends microphone audio over a WebSocket and consumes the backend's speech-boundary and transcription events. Realtime ASR does not require Realtime TTS; the Speaches Realtime ASR preset keeps Kokoro on the REST speech API.
+
+<Warning title="Speaches Realtime evaluation">
+  Concurrent ASR, LLM, and TTS testing on Orin Nano exposed errors and delayed interruption with the pinned public Speaches 0.9.0-rc.3 image. Follow-up tests passed with a locally corrected backend, but that corrected image is not yet published. Updating Voice AI Workbench alone does not install those server fixes. Keep the REST preset for the recommended public quick start; the Realtime command below is an optional diagnostic path, not equivalent qualification of the public image.
+</Warning>
+
+To evaluate the Realtime ASR path against a suitable backend:
 
 ```bash
-multi-modal-ai-studio --preset speaches-realtime-asr-jetson --port 8092
+voice-ai-workbench --preset speaches-realtime-asr-jetson --port 8092
 ```
 
 Speaches emits Realtime session and speech-boundary events, then transcribes each completed speech segment with Faster-Whisper. This is not token-by-token model-native Faster-Whisper decoding, so partial transcript deltas may not be available.
 
 ### Try NVIDIA open speech models
 
-MMAS also includes reference services for Nemotron 3.5 ASR and Magpie TTS. They can be used through OpenAI-compatible REST or Realtime APIs while keeping Gemma or another independently served LLM:
+The repository also includes reference services for Nemotron 3.5 ASR and Magpie TTS. They expose REST and WebSocket Realtime adapters while keeping Gemma or another independently served LLM. The launcher manages speech only, not the LLM:
 
 ```bash
 ./scripts/nvidia_open_models_speech.sh build
@@ -181,7 +201,7 @@ This tutorial is written for **Jetson AGX Thor** because it uses the **RIVA SDK*
 
 ### Advanced architecture
 
-Multi-Modal AI Studio does not run the AI models by itself. It connects to model services through standard APIs, which makes the pipeline easy to swap and tune.
+Voice AI Workbench does not run the AI models by itself. It connects to model services through standard APIs, which makes the pipeline easy to swap and tune.
 
 ![Multi-Modal AI Studio architecture](https://raw.githubusercontent.com/NVIDIA-AI-IOT/multi_modal_ai_studio/main/docs/images/MMAS-arch.png)
 
@@ -189,7 +209,7 @@ Multi-Modal AI Studio does not run the AI models by itself. It connects to model
 
 RIVA provides the ASR and TTS services for the voice pipeline. This tutorial uses **Riva 2.24.0 Embedded (aarch64)**; see the [Riva support matrix](https://docs.nvidia.com/deeplearning/riva/user-guide/docs/support-matrix/support-matrix.html) for platform and model compatibility.
 
-Before running the commands below, install and initialize RIVA by following the [NVIDIA Riva setup for voice ASR/TTS](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/INSTALL.md#nvidia-riva-setup-for-voice-asrtts) instructions in the Multi-Modal AI Studio repository.
+Before running the commands below, install and initialize RIVA by following the [NVIDIA Riva setup for voice ASR/TTS](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/INSTALL.md#nvidia-riva-setup-for-voice-asrtts) instructions in the application repository.
 
 After RIVA is installed and initialized, start it from the RIVA quick start directory:
 
@@ -261,27 +281,22 @@ curl http://localhost:8010/v1/models
 You should see `nvidia/cosmos-reason2-8b-fp8` in the response.
 
 <Warning title="⚠️ Port conflict with RIVA">
-  Do not use vLLM's default port when RIVA is running. Keep vLLM on `8010` or another unused port, then use the same port in Multi-Modal AI Studio's LLM API base URL.
+  Do not use vLLM's default port when RIVA is running. Keep vLLM on `8010` or another unused port, then use the same port in the workbench's LLM API base URL.
 </Warning>
 
-### Step 3: Start Multi-Modal AI Studio
+### Step 3: Start Voice AI Workbench
 
-In a **new terminal**, keep RIVA and vLLM running, then clone and install the application:
+In a **new terminal**, keep RIVA and vLLM running, then activate the application environment created in the quick start. If you skipped that section, first complete its installation step.
 
 ```bash
-git clone https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio.git ~/multi_modal_ai_studio
-cd ~/multi_modal_ai_studio
-
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install -e .
+source ~/voice-workbench-venv/bin/activate
 ```
 
 Launch the Studio server and point it at the local RIVA and vLLM services:
 
 ```bash
-multi-modal-ai-studio --port 8092 \
+voice-ai-workbench --port 8092 \
+  --asr-scheme riva --tts-scheme riva \
   --asr-server localhost:50051 \
   --tts-server localhost:50051 \
   --llm-api-base http://localhost:8010/v1 \
@@ -520,14 +535,13 @@ The recommended configuration was qualified with a 16 GB swap file. Swap helps w
 </details>
 
 <details>
-<summary><code>multi-modal-ai-studio: command not found</code></summary>
+<summary><code>voice-ai-workbench: command not found</code></summary>
 
 Activate the Python virtual environment before launching:
 
 ```bash
-cd ~/multi_modal_ai_studio
-source .venv/bin/activate
-multi-modal-ai-studio --help
+source ~/voice-workbench-venv/bin/activate
+voice-ai-workbench --help
 ```
 
 </details>
@@ -585,7 +599,7 @@ sudo sysctl -w vm.drop_caches=3
 
 - Change the system prompt to create a different assistant personality.
 - Enable barge-in and test interrupting the assistant while it is speaking.
-- Compare REST ASR with the Realtime transcription preset.
+- Compare REST ASR with the Realtime transcription preset after checking the backend limitation above.
 - Try Nemotron 3.5 ASR and Magpie TTS through the NVIDIA open model services.
 - Try another OpenAI-compatible TTS backend, voice, language, or speaking speed.
 - Try a USB camera connected directly to Jetson.
@@ -595,7 +609,7 @@ sudo sysctl -w vm.drop_caches=3
 
 ## Resources
 
-- [Multi-Modal AI Studio GitHub repository](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio)
+- [Voice AI Workbench GitHub repository (legacy repository name)](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio)
 - [Speaches on Jetson quick-start reference](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_speaches_jetson.md)
 - [NVIDIA open speech models on Jetson](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_open_models_jetson.md)
 - [Speech API backend matrix](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/api_backends.md)
