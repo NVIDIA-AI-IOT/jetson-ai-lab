@@ -298,7 +298,30 @@ team_members:
     org: "Innovation"
     location: ""
     image: "/images/research/Ori_Nachum.jpg"
-    linkedin: ""
+    linkedin: "https://www.linkedin.com/in/ori-nachum-73274745/"
+    github: "https://github.com/OriNachum"
+    expertise: ["AI", "Innovation"]
+  - name: "Kieran Lal"
+    role: "Chief Cybernetic Survival Officer"
+    org: "Rosso LLC"
+    location: "San Francisco, CA"
+    image: "https://media.licdn.com/dms/image/v2/C4E03AQGHhD6YlSPnJA/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1516237879564?e=1793232000&v=beta&t=6CQ0_HPsYwavmCYKynIjVaqo-k2l72jmgxmwT1i10kg"
+    linkedin: "https://www.linkedin.com/in/kieran/"
+    expertise: ["AI", "Innovation"]
+  - name: "Aditya Sahu"
+    role: "TME"
+    org: "NVIDIA"
+    location: "Santa Clara, CA"
+    image: "https://developer-blogs.nvidia.com/wp-content/uploads/2026/04/cropped-image5-3-540x540.webp"
+    github: "https://github.com/adsahu-nv"
+    expertise: ["AI", "Innovation"]
+  - name: "Khalil Ben Khaled"
+    role: "TME"
+    org: "NVIDIA"
+    location: "Toronto, Canada"
+    image: "https://developer-blogs.nvidia.com/wp-content/uploads/2025/10/cropped-Khalil-BenKhaled-Headshot-540x540.png"
+    linkedin: "https://www.linkedin.com/in/khalil-benkhaled-978505229/"
+    github: "https://github.com/kbenkhaled"
     expertise: ["AI", "Innovation"]
 emeritus_members:
   - name: "Dustin Franklin"
