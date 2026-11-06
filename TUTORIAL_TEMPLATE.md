@@ -16,6 +16,9 @@ category: "Setup"
 section: "Jetson Setup"
 order: 1
 tags: ["tag1", "tag2", "tag3"]
+authors:
+  - name: "Your Name"
+    github: "your-github-handle"
 ---
 
 ## Overview
@@ -36,7 +39,7 @@ Instructions here...
 Links to related tutorials...
 ```
 
-**Accepted values for `category`:** `Setup`, `Text`, `Image`, `Audio`, `Multimodal`, `Fundamentals`, `Workshops`
+**Accepted values for `category`:** `Text`, `Image`, `Audio`, `Applications`, `VLM`, `VLA`, `Fundamentals`, `Setup`, `Workshops`, `Model Optimization`
 
 ---
 
@@ -65,10 +68,13 @@ For tutorials with interactive elements, use `.mdx` files.
 title: "My Tutorial"
 description: "Tutorial with tabs"
 category: "Setup"
+authors:
+  - name: "Your Name"
+    github: "your-github-handle"
 ...
 ---
 
-import Tabs from '../../components/Tabs.astro';
+import Tabs from '../../../components/Tabs.astro';
 
 Content here...
 ```
@@ -257,9 +263,12 @@ category: "Setup"
 section: "Getting Started"
 order: 1
 tags: ["example", "demo"]
+authors:
+  - name: "Your Name"
+    github: "your-github-handle"
 ---
 
-import Tabs from '../../components/Tabs.astro';
+import Tabs from '../../../components/Tabs.astro';
 
 <div class="admonition note">
 <p class="admonition-title">📘 Note</p>

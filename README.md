@@ -70,7 +70,10 @@ cd jetson-ai-lab
 
 ```bash
 npm install
+npx playwright install chromium
 ```
+
+Chromium is required to render Mermaid diagrams during production builds.
 
 3. **Start the development server**
 

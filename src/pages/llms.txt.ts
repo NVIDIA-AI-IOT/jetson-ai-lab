@@ -66,11 +66,14 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 
 ## Getting Started
 
+- [Introduction to NVIDIA Jetson](${SITE}/tutorials/intro-to-jetson/): Explore Jetson Thor and Orin platforms, developer kits, production modules, JetPack, and hardware comparisons
 - [Getting Started with Jetson](${SITE}/tutorials/getting-started-with-jetson/): Official developer kit user guides and remote SSH setup with VS Code or Cursor
 - [AI-assisted development on NVIDIA Jetson](${SITE}/tutorials/ai-assisted-development-on-jetson/): Use AI coding agents directly on Jetson with practical prompts, guided workflows, and on-device validation
 - [Jetson Agent Skills](${SITE}/tutorials/jetson-agent-skills/): Install Jetson Device Skills and Jetson BSP Skills for Cursor, Claude Code, Codex, Cursor projects, or OpenClaw
 - [SSD + Docker Setup](${SITE}/tutorials/ssd-docker-setup/): Set up NVMe SSD storage and configure Docker on Jetson for optimal performance with AI containers
 - [RAM Optimization](${SITE}/tutorials/ram-optimization/): Optimize system RAM by disabling desktop GUI, unnecessary services, and mounting swap for large model workloads
+- [Quick Start Guide with Yocto](${SITE}/tutorials/yocto-on-jetson/): Flash a prebuilt OE4T Yocto image to Jetson AGX Thor, AGX Orin, or Orin Nano without a BitBake build
+- [WiFi 7 Adapters on JetPack 7.2](${SITE}/tutorials/wifi7-on-jetson/): Install USB and PCIe WiFi 7 adapters on Jetson Orin and troubleshoot drivers, firmware, and headless networking
 
 ## Inference Engines & Fundamentals
 
@@ -82,6 +85,8 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 
 - [Speculative Decoding on Jetson](${SITE}/tutorials/speculative-decoding/): Learn how MTP, DFlash, and DSpark accelerate local LLM generation and how to run compatible checkpoints with vLLM and llama.cpp
 - [Fine-tune LLMs on Jetson](${SITE}/tutorials/finetune-on-jetson/): Fine-tune large language models directly on Jetson using PyTorch and Hugging Face TRL — Full SFT (4B), LoRA (9B), and QLoRA (27B)
+- [Optimize Models with NVIDIA Model Optimizer](${SITE}/tutorials/modelopt-on-jetson/): Quantize Hugging Face models to NVFP4 on Jetson Thor and deploy them with vLLM
+- [Optimize Models with Unsloth](${SITE}/tutorials/unsloth-on-jetson/): Fine-tune, convert, and deploy language models on Jetson with Unsloth and llama.cpp
 - [TensorRT Edge-LLM on Jetson](${SITE}/tutorials/tensorrt-edge-llm/): Use NVIDIA TensorRT Edge-LLM for quantization, ONNX export, engine builds, and pure C++ on-device inference
 
 ## Applications
@@ -90,6 +95,7 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 - [Multi-Modal AI Studio on Jetson](${SITE}/tutorials/multi-modal-ai-studio/): Run a conversational AI pipeline on Jetson Thor with on-device ASR, LLM/VLM, and TTS
 - [Live VLM WebUI](${SITE}/tutorials/live-vlm-webui/): Real-time Vision Language Model interface with WebRTC webcam streaming, OpenAI-compatible API, and interactive prompt editor
 - [OpenClaw on Jetson](${SITE}/tutorials/openclaw/): Fully local AI personal assistant on Jetson with OpenClaw and WhatsApp, no cloud APIs needed
+- [NemoClaw on Jetson](${SITE}/tutorials/nemoclaw/): Run NVIDIA NemoClaw with a local Ollama model and chat with the sandboxed agent through Telegram
 - [NanoOWL](${SITE}/tutorials/nanoowl/): OWL-ViT optimized for real-time open-vocabulary object detection on Jetson with TensorRT
 
 ## Vision Language Models (VLMs)
@@ -100,6 +106,7 @@ Jetson AI Lab covers the full workflow: initial device setup, inference engine i
 ## Vision-Language-Action (VLA) Models
 
 - [OpenPi on Jetson Thor](${SITE}/tutorials/openpi_on_thor/): Deploy Physical Intelligence's OpenPi VLA model on Jetson Thor with TensorRT NVFP4 quantization for low-latency robotics inference
+- [Isaac GR00T 1.7 on Jetson Thor](${SITE}/tutorials/groot_n17_on_thor/): Deploy NVIDIA Isaac GR00T 1.7 with TensorRT mixed NVFP4 quantization for real-time robotics inference
 
 ## Workshops
 

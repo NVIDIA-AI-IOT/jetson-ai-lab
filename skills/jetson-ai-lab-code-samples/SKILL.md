@@ -1,4 +1,4 @@
-﻿---
+---
 name: jetson-ai-lab-code-samples
 description: Place downloadable tutorial scripts under public/code-samples/ and link them from tutorial pages. Use when adding, moving, or linking downloadable scripts, assets, or code files for Jetson AI Lab tutorials.
 license: Apache-2.0
@@ -9,7 +9,7 @@ compatibility: Requires Node.js and npm for optional build verification.
 
 ## Purpose
 
-Runnable **Python**, **shell**, and other assets that users **download or curl** from tutorials must live under the repoΓÇÖs static asset tree:
+Runnable **Python**, **shell**, and other assets that users **download or curl** from tutorials must live under the repo’s static asset tree:
 
 **`public/code-samples/<topic-folder>/`**
 
@@ -47,14 +47,14 @@ List the current tree with your OS or `git ls-files public/code-samples` before 
      `https://raw.githubusercontent.com/NVIDIA-AI-IOT/jetson-ai-lab/main/public/code-samples/<topic>/<filename>`  
      Example in repo: `src/content/tutorials/applications/openclaw.md`, `src/content/tutorials/vla/openpi_on_thor.md`.
 
-3. **Prefer** keeping long scripts in **`public/code-samples/`** and linking themΓÇöavoid embedding huge scripts only inside MDX unless there is a strong reason.
+3. **Prefer** keeping long scripts in **`public/code-samples/`** and linking them—avoid embedding huge scripts only inside MDX unless there is a strong reason.
 
 ---
 
 ## What not to do
 
 - Do not put user-downloadable tutorial scripts under `src/` alone (they would not be served at `/code-samples/...` unless additionally copied to `public/`).
-- Do not invent alternate roots like `static/code-sample/` for this siteΓÇÖs conventions.
+- Do not invent alternate roots like `static/code-sample/` for this site’s conventions.
 
 ---
 
@@ -72,6 +72,6 @@ After adding or moving files under `public/code-samples/`:
 | Item | Path |
 |------|------|
 | Asset root | `public/code-samples/` |
-| Finetune tutorial links | `src/content/tutorials/model-optimization/finetune-on-jetson.mdx` (~lines 107ΓÇô110 for wget URLs) |
+| Finetune tutorial links | `src/content/tutorials/model-optimization/finetune-on-jetson.mdx` (~lines 107–110 for wget URLs) |
 | OpenClaw raw GitHub links | `src/content/tutorials/applications/openclaw.md` |
 | OpenPI Thor links | `src/content/tutorials/vla/openpi_on_thor.md` |

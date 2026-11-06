@@ -1,5 +1,9 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
+import {
+	getSupportedInferenceEngines,
+	sortEnginesForUi,
+} from '../lib/modelFrontmatterAdapter';
 
 const SITE = 'https://www.jetson-ai-lab.com';
 
@@ -28,6 +32,20 @@ const TUTORIAL_SLUG_MAP: Record<string, string> = {
 function tutorialUrl(slug: string): string {
 	const mapped = TUTORIAL_SLUG_MAP[slug] ?? slug.split('/').pop();
 	return `${SITE}/tutorials/${mapped}/`;
+}
+
+function appendCommand(
+	sections: string[],
+	label: string,
+	command: string | undefined,
+	language = 'shell',
+): void {
+	if (!command?.trim()) return;
+	sections.push(`${label}:`);
+	sections.push(`\`\`\`${language}`);
+	sections.push(command.trim());
+	sections.push('```');
+	sections.push('');
 }
 
 export const GET: APIRoute = async () => {
@@ -80,7 +98,6 @@ export const GET: APIRoute = async () => {
 
 		for (const tutorial of items) {
 			const url = tutorialUrl(tutorial.slug);
-			const { Content } = await tutorial.render();
 
 			sections.push(`#### ${tutorial.data.title}`);
 			sections.push('');
@@ -109,9 +126,13 @@ export const GET: APIRoute = async () => {
 		sections.push('');
 		sections.push(`URL: ${SITE}/models/${model.slug}/`);
 		sections.push(`Description: ${model.data.short_description}`);
-		sections.push(`Memory: ${model.data.memory_requirements}`);
+		if (model.data.memory_requirements) {
+			sections.push(`Memory: ${model.data.memory_requirements}`);
+		}
 		sections.push(`Precision: ${model.data.precision}`);
-		sections.push(`Size: ${model.data.model_size}`);
+		if (model.data.model_size) {
+			sections.push(`Size: ${model.data.model_size}`);
+		}
 		if (model.data.vision_capable) {
 			sections.push(`Vision capable: yes`);
 		}
@@ -119,6 +140,86 @@ export const GET: APIRoute = async () => {
 			sections.push(`HuggingFace: ${model.data.hf_checkpoint}`);
 		}
 		sections.push('');
+
+		const engines = sortEnginesForUi(getSupportedInferenceEngines(model.data));
+		if (engines.length) {
+			sections.push('#### Serving');
+			sections.push('');
+			for (const engine of engines) {
+				sections.push(`##### ${engine.engine}`);
+				if (engine.type) sections.push(`Type: ${engine.type}`);
+				if (engine.modules_supported?.length) {
+					sections.push(`Modules supported: ${engine.modules_supported.join(', ')}`);
+				}
+				sections.push('');
+				appendCommand(sections, 'Install command', engine.install_command);
+				appendCommand(sections, 'Orin install command', engine.install_command_orin);
+				appendCommand(sections, 'Thor install command', engine.install_command_thor);
+				appendCommand(sections, 'Run command', engine.run_command);
+				appendCommand(
+					sections,
+					'Orin serve command',
+					engine.serve_command_orin ?? engine.run_command_orin,
+				);
+				appendCommand(
+					sections,
+					'Thor serve command',
+					engine.serve_command_thor ?? engine.run_command_thor,
+				);
+				for (const [moduleId, command] of Object.entries(
+					engine.run_commands_by_module ?? {},
+				)) {
+					appendCommand(sections, `${moduleId} run command`, command);
+				}
+			}
+		}
+
+		const oneShot = model.data.one_shot_inference;
+		if (oneShot) {
+			const oneShotCommands = [
+				oneShot.run_command_orin,
+				oneShot.run_command_thor,
+				oneShot.shell,
+				oneShot.python,
+				...Object.values(oneShot.shell_by_module ?? {}),
+				...Object.values(oneShot.python_by_module ?? {}),
+			];
+			if (oneShotCommands.some((command) => command?.trim())) {
+				sections.push('#### One-shot inference');
+				sections.push('');
+				if (oneShot.modules_supported?.length) {
+					sections.push(`Modules supported: ${oneShot.modules_supported.join(', ')}`);
+					sections.push('');
+				}
+				if (oneShot.intro) {
+					sections.push(oneShot.intro);
+					sections.push('');
+				}
+				appendCommand(sections, 'Orin run command', oneShot.run_command_orin);
+				appendCommand(sections, 'Thor run command', oneShot.run_command_thor);
+				appendCommand(sections, 'Shell command', oneShot.shell);
+				appendCommand(sections, 'Python command', oneShot.python, 'python');
+				for (const [moduleId, command] of Object.entries(oneShot.shell_by_module ?? {})) {
+					appendCommand(sections, `${moduleId} shell command`, command);
+				}
+				for (const [moduleId, command] of Object.entries(oneShot.python_by_module ?? {})) {
+					appendCommand(sections, `${moduleId} Python command`, command, 'python');
+				}
+			}
+		}
+
+		const clientCall = model.data.client_call;
+		if (clientCall?.shell?.trim() || clientCall?.python?.trim()) {
+			sections.push('#### Call the model');
+			sections.push('');
+			if (clientCall.intro) {
+				sections.push(clientCall.intro);
+				sections.push('');
+			}
+			appendCommand(sections, 'Shell command', clientCall.shell);
+			appendCommand(sections, 'Python command', clientCall.python, 'python');
+		}
+
 		if (model.body?.trim()) {
 			sections.push(model.body);
 			sections.push('');
