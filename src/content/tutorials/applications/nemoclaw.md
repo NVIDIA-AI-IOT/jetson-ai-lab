@@ -6,6 +6,9 @@ section: "AI Agents"
 order: 3
 tags: ["nemoclaw", "ollama", "telegram", "nemotron", "jetson-thor", "jetson-orin", "ai-agent", "local-llm", "tool-calling"]
 isNew: true
+authors:
+  - name: "Khalil Ben Khaled"
+    github: "kbenkhaled"
 ---
 
 If you want to get started with **NemoClaw** on Jetson, this is a good place to start. In this tutorial we will run NemoClaw with a **local Ollama model**, so you can keep inference on-device, avoid API costs, and keep the setup simple. We will also set up **Telegram** so you can talk to your agent from your phone.

@@ -6,6 +6,9 @@ section: "Performance"
 order: 2
 tags: ["benchmarking", "vllm", "llm", "vlm", "performance", "throughput", "latency", "ttft", "jetson"]
 featured: false
+authors:
+  - name: "Khalil Ben Khaled"
+    github: "kbenkhaled"
 ---
 
 In this tutorial, we will walk you through benchmarking Large Language Models (LLMs) and Vision Language Models (VLMs) on your Jetson. This is meant to be a more general benchmarking guide that helps you understand the workflow and the main metrics.
