@@ -26,6 +26,7 @@ const tutorials = defineCollection({
 		featured: z.boolean().optional(),
 		isNew: z.boolean().optional(), // Mark as new tutorial
 		hero_image: z.string().optional(), // Optional background image for hero section
+		hero_image_mode: z.enum(['background', 'perspective']).optional(), // Default crop or decorative perspective artwork
 		authors: z
 			.array(
 				z.object({

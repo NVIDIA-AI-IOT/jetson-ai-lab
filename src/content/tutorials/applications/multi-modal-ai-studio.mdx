@@ -6,6 +6,8 @@ section: "Conversational AI"
 order: 1
 tags: ["multimodal", "speech-ai", "speaches", "gemma-4", "riva", "asr", "tts", "realtime-api", "vlm", "webrtc", "jetson-orin", "jetson-thor"]
 isNew: true
+hero_image: "/images/tutorials/multi-modal-ai-studio/timeline-monitor.svg"
+hero_image_mode: "perspective"
 authors:
   - name: "Chitoku YATO"
     github: "tokk-nv"
@@ -33,7 +35,8 @@ The recommended quick start runs on **Jetson Orin Nano, Jetson AGX Orin, and Jet
 | --- | --- | --- | --- | --- | --- |
 | **Recommended quick start** | Orin Nano, AGX Orin, AGX Thor | Faster-Whisper tiny.en | Gemma 4 E2B | Kokoro | Public setup, hackathons, voice-agent prototypes |
 | **NVIDIA open speech models** | AGX Orin, AGX Thor | Nemotron 3.5 ASR | Any OpenAI-compatible LLM | Magpie | Direct NVIDIA model and REST/Realtime API evaluation |
-| **Riva + Cosmos-Reason2** | AGX Thor | Riva Parakeet | Cosmos-Reason2 VLM | Riva Magpie | Advanced voice + vision and existing Riva deployments |
+| **Richer speech and vision evaluation** | AGX Thor | Faster-Whisper small; compare larger variants | Gemma 4 12B VLM | Qwen3-TTS 1.7B CustomVoice | Explore multilingual input, voice quality, and visual context; validate the combined configuration |
+| **Riva + Cosmos-Reason2 alternative** | AGX Thor | Riva Parakeet | Cosmos-Reason2 VLM | Riva Magpie | Specialized visual reasoning and existing Riva deployments |
 
 </div>
 
@@ -188,9 +191,46 @@ See the [NVIDIA open speech model setup](https://github.com/NVIDIA-AI-IOT/multi_
 
 For the complete Speaches lifecycle, model overrides, API endpoints, and troubleshooting, see the [Speaches on Jetson guide](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_speaches_jetson.md).
 
-## Advanced: Riva + Cosmos-Reason2 Voice and Vision on Thor
+## Go further on Thor: richer speech and vision
 
-The following configuration uses the **NVIDIA Riva SDK** for streaming ASR/TTS and **Cosmos-Reason2** on vLLM for visual reasoning. It targets Jetson AGX Thor and preserves the original MMAS voice-and-vision workflow.
+Thor's additional memory makes it a useful platform for exploring larger models, but a larger model is not automatically a more responsive voice assistant. Keep the quick start as a baseline, change one service at a time, and compare recognition accuracy, time to first text, time to first audio, and playback gaps with the same input.
+
+### Explore a multilingual ASR model
+
+The quick start's `tiny.en` model is English-only. Download the multilingual small model into the same Speaches service, then reload the ASR model list and select it in **Configuration → ASR**:
+
+```bash
+curl --fail --show-error -X POST \
+  'http://localhost:18080/v1/models/Systran%2Ffaster-whisper-small'
+```
+
+Use the language corresponding to the input speech. A larger Faster-Whisper variant, such as `large-v3-turbo`, is a further comparison candidate, not a latency improvement guaranteed by the workbench. Speaches and Faster-Whisper still determine whether recognition is segment-based or produces partial transcripts; changing the model size or using a WebSocket does not itself make decoding incremental.
+
+### Add a larger LLM or visual context
+
+[Gemma 4 12B](/models/gemma4-12b/) is a candidate for a richer conversational and visual assistant. Start with reasoning disabled and short answers, then compare it with E2B using identical prompts. Do not infer speed from parameter count alone or compare different thinking settings and response lengths as if they were equivalent.
+
+Gemma's image understanding is **VLM**, not a robot **VLA** action policy. Its text output does not directly implement robot motion control. The quick start launcher deliberately uses `--no-mmproj` and disables vision. To test a camera, the serving configuration must support image input, and **Configuration → LLM / VLM** must enable vision. Select a browser camera under **Devices**, start with one small frame per turn, and verify the answer changes with the image. See the [vision setup guide](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/v0.2.0/docs/vlm_guide.md).
+
+<Tip title="Thor evaluation settings">
+  A standalone check on Thor with Gemma 4 12B QAT Q4_0 used its matching multimodal projector, 4096-token context, one request slot, `--reasoning off`, `--fit off`, and `--load-mode mmap`. It correctly identified a red circle and blue square through the released workbench's image-request adapter. This verifies an image request, not camera capture, video understanding, or a robot action policy. Automatic memory fitting did not reach ready in that evaluation; inspect server logs instead of assuming the application is at fault.
+</Tip>
+
+### Compare Qwen3-TTS with Kokoro or Magpie
+
+[Qwen3-TTS 1.7B CustomVoice](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice) is a further Thor evaluation option. Serve it with an OpenAI-compatible speech endpoint, such as the [vLLM-Omni Qwen3-TTS deployment](https://docs.vllm.ai/projects/vllm-omni/en/latest/), then select **OpenAI REST API** in the workbench's TTS tab and set the endpoint, model, and a supported voice such as `ryan`. Begin with **Start speaking before LLM finishes** off, then test overlapping generation separately.
+
+Keep the ASR, LLM, and TTS endpoints independent: for example, compare **Faster-Whisper small → Gemma 4 12B → Qwen3-TTS** with **Nemotron 3.5 ASR → Gemma → Magpie**. Test the combined load, interruption, and recovery rather than assuming three successful standalone requests qualify the complete robot pipeline. Model-native audio streaming also depends on the serving API and the request fields; a PCM response alone does not prove incremental model generation.
+
+In the evaluated vLLM-Omni configuration, an explicit streaming request returned its first PCM bytes before synthesis finished. The released 0.2.0 generic REST TTS adapter does not send that provider-specific `stream` field, and the same server buffered that request until completion. Do not present the model's streaming timing as the released application's time to first audio.
+
+<Note title="Released features and follow-up work">
+  This tutorial uses Voice AI Workbench 0.2.0. Dedicated Qwen3-TTS instructions, VoiceDesign, and reference-voice cloning controls are separate 0.3.0 development work, not prerequisites for this release or capabilities implied by selecting a CustomVoice model.
+</Note>
+
+## Alternative on Thor: Riva + Cosmos-Reason2
+
+The following configuration uses the **NVIDIA Riva SDK** for streaming ASR/TTS and **Cosmos-Reason2** on vLLM for visual reasoning. It preserves the original MMAS voice-and-vision workflow for users who want this combination or already have Riva deployed; it is not a requirement for running the workbench on Thor.
 
 ### Prerequisites
 
