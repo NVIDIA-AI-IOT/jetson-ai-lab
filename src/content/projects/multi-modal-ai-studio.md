@@ -6,7 +6,7 @@ date: "2026-02-09"
 origin: "nvidia"
 source: "NVIDIA"
 link: "https://www.jetson-ai-lab.com/tutorials/multi-modal-ai-studio/"
-image: "https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/raw/main/docs/images/screenshot_example_2.png"
+image: "/images/tutorials/voice-ai-workbench-nvidia-speech.png"
 featured: false
 jetson: ["Jetson Orin Nano", "Jetson AGX Orin", "Jetson Thor"]
 tags: ["VLM", "Speech", "Speaches", "Riva", "Conversational AI"]

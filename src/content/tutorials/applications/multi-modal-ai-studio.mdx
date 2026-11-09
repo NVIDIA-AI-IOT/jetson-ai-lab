@@ -19,10 +19,10 @@ import Warning from '../../../components/admonition/Warning.astro';
 
 [Voice AI Workbench](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio), formerly **Multi-modal AI Studio (MMAS)**, helps developers give a robot a voice and a character. Compare independent ASR, LLM/VLM, and TTS services through standard APIs, tune the LLM's system prompt, and inspect recorded transcripts, latency, barge-in, audio playback, and device utilization. Optional vision input remains supported. The GitHub repository and existing session formats retain their original names; the recommended package and CLI name is now `voice-ai-workbench`.
 
-The recommended public-preview path now runs on **Jetson Orin Nano, Jetson AGX Orin, and Jetson AGX Thor** without requiring an NGC entitlement or a Riva installation. It combines Faster-Whisper and Kokoro through Speaches with a text-only Gemma 4 E2B LLM. The original Riva and Cosmos-Reason2 voice-and-vision configuration remains available below as an advanced Thor workflow.
+The recommended quick start runs on **Jetson Orin Nano, Jetson AGX Orin, and Jetson AGX Thor** without requiring an NGC entitlement or a Riva installation. It combines Faster-Whisper and Kokoro through Speaches with a text-only Gemma 4 E2B LLM. The original Riva and Cosmos-Reason2 voice-and-vision configuration remains available below as an advanced Thor workflow.
 
 <Note title="Application and backend versions">
-  Voice AI Workbench 0.2.0 is being prepared for release. Check [GitHub Releases](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/releases) for the published tag, artifacts, checksums, and limitations before following the version-pinned installation below. The independently versioned Speaches backend remains pinned to 0.9.0-rc.3; publishing the workbench does not make that backend a GA release. Use the REST quick start for initial evaluation.
+  [Voice AI Workbench 0.2.0](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/releases/tag/v0.2.0) is available on [PyPI](https://pypi.org/project/voice-ai-workbench/0.2.0/). The GitHub release provides artifacts, checksums, and limitations. The independently versioned Speaches backend remains pinned to 0.9.0-rc.3; the workbench release does not make that backend a GA release. Use the REST quick start for initial evaluation.
 </Note>
 
 ## Choose a deployment path
@@ -64,7 +64,7 @@ Speaches exposes OpenAI-compatible speech APIs. Gemma is a separate OpenAI-compa
 
 ### 1. Install Voice AI Workbench
 
-After the release notes confirm publication on PyPI, install the application in an isolated Python 3.11+ environment. Clone the matching release only for the backend launcher scripts; the installed wheel supplies the Web UI and built-in presets.
+Install the published application in an isolated Python 3.11+ environment. Clone the matching release only for the backend launcher scripts; the installed wheel supplies the Web UI and built-in presets.
 
 ```bash
 python3 -m venv ~/voice-workbench-venv
@@ -72,12 +72,13 @@ source ~/voice-workbench-venv/bin/activate
 python -m pip install voice-ai-workbench==0.2.0
 voice-ai-workbench --version
 
-git clone https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio.git
-cd multi_modal_ai_studio
-git checkout v0.2.0
+git clone --branch v0.2.0 --depth 1 \
+  https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio.git \
+  ~/voice-workbench-backends
+cd ~/voice-workbench-backends
 ```
 
-Until publication, use a verified candidate wheel and its matching source commit from the [release preparation instructions](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/release/v0.2.0/docs/development/releasing.md). Do not assume an unreleased version or tag is downloadable.
+The commands below run the backend scripts from `~/voice-workbench-backends`. The application is launched from outside that checkout so Python uses the installed wheel rather than importing source files from the current directory.
 
 If creating the environment fails because `ensurepip` is missing, install your OS's matching venv package, such as `sudo apt install python3-venv`. Browser audio does not require the optional PyAudio package. Keep earlier `multi-modal-ai-studio` installations in a separate environment; see the [upgrade instructions](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/development/releasing.md#upgrading-an-earlier-mmas-installation) before reusing one.
 
@@ -116,6 +117,7 @@ The launcher selects the Jetson Orin or Thor llama.cpp image automatically and s
 ### 4. Start the workbench
 
 ```bash
+cd ~
 voice-ai-workbench --preset speaches-jetson --port 8092
 ```
 
@@ -125,7 +127,7 @@ Open the URL printed by the server, normally:
 https://<JETSON_IP>:8092
 ```
 
-Accept the local development certificate, allow microphone access, select **Check servers**, and start a session. Try these short prompts:
+After verifying that the address belongs to your Jetson on a trusted network, accept its local development certificate, allow microphone access, select **Check servers**, and start a session. Try these short prompts:
 
 ```text
 Hi, can you hear me?
@@ -141,7 +143,9 @@ Stop. What is one plus one?
 
 When you stop the session, select it in the left sidebar to review the transcript, audio waveforms, pipeline timeline, time-to-first-audio measurements, and Jetson system information.
 
-![Voice AI Workbench session timeline (earlier MMAS interface)](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/raw/main/docs/images/screenshot_example_2.png)
+![Voice AI Workbench showing a recorded NVIDIA Speech conversation, audio waveforms, and latency timeline on Jetson Thor](/images/tutorials/voice-ai-workbench-nvidia-speech.png)
+
+This recorded session uses **Nemotron 3.5 ASR → Gemma 4 E2B → Magpie TTS** with the NVIDIA Speech — Realtime preset, an alternative to the Speaches quick start. It illustrates the shared review interface, not a controlled performance benchmark; the internal hostname and IP addresses are omitted.
 
 ### From a browser test to a robot's audio devices
 
@@ -159,9 +163,10 @@ The default `speaches-jetson` preset uses REST transcription and speech APIs. Th
   Concurrent ASR, LLM, and TTS testing on Orin Nano exposed errors and delayed interruption with the pinned public Speaches 0.9.0-rc.3 image. Follow-up tests passed with a locally corrected backend, but that corrected image is not yet published. Updating Voice AI Workbench alone does not install those server fixes. Keep the REST preset for the recommended public quick start; the Realtime command below is an optional diagnostic path, not equivalent qualification of the public image.
 </Warning>
 
-To evaluate the Realtime ASR path against a suitable backend:
+To evaluate the Realtime ASR path against a suitable backend, stop the current workbench process with **Ctrl+C** in its terminal, then restart it with the alternate preset. Keep the model services running:
 
 ```bash
+cd ~
 voice-ai-workbench --preset speaches-realtime-asr-jetson --port 8092
 ```
 
@@ -172,9 +177,11 @@ Speaches emits Realtime session and speech-boundary events, then transcribes eac
 The repository also includes reference services for Nemotron 3.5 ASR and Magpie TTS. They expose REST and WebSocket Realtime adapters while keeping Gemma or another independently served LLM. The launcher manages speech only, not the LLM:
 
 ```bash
+cd ~/voice-workbench-backends
 ./scripts/nvidia_open_models_speech.sh build
 ./scripts/nvidia_open_models_speech.sh start
 ./scripts/nvidia_open_models_speech.sh verify
+cd ~
 ```
 
 See the [NVIDIA open speech model setup](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_open_models_jetson.md) for model access, presets, and platform notes.
@@ -258,7 +265,6 @@ Then serve the model on port `8010`:
 
 ```bash
 mkdir -p ~/.cache/vllm
-sudo sysctl -w vm.drop_caches=3
 
 sudo docker run -it --rm --runtime=nvidia --network host \
   -v $MODEL_PATH:/models/cosmos-reason2-8b:ro \
@@ -298,6 +304,7 @@ In a **new terminal**, keep RIVA and vLLM running, then activate the application
 
 ```bash
 source ~/voice-workbench-venv/bin/activate
+cd ~
 ```
 
 Launch the Studio server and point it at the local RIVA and vLLM services:
@@ -319,15 +326,13 @@ From your client PC browser, open:
 https://<JETSON_IP>:8092
 ```
 
-Accept the self-signed certificate by clicking **Advanced** and continuing to the site. HTTPS is required because browsers restrict microphone and camera access on insecure origins.
+Verify that this is your Jetson's address on a trusted network before accepting its self-signed development certificate. HTTPS is required because browsers restrict microphone and camera access on insecure origins.
 
 When prompted, allow microphone and camera permissions.
 
 ### Step 5: Configure and Run a Voice + Vision Session
 
 Click **New Voice Chat** to open the configuration panel. First configure the tabs below, then click **Start Session** and speak naturally.
-
-![Multi-Modal AI Studio session interface](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/raw/main/docs/images/screenshot_example_2.png)
 
 <details>
 <summary><strong>1. ASR Tab → Select "RIVA Speech"</strong></summary>
@@ -348,7 +353,7 @@ Click **New Voice Chat** to open the configuration panel. First configure the ta
 </table>
 </div>
 
-The Silero VAD variant detects when you start and stop speaking, so the system knows when to begin transcription and when your turn is over.
+The Silero VAD variant helps the Riva streaming ASR service detect speech boundaries. Unlike the REST quick start, Riva can return partial transcripts while you speak, before finalizing the utterance.
 
 </details>
 
@@ -382,7 +387,7 @@ You are a vision assistant. Give one short sentence answers only. Be direct. No 
 ```
 
 <Note title="📝 Why these settings?">
-  - **Streaming Responses** lets TTS start speaking before the full LLM response is generated, reducing perceived latency.
+  - **Streaming Responses** delivers LLM text incrementally. With **Start speaking before LLM finishes** enabled in the TTS tab, the workbench can send text chunks to TTS before the response is complete.
   - **Conversation History** gives the LLM context from previous turns, enabling follow-up questions.
   - **Vision (Video Input)** captures frames from the camera and includes them in the LLM prompt.
   - **System Prompt** shapes the AI's behavior. Shorter responses mean faster TTS and a more conversational feel.
@@ -408,12 +413,12 @@ You are a vision assistant. Give one short sentence answers only. Be direct. No 
 <tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Sample Rate (Hz)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>22050</code></td></tr>
 <tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Quality</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">High (Better)</td></tr>
 <tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Start speaking before LLM finishes</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Checked</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; font-weight: 500;">Words before first speech</td><td style="padding: 12px 16px;"><code>10</code></td></tr>
+<tr style="background: #f8fafc;"><td style="padding: 12px 16px; font-weight: 500;">Units before first speech</td><td style="padding: 12px 16px;"><code>10</code></td></tr>
 </tbody>
 </table>
 </div>
 
-"Start speaking before LLM finishes" is key for low latency. TTS begins synthesizing after the first 10 words arrive from the LLM, rather than waiting for the complete response.
+"Start speaking before LLM finishes" sends short text chunks to TTS while the LLM generates. With a threshold of 10 units, the first chunk targets about 10 words in spaced text or characters in Japanese, Chinese, and Korean; a natural phrase boundary can flush it earlier. Playback still waits for the TTS service to return audio. Smaller chunks can reduce initial latency but affect prosody, and shared GPU load can cause gaps. Compare this option on and off for your chosen models.
 
 </details>
 
@@ -499,8 +504,8 @@ The best settings depend on your model, microphone, room noise, and use case. Th
 </thead>
 <tbody>
 <tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Short system prompt</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Reduces prompt tokens and encourages concise responses</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Streaming responses</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Allows TTS to start before the full response is complete</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Words before first speech</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Lower values start speech earlier, but can sound less natural</td></tr>
+<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Streaming responses + early TTS</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Can start speech before the full response is complete; compare against waiting for completion if playback has gaps</td></tr>
+<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Units before first speech</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Lower values can start speech earlier, but shorter chunks can sound less natural</td></tr>
 <tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">VAD sensitivity</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Improves turn detection in noisy rooms</td></tr>
 <tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Max model length</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Reduces KV cache memory pressure</td></tr>
 <tr style="background: #ffffff;"><td style="padding: 12px 16px; font-weight: 500;">GPU memory utilization</td><td style="padding: 12px 16px;">Leaves headroom for RIVA and the app</td></tr>
@@ -520,6 +525,7 @@ The best settings depend on your model, microphone, room noise, and use case. Th
 Confirm the service and installed models, then rerun the idempotent start command if either starter model is missing:
 
 ```bash
+cd ~/voice-workbench-backends
 ./scripts/speaches_speech.sh status
 ./scripts/speaches_speech.sh models
 ./scripts/speaches_speech.sh start
@@ -557,11 +563,13 @@ voice-ai-workbench --help
 <details>
 <summary>Port <code>8092</code> is already in use</summary>
 
-Stop the existing process and restart:
+Identify the listener before stopping anything:
 
 ```bash
-fuser -k 8092/tcp
+ss -ltnp 'sport = :8092'
 ```
+
+If it is your existing workbench process, stop it with **Ctrl+C** in its terminal. Otherwise, leave that service running and choose another port, for example `voice-ai-workbench --preset speaches-jetson --port 8101`, from outside the backend checkout.
 
 </details>
 
@@ -581,7 +589,7 @@ Make sure you opened the HTTPS URL:
 https://<JETSON_IP>:8092
 ```
 
-Accept the self-signed certificate and allow browser permissions for microphone and camera.
+Verify the Jetson address before accepting its self-signed development certificate, then allow browser permissions for microphone and camera.
 
 </details>
 
@@ -595,11 +603,14 @@ The ASR stream can time out if it stops receiving audio for an extended period. 
 <details>
 <summary>GPU memory is not released after stopping vLLM</summary>
 
-After stopping the vLLM container, clear cached memory:
+Check whether another model process or container is still running:
 
 ```bash
-sudo sysctl -w vm.drop_caches=3
+docker ps
+free -h
 ```
+
+Stop only the model services you no longer need. Linux page-cache reclamation does not release memory held by a live inference process; do not use `vm.drop_caches` as a GPU-memory fix.
 
 </details>
 
