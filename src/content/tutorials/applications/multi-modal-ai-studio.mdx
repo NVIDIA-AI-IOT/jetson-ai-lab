@@ -101,19 +101,21 @@ The first build and checkpoint downloads can take time. This launcher manages **
 
 ### 2. Serve the Cosmos3-Edge Reasoner
 
-Use the **vLLM Reasoner** deployment, not the vLLM-Omni Generator / Action deployment, on the [Cosmos3-Edge model page](/models/cosmos3-edge/). The following single-session settings shorten the context and leave shared-GPU memory for ASR and TTS; port 18087 also avoids replacing an existing E2B server:
+Use the **vLLM Reasoner** deployment, not the vLLM-Omni Generator / Action deployment, on the [Cosmos3-Edge model page](/models/cosmos3-edge/). The following evaluated ARM64 image and model revision provide a reproducible starting point. Single-session settings shorten the context and leave shared-GPU memory for ASR and TTS; port 18087 also avoids replacing an existing E2B server:
 
 ```bash
 sudo docker run -it --rm --init --pull always \
   --runtime=nvidia --network host \
+  -e PYTORCH_CUDA_ALLOC_CONF=backend:cudaMallocAsync \
   -v $HOME/.cache/huggingface:/root/.cache/huggingface \
   --entrypoint "" \
-  vllm/vllm-openai:cosmos3 \
+  vllm/vllm-openai:cosmos3@sha256:34094f070375eb5328e302af58737a8928ba5d55ff9fa196a4b7cf5fb85edcc4 \
   vllm serve nvidia/Cosmos3-Edge \
+    --revision 5b590285c565623fb8a47c123708d27866b0564a \
     --host 127.0.0.1 --port 18087 \
     --trust-remote-code --dtype bfloat16 \
     --max-model-len 4096 --max-num-seqs 1 \
-    --gpu-memory-utilization 0.15 --enforce-eager \
+    --gpu-memory-utilization 0.15 --kv-cache-memory-bytes 1073741824 --enforce-eager \
     --limit-mm-per-prompt '{"image":1,"video":0}' \
     --mm-processor-kwargs '{"do_resize":true,"min_pixels":4096,"max_pixels":262144}'
 ```
@@ -124,7 +126,23 @@ Keep this terminal running. From another terminal, verify the model API:
 curl --fail http://localhost:18087/v1/models
 ```
 
-The model page is the reference for supported engines and hardware. These shared-service settings are a starting point for AGX Thor, not a claim that this vLLM configuration fits an 8 GB Orin Nano. Do not start multiple full-size LLM servers unnecessarily.
+Warm up a short text response before starting voice. Model discovery alone does not test inference, and the first text or image request can include substantial initialization and kernel-compilation latency:
+
+```bash
+curl --fail --show-error --max-time 180 \
+  http://localhost:18087/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "nvidia/Cosmos3-Edge",
+    "messages": [{"role": "user", "content": "What is one plus one? Answer briefly."}],
+    "max_tokens": 32,
+    "chat_template_kwargs": {"enable_thinking": false}
+  }'
+```
+
+Wait for the answer, not just an HTTP connection. Warm up an image question too when enabling vision, then compare latency on subsequent turns.
+
+The model page is the reference for supported engines and hardware. This conservative single-session recipe uses asynchronous CUDA allocation, a 1 GiB KV-cache budget, and eager execution; it is not a peak-throughput benchmark or a claim that the same vLLM configuration fits an 8 GB Orin Nano. The KV budget is not a cap on total process memory. Do not start multiple full-size LLM servers unnecessarily.
 
 ### 3. Connect the workbench
 
