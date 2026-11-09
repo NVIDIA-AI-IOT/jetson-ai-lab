@@ -3,6 +3,8 @@ title: "Gemma 3 270M"
 model_id: "gemma3-270m"
 short_description: "Google's ultra-compact 270 million parameter model for lightweight edge deployments"
 family: "Google Gemma3"
+visual_family: "gemma"
+visual_variant: "3"
 icon: "💎"
 is_new: false
 order: 1
@@ -12,6 +14,9 @@ memory_requirements: "1GB RAM"
 precision: "FP16"
 parameters: "270M"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "32K"
 license: "Gemma Terms of Service"
 model_size: "0.5GB"
@@ -72,4 +77,3 @@ Gemma is a family of lightweight, state-of-the-art open models from Google, buil
 **Output:**
 - Generated text in response to the input, such as an answer to a question, analysis of image content, or a summary of a document
 - Total output context of 8192 tokens
-

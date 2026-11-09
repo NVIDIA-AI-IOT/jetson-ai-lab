@@ -3,13 +3,19 @@ title: "FLUX 3 Action"
 model_id: "flux-3-action"
 short_description: "Black Forest Labs' world action model for robotics, with a guide to generating action predictions on Jetson Thor using LeRobot."
 family: "Black Forest Labs"
-is_new: true
+visual_family: "flux3-action"
+is_new: false
 order: -5
 type: "Multimodal"
 vision_capable: true
 precision: "BF16"
 parameters: "7B"
 modalities: ["Text", "Image", "Action"]
+input_modalities: ["text", "image", "action"]
+output_modalities: ["action", "video"]
+tasks:
+  - "action-generation"
+  - "text-to-video"
 huggingface_url: "https://huggingface.co/collections/black-forest-labs/flux-3-action"
 minimum_jetson: "Thor"
 hide_run_button: true

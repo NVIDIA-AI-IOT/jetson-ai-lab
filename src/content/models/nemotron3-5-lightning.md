@@ -3,6 +3,8 @@ title: "Nemotron 3.5 Lightning"
 model_id: "nemotron3-5-lightning"
 short_description: "NVIDIA's fast open-weight model for responsive local agents, reasoning, coding, and tool use. It delivers performance comparable to the much larger Nemotron 3 Super."
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 icon: "⚡"
 is_new: false
 order: -2
@@ -12,6 +14,9 @@ memory_requirements: "64GB RAM"
 precision: "NVFP4"
 parameters: "30B total / 3B active"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "1M"
 license: "OpenMDW 1.1"
 hf_checkpoint: "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"

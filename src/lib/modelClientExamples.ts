@@ -180,14 +180,19 @@ export function buildClientCallExamples(
 		if (key === 'llamacpp') {
 			seen.add('llamacpp');
 			const aliasMatch = runSample.match(/--alias\s+(\S+)/);
-			const modelName = aliasMatch?.[1] || 'my_model';
+			const hfRepoMatch = runSample.match(/(?:^|\s)(?:-hf|-hfr|--hf-repo)(?:=|\s+)(?:"([^"]+)"|'([^']+)'|(\S+))/);
+			const modelMatch = runSample.match(/(?:^|\s)(?:--model|-m)(?:=|\s+)(?:"([^"]+)"|'([^']+)'|(\S+))/);
+			const modelName = aliasMatch?.[1] ||
+				hfRepoMatch?.[1] || hfRepoMatch?.[2] || hfRepoMatch?.[3] ||
+				modelMatch?.[1] || modelMatch?.[2] || modelMatch?.[3] || 'my_model';
+			const port = Number(runSample.match(/--port(?:=|\s+)(\d+)/)?.[1] || 8080);
 			out.push({
 				callEngineKey: 'llamacpp',
 				engineLabel: 'llama.cpp server (OpenAI-compatible API)',
 				lang: 'shell',
 				intro:
 					'After llama-server is running with --network host, call it from another machine on the LAN (set <code class="text-xs bg-nvidia-gray-100 px-1 rounded">${JETSON_HOST}</code> or use the field). Default port is often 8080 unless you set --port.',
-				command: `curl -s http://\${JETSON_HOST}:8080/v1/chat/completions \\
+				command: `curl -s http://\${JETSON_HOST}:${port}/v1/chat/completions \\
   -H "Content-Type: application/json" \\
   -d '{
     "model": "${modelName}",
@@ -200,7 +205,7 @@ export function buildClientCallExamples(
 				lang: 'python',
 				intro: '',
 				showEngineHeading: false,
-				command: openaiSdkPythonExample(8080, modelName, 'compat', 'Hello!'),
+				command: openaiSdkPythonExample(port, modelName, 'compat', 'Hello!'),
 			});
 			continue;
 		}

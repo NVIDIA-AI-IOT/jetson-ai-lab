@@ -3,6 +3,7 @@ title: "GPT OSS 20B"
 model_id: "gpt-oss-20b"
 short_description: "OpenAI's open-source 20 billion parameter language model"
 family: "OpenAI GPT OSS"
+visual_family: "openai-gpt-oss"
 icon: "🤖"
 is_new: false
 order: 1
@@ -12,6 +13,9 @@ memory_requirements: "16GB RAM"
 precision: "W4A16"
 parameters: "21B total / 3.6B activated"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Apache 2.0"
 model_size: "12GB"

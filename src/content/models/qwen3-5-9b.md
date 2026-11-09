@@ -3,6 +3,8 @@ title: "Qwen3.5 9B"
 model_id: "qwen3-5-9b"
 short_description: "Alibaba's dense Qwen3.5 9B vision-language model with Jetson-specific checkpoints for Orin and Thor"
 family: "Alibaba Qwen3.5"
+visual_family: "qwen"
+visual_variant: "3.5"
 icon: "🔮"
 is_new: false
 order: 3
@@ -11,7 +13,10 @@ vision_capable: true
 memory_requirements: "8GB RAM"
 precision: "NVFP4 / W4A16"
 parameters: "9B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "5GB"

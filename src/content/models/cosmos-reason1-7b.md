@@ -2,7 +2,9 @@
 title: "Cosmos Reason 1 7B"
 model_id: "cosmos-reason1-7b"
 short_description: "NVIDIA's 7B parameter reasoning vision-language model designed for physical AI and robotics applications"
-family: "NVIDIA Cosmos Reason"
+family: "NVIDIA Cosmos"
+visual_family: "nvidia-cosmos"
+visual_variant: "2"
 icon: "🧠"
 is_new: false
 order: 1
@@ -12,6 +14,9 @@ memory_requirements: "16GB RAM"
 precision: "FP16"
 parameters: "7B"
 modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "NVIDIA Open Model License"
 model_size: "14GB"
@@ -78,4 +83,3 @@ This model can be pulled directly from HuggingFace and served with vLLM — no m
 - [Try on build.nvidia.com](https://build.nvidia.com/nvidia/cosmos-reason1-7b)
 - [NVIDIA Cosmos Documentation](https://docs.nvidia.com/cosmos/2.0.0/reason1/quickstart_guide.html)
 - [Live VLM WebUI](https://github.com/NVIDIA-AI-IOT/live-vlm-webui) — real-time webcam-to-VLM interface
-

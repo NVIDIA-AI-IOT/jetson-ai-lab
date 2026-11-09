@@ -1,4 +1,4 @@
-﻿---
+---
 name: jetson-model-catalog-inference
 description: Configure Jetson AI Lab model pages — frontmatter for the Model Details sidebar (parameters, modalities, context length, license, precision pills), the Run on Jetson serve/call/one-shot UI, the three "block" levers (hide_run_button, matrix_modules_disabled, per-engine modules_supported), and the join to src/data/benchmarks.json (benchmark_key, benchmark_series, OOM vs DNR vs null). Use when adding or editing model pages, inference engines, serve/run commands, one-shot blocks, the details sidebar, benchmark wiring, or deciding whether to mark a Jetson module as OOM, blocked, or simply untested.
 license: Apache-2.0
@@ -46,7 +46,7 @@ Either schema-required (build fails without them) or used by every model in the 
 | `short_description` | **required** | One-line summary in the catalog grid and Hero subtitle. |
 | `precision` | **required** | Slash-or-comma separated quant tokens (e.g. `"NVFP4 / FP8 / Q4_K_M GGUF"`). Each token renders as a colored pill in the sidebar (`precisionPill` in `[slug].astro`). |
 | `family` | optional but ubiquitous | Groups models in the catalog. Special value `"Google Gemma4"` triggers the Gemma 4 tutorial CTA banner above the prose. |
-| `model_id`, `icon`, `is_new`, `order`, `type`, `hf_checkpoint`, `huggingface_url`, `minimum_jetson` | optional but ubiquitous | Catalog card / hero / external links. `huggingface_url` falls back to `https://huggingface.co/${hf_checkpoint}` when omitted. |
+| `model_id`, `icon`, `catalog_added_at`, `order`, `type`, `hf_checkpoint`, `huggingface_url`, `minimum_jetson` | optional but expected | Catalog card / hero / external links. New model files must set `catalog_added_at: YYYY-MM-DD`; `is_new` is retained only for legacy entries. `huggingface_url` falls back to `https://huggingface.co/${hf_checkpoint}` when omitted. |
 
 ### Model Details sidebar tags (drive the dark spec card on the right of the Hero)
 
@@ -287,7 +287,7 @@ Two text routes surface the model catalog to external clients (search agents, LL
 | Route | Source file | What it contains |
 |---|---|---|
 | `/llms.txt` | `src/pages/llms.txt.ts` | Short index. Curated tutorial header (static template literal) + auto-generated **Supported Models** section grouped by vendor. Models grouped by `family` per `MODEL_SECTIONS`, sorted by frontmatter `order`. |
-| `/llms-full.txt` | `src/pages/llms-full.txt.ts` | Full long-form index. Iterates `getCollection('tutorials')` and `getCollection('models')`, emits frontmatter + full Markdown body for every page. |
+| `/llms-full.txt` | `src/pages/llms-full.txt.ts` | Full long-form index. Iterates tutorials and models, emits documentation plus normalized serving commands, per-engine module support, one-shot commands, and explicit client-call examples. |
 
 **When you add a new model:**
 
@@ -335,7 +335,7 @@ Otherwise Zod reports a custom error on `supported_inference_engines`:
 
 | Purpose | Path |
 |---|---|
-| Model schema + Zod validation | `src/content/config.ts` (`modelsSchema`, `superRefine` ~L144–165) |
+| Model schema + Zod validation | `src/content/config.ts` (`modelsSchema.superRefine`) |
 | Frontmatter → engine list adapter | `src/lib/modelFrontmatterAdapter.ts` (`getSupportedInferenceEngines`, `servingEntryToSupportedEngine`, `sortEnginesForUi`) |
 | Engine types, matrix module ids, serve/run helpers | `src/lib/inferenceCommands.ts` (`SupportedEngineEntry`, `JETSON_MATRIX_MODULES`, `JETSON_MATRIX_TAB_MODULE_IDS`, matrix helpers) |
 | Model page layout (Hero, sidebar, sections) | `src/pages/models/[slug].astro` |

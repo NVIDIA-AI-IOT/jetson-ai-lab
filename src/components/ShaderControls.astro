@@ -1,0 +1,325 @@
+---
+interface Control {
+	key: string;
+	label: string;
+	min: number;
+	max: number;
+	step: number;
+	value: number;
+	decimals?: number;
+	unit?: string;
+	description?: string;
+}
+
+interface Props {
+	shaderId: string;
+	controls: Control[];
+	savedDefaults: Record<string, number>;
+	defaultVariant?: string | null;
+}
+
+const { shaderId, controls, savedDefaults, defaultVariant = null } = Astro.props;
+const layered = shaderId === 'muse-glimmer' || shaderId === 'ministral3';
+const displayControls = [
+	...controls,
+	{
+		key: 'darkness',
+		label: 'Dark overlay',
+		min: 0,
+		max: 0.8,
+		step: 0.01,
+		value: 0,
+		description: 'Opacity of a black layer above the visual. This changes presentation without changing shader rendering cost.',
+	},
+];
+---
+
+<details class="border-t border-nvidia-gray-200 bg-nvidia-gray-50 px-6 py-4">
+	<summary class="cursor-pointer select-none text-sm font-bold text-nvidia-gray-800">Tune motion &amp; composition</summary>
+	<div class="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+		{displayControls.map((control) => (
+			<label class="block text-xs font-bold uppercase tracking-wide text-nvidia-gray-600">
+				<span class="flex items-center justify-between gap-3">
+					<span>{control.label}</span>
+					<output class="font-mono text-nvidia-black" data-shader-value={`${shaderId}:${control.key}`} data-unit={control.unit ?? ''}>
+						{control.value.toFixed(control.decimals ?? 2)}{control.unit ?? ''}
+					</output>
+				</span>
+				<input
+					type="range"
+					min={control.min}
+					max={control.max}
+					step={control.step}
+					value={control.value}
+					data-shader-control={shaderId}
+					data-param={control.key}
+					data-decimals={control.decimals ?? 2}
+					class="mt-2 w-full accent-nvidia-green"
+				/>
+				{control.description && <span class="mt-1.5 block text-[11px] font-normal normal-case leading-snug tracking-normal text-nvidia-gray-500">{control.description}</span>}
+			</label>
+		))}
+	</div>
+	<div class="mt-5 flex flex-wrap items-center gap-2">
+		<button type="button" data-shader-reset={shaderId} data-shader-reset-values={JSON.stringify(savedDefaults)} class="rounded-sm border border-nvidia-gray-300 bg-white px-3 py-2 text-xs font-bold text-nvidia-gray-700 hover:border-nvidia-green hover:text-nvidia-black">
+			Reset to saved defaults
+		</button>
+		<button type="button" data-shader-save={shaderId} data-shader-default-variant={defaultVariant ?? ''} data-shader-saved-values={JSON.stringify(savedDefaults)} class="rounded-sm border border-nvidia-green bg-nvidia-green px-3 py-2 text-xs font-bold text-black hover:bg-[#8bd000]">
+			Save current values as defaults
+		</button>
+		<button type="button" data-shader-preview={shaderId} class="rounded-sm border border-nvidia-gray-300 bg-white px-3 py-2 text-xs font-bold text-nvidia-gray-700 hover:border-nvidia-green hover:text-nvidia-black">
+			View Shadertoy GLSL
+		</button>
+		<button type="button" data-shader-copy={shaderId} class="rounded-sm border border-nvidia-green bg-nvidia-green/10 px-3 py-2 text-xs font-bold text-nvidia-black hover:bg-nvidia-green/20">
+			{layered ? 'Copy simplified Shadertoy' : 'Copy for Shadertoy'}
+		</button>
+		{layered && (
+			<button type="button" data-shader-bundle={shaderId} class="rounded-sm border border-nvidia-gray-300 bg-white px-3 py-2 text-xs font-bold text-nvidia-gray-700 hover:border-nvidia-green hover:text-nvidia-black">
+				Download layered sources
+			</button>
+		)}
+	</div>
+	<p class="mt-3 hidden text-xs font-semibold" data-shader-save-status={shaderId} role="status"></p>
+	{layered && (
+		<p class="mt-3 max-w-3xl text-[11px] leading-relaxed text-nvidia-gray-500">
+			The Shadertoy export is the single-pass approximation. The production visual uses WebGL2 framebuffers and instanced geometry; download its source bundle to inspect every pass.
+		</p>
+	)}
+</details>
+
+<dialog data-shader-save-dialog={shaderId} class="w-[min(720px,calc(100vw-2rem))] rounded-sm border border-nvidia-gray-300 bg-white p-0 text-nvidia-black shadow-2xl backdrop:bg-black/60">
+	<div class="border-b border-nvidia-gray-200 px-5 py-4">
+		<h2 class="text-lg font-bold">Change production defaults?</h2>
+		<p class="mt-1 text-xs leading-relaxed text-nvidia-gray-500">This writes the selected values to <code>src/data/modelShaderDefaults.json</code>. The change remains visible in Git for review; no commit is created automatically.</p>
+	</div>
+	<div class="p-5">
+		<pre data-shader-save-diff class="max-h-[50vh] overflow-auto rounded-sm bg-[#0d1324] p-4 font-mono text-xs leading-relaxed text-white"></pre>
+		<div class="mt-4 flex justify-end gap-2">
+			<button type="button" data-shader-save-cancel class="rounded-sm border border-nvidia-gray-300 bg-white px-3 py-2 text-xs font-bold text-nvidia-gray-700">Cancel</button>
+			<button type="button" data-shader-save-confirm={shaderId} class="rounded-sm border border-nvidia-green bg-nvidia-green px-3 py-2 text-xs font-bold text-black">Update saved defaults</button>
+		</div>
+	</div>
+</dialog>
+
+<dialog data-shader-source-dialog={shaderId} class="w-[min(920px,calc(100vw-2rem))] rounded-sm border border-nvidia-gray-300 bg-white p-0 text-nvidia-black shadow-2xl backdrop:bg-black/60">
+	<div class="flex items-start justify-between gap-4 border-b border-nvidia-gray-200 px-5 py-4">
+		<div>
+			<h2 class="text-lg font-bold">Shadertoy-ready GLSL</h2>
+			<p class="mt-1 text-xs text-nvidia-gray-500">Current tuning values are embedded. Paste into a new Shadertoy Image shader.</p>
+		</div>
+		<button type="button" data-shader-dialog-close aria-label="Close" class="rounded-sm px-2 py-1 text-xl leading-none text-nvidia-gray-500 hover:bg-nvidia-gray-100">×</button>
+	</div>
+	<div class="p-5">
+		<textarea data-shader-source-output readonly spellcheck="false" class="h-[min(60vh,640px)] w-full resize-y rounded-sm border border-nvidia-gray-300 bg-[#0d1324] p-4 font-mono text-xs leading-relaxed text-white"></textarea>
+		<div class="mt-3 flex justify-end gap-2">
+			<button type="button" data-shader-dialog-close class="rounded-sm border border-nvidia-gray-300 bg-white px-3 py-2 text-xs font-bold text-nvidia-gray-700">Close</button>
+			<button type="button" data-shader-dialog-copy={shaderId} class="rounded-sm border border-nvidia-green bg-nvidia-green px-3 py-2 text-xs font-bold text-black">Copy code</button>
+		</div>
+	</div>
+</dialog>
+
+<script>
+	const numberLiteral = (value) => {
+		const finite = Number.isFinite(Number(value)) ? Number(value) : 0;
+		const rounded = Number(finite.toFixed(6));
+		return Number.isInteger(rounded) ? `${rounded}.0` : String(rounded);
+	};
+
+	const makeShadertoySource = (shaderId) => {
+		const entry = globalThis.__jalShaderExports?.[shaderId];
+		if (!entry) throw new Error(`Shader source is not registered for ${shaderId}`);
+		const floatUniforms = [...entry.source.matchAll(/^uniform\s+float\s+(u_[A-Za-z0-9_]+)\s*;\s*$/gm)]
+			.map((match) => match[1]);
+		const reserved = new Set(['u_time']);
+		const scalarConstants = floatUniforms
+			.filter((name) => !reserved.has(name))
+			.map((name) => {
+				const key = name.slice(2);
+				return `const float ${name} = ${numberLiteral(entry.values[key] ?? 0)};`;
+			});
+		const coverage = Number(entry.canvasCoverage ?? 1);
+		const speed = Number(entry.values.speed ?? 1);
+		let source = entry.source
+			.replace(/^#version\s+300\s+es\s*$/m, '')
+			.replace(/^precision\s+(?:lowp|mediump|highp)\s+float\s*;\s*$/m, '')
+			.replace(/^uniform\s+(?:vec2|float)\s+u_[A-Za-z0-9_]+\s*;\s*$/gm, '')
+			.replace(/^out\s+vec4\s+outColor\s*;\s*$/m, '')
+			.replace(/\boutColor\b/g, 'fragColor')
+			.replace(/\bvoid\s+main\s*\(\s*\)/, 'void mainImage(out vec4 fragColor, in vec2 fragCoord)')
+			.trim();
+		const modeNote = entry.layered
+			? '// NOTE: This is the single-pass approximation; download the layered bundle for the production WebGL2 passes.\n'
+			: '';
+		return `// Jetson AI Lab model visual: ${shaderId}\n// Generated from the current Model Visuals Prototype controls.\n// Paste into https://www.shadertoy.com/new as an Image shader.\n${modeNote}\nprecision highp float;\n\n#define u_resolution iResolution.xy\n#define u_layout_resolution vec2(iResolution.x / ${numberLiteral(coverage)}, iResolution.y)\n#define u_viewport vec2(${numberLiteral(1 - coverage)}, ${numberLiteral(coverage)})\n#define u_time (${numberLiteral(entry.startTime ?? 0)} + iTime * ${numberLiteral(speed)})\n${scalarConstants.join('\n')}\n\n${source}\n`;
+	};
+
+	const copyText = async (text) => {
+		try {
+			await navigator.clipboard.writeText(text);
+		} catch {
+			const helper = document.createElement('textarea');
+			helper.value = text;
+			helper.style.position = 'fixed';
+			helper.style.opacity = '0';
+			document.body.appendChild(helper);
+			helper.select();
+			document.execCommand('copy');
+			helper.remove();
+		}
+	};
+
+	const flashCopied = (button) => {
+		const original = button.textContent;
+		button.textContent = 'Copied';
+		setTimeout(() => { button.textContent = original; }, 1400);
+	};
+
+	const parsedValues = (value) => {
+		try { return JSON.parse(value || '{}'); } catch { return {}; }
+	};
+
+	const currentPersistedValues = (shaderId, savedValues) => {
+		const liveValues = globalThis.__jalShaderExports?.[shaderId]?.values ?? {};
+		return Object.fromEntries(Object.keys(savedValues).map((key) => [key, Number(liveValues[key])]));
+	};
+
+	const formatDefaultsDiff = (savedValues, currentValues) => {
+		const lines = Object.keys(savedValues).map((key) => {
+			const before = Number(savedValues[key]);
+			const after = Number(currentValues[key]);
+			return before === after ? null : `${key}: ${before} → ${after}`;
+		}).filter(Boolean);
+		return lines.length ? lines.join('\n') : 'No values have changed.';
+	};
+
+	const setSaveStatus = (shaderId, message, error = false) => {
+		const status = document.querySelector(`[data-shader-save-status="${shaderId}"]`);
+		if (!(status instanceof HTMLElement)) return;
+		status.textContent = message;
+		status.classList.remove('hidden', 'text-red-700', 'text-green-700');
+		status.classList.add(error ? 'text-red-700' : 'text-green-700');
+	};
+
+	const pendingSaveKey = 'jal:model-visual-defaults:saved';
+	try {
+		const pendingSave = JSON.parse(sessionStorage.getItem(pendingSaveKey) || 'null');
+		if (pendingSave?.shaderId && pendingSave?.message) {
+			setSaveStatus(pendingSave.shaderId, pendingSave.message);
+			sessionStorage.removeItem(pendingSaveKey);
+		}
+	} catch {
+		sessionStorage.removeItem(pendingSaveKey);
+	}
+
+	document.addEventListener('click', async (event) => {
+		const button = event.target instanceof Element ? event.target.closest('button') : null;
+		if (!(button instanceof HTMLButtonElement)) return;
+
+		const saveId = button.dataset.shaderSave;
+		if (saveId) {
+			const dialog = document.querySelector(`[data-shader-save-dialog="${saveId}"]`);
+			const output = dialog?.querySelector('[data-shader-save-diff]');
+			const confirm = dialog?.querySelector('[data-shader-save-confirm]');
+			const savedValues = parsedValues(button.dataset.shaderSavedValues);
+			const currentValues = currentPersistedValues(saveId, savedValues);
+			const changed = Object.keys(savedValues).some((key) => Number(savedValues[key]) !== Number(currentValues[key]));
+			if (dialog instanceof HTMLDialogElement && output instanceof HTMLElement) {
+				output.textContent = formatDefaultsDiff(savedValues, currentValues);
+				if (confirm instanceof HTMLButtonElement) confirm.disabled = !changed;
+				dialog.showModal();
+			}
+			return;
+		}
+
+		if (button.hasAttribute('data-shader-save-cancel')) {
+			button.closest('dialog')?.close();
+			return;
+		}
+
+		const saveConfirmId = button.dataset.shaderSaveConfirm;
+		if (saveConfirmId) {
+			const saveButton = document.querySelector(`[data-shader-save="${saveConfirmId}"]`);
+			if (!(saveButton instanceof HTMLButtonElement)) return;
+			const savedValues = parsedValues(saveButton.dataset.shaderSavedValues);
+			const values = currentPersistedValues(saveConfirmId, savedValues);
+			button.disabled = true;
+			button.textContent = 'Saving…';
+			try {
+				const variant = saveButton.dataset.shaderDefaultVariant || null;
+				const savedMessage = `Saved ${saveConfirmId}${variant ? ` / ${variant}` : ''}. Git now contains the reviewable source change.`;
+				sessionStorage.setItem(pendingSaveKey, JSON.stringify({ shaderId: saveConfirmId, message: savedMessage }));
+				const response = await fetch('/api/internal/model-visual-defaults', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						shaderId: saveConfirmId,
+						variant,
+						values,
+					}),
+				});
+				const result = await response.json();
+				if (!response.ok) throw new Error(result.error || `Save failed (${response.status})`);
+				document.querySelectorAll(`[data-shader-save="${saveConfirmId}"]`).forEach((candidate) => {
+					if (candidate instanceof HTMLButtonElement) candidate.dataset.shaderSavedValues = JSON.stringify(result.values);
+				});
+				document.querySelectorAll(`[data-shader-reset="${saveConfirmId}"]`).forEach((candidate) => {
+					if (candidate instanceof HTMLButtonElement) candidate.dataset.shaderResetValues = JSON.stringify(result.values);
+				});
+				button.closest('dialog')?.close();
+				setSaveStatus(saveConfirmId, savedMessage);
+				sessionStorage.removeItem(pendingSaveKey);
+			} catch (error) {
+				sessionStorage.removeItem(pendingSaveKey);
+				setSaveStatus(saveConfirmId, error instanceof Error ? error.message : String(error), true);
+			} finally {
+				button.disabled = false;
+				button.textContent = 'Update saved defaults';
+			}
+			return;
+		}
+
+		const previewId = button.dataset.shaderPreview;
+		if (previewId) {
+			const dialog = document.querySelector(`[data-shader-source-dialog="${previewId}"]`);
+			const output = dialog?.querySelector('[data-shader-source-output]');
+			if (dialog instanceof HTMLDialogElement && output instanceof HTMLTextAreaElement) {
+				output.value = makeShadertoySource(previewId);
+				dialog.showModal();
+			}
+			return;
+		}
+
+		const copyId = button.dataset.shaderCopy ?? button.dataset.shaderDialogCopy;
+		if (copyId) {
+			await copyText(makeShadertoySource(copyId));
+			flashCopied(button);
+			return;
+		}
+
+		if (button.hasAttribute('data-shader-dialog-close')) {
+			button.closest('dialog')?.close();
+			return;
+		}
+
+		const bundleId = button.dataset.shaderBundle;
+		if (bundleId) {
+			const entry = globalThis.__jalShaderExports?.[bundleId];
+			const sources = globalThis.__jalLayeredShaderExports?.[bundleId];
+			if (!entry || !sources) return;
+			const payload = {
+				shaderId: bundleId,
+				note: 'Production WebGL2 source bundle. Rendering orchestration lives in src/components/LayeredModelShaderCanvas.astro.',
+				parameters: entry.values,
+				canvasCoverage: entry.canvasCoverage,
+				startTime: entry.startTime,
+				sources,
+			};
+			const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `${bundleId}-webgl2-source-bundle.json`;
+			link.click();
+			URL.revokeObjectURL(url);
+		}
+	});
+</script>

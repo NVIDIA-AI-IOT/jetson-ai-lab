@@ -3,6 +3,8 @@ title: "Nemotron3 Nano 30B-A3B"
 model_id: "nemotron-3-nano-30b-a3b"
 short_description: "NVIDIA's flagship hybrid MoE reasoning model with 30B total / 3.5B active parameters"
 family: "NVIDIA Nemotron"
+visual_family: "nvidia-nemotron"
+visual_variant: "3.5"
 icon: "⚡"
 is_new: false
 order: 1
@@ -12,6 +14,9 @@ memory_requirements: "32GB RAM"
 precision: "NVFP4 / AWQ"
 parameters: "30B total / 3B activated"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "NVIDIA Nemotron Open Model License"
 model_size: "17GB"

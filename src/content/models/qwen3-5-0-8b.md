@@ -3,6 +3,8 @@ title: "Qwen3.5 0.8B"
 model_id: "qwen3-5-0-8b"
 short_description: "Alibaba's compact Qwen3.5 vision-language model for lightweight multimodal deployment"
 family: "Alibaba Qwen3.5"
+visual_family: "qwen"
+visual_variant: "3.5"
 icon: "🔮"
 is_new: false
 order: 5
@@ -11,7 +13,10 @@ vision_capable: true
 memory_requirements: "2GB RAM"
 precision: "BF16"
 parameters: "0.8B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "1.7GB"

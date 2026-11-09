@@ -3,15 +3,20 @@ title: "Qwen3.5 27B"
 model_id: "qwen3-5-27b"
 short_description: "Alibaba's dense 27 billion parameter language model with native tool calling and MTP speculative decoding"
 family: "Alibaba Qwen3.5"
+visual_family: "qwen"
+visual_variant: "3.5"
 icon: "🔮"
 is_new: false
 order: 2
-type: "Text"
-vision_capable: false
+type: "Multimodal"
+vision_capable: true
 memory_requirements: "18GB RAM"
 precision: "NVFP4 / W4A16"
 parameters: "27B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "15GB"

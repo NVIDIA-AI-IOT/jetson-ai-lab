@@ -3,6 +3,8 @@ title: "Qwen3.5 4B"
 model_id: "qwen3-5-4b"
 short_description: "Alibaba's efficient Qwen3.5 4B vision-language model tuned for practical multimodal deployment"
 family: "Alibaba Qwen3.5"
+visual_family: "qwen"
+visual_variant: "3.5"
 icon: "🔮"
 is_new: false
 order: 4
@@ -11,7 +13,10 @@ vision_capable: true
 memory_requirements: "4GB RAM"
 precision: "NVFP4 / W4A16"
 parameters: "4B"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "2.5GB"

@@ -3,6 +3,8 @@ title: "Qwen3.8 Flash Next"
 model_id: "qwen3-8-flash-next"
 short_description: "Qwen's vision-language MoE model for reasoning, coding, and tool use on Jetson Thor, with NVFP4 quantization and MTP speculative decoding"
 family: "Alibaba Qwen3.8"
+visual_family: "qwen"
+visual_variant: "3.8"
 icon: "🔮"
 is_new: true
 order: -4
@@ -12,6 +14,9 @@ memory_requirements: "128GB RAM"
 precision: "NVFP4"
 parameters: "125B MoE / 6B activated"
 modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "262K"
 license: "Qwen Community 1.0"
 model_size: "106GB"

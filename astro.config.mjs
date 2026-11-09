@@ -4,8 +4,29 @@ import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import rehypeMermaid from 'rehype-mermaid';
 
+const internalVisualLabDevRoute = {
+  name: 'internal-visual-lab-dev-route',
+  hooks: {
+    'astro:config:setup': ({ command, injectRoute }) => {
+      if (command === 'dev') {
+        injectRoute({
+          pattern: '/model-visuals-prototype',
+          entrypoint: new URL('./src/internal/model-visuals-prototype.astro', import.meta.url),
+          prerender: true,
+        });
+        injectRoute({
+          pattern: '/api/internal/model-visual-defaults',
+          entrypoint: new URL('./src/internal/model-visual-defaults.ts', import.meta.url),
+          prerender: false,
+        });
+      }
+    },
+  },
+};
+
 export default defineConfig({
   integrations: [
+    internalVisualLabDevRoute,
     tailwind(),
     mdx(),
     sitemap({

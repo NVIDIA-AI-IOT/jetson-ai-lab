@@ -3,6 +3,7 @@ title: "GPT OSS 120B"
 model_id: "gpt-oss-120b"
 short_description: "OpenAI's open-source 120 billion parameter language model for Jetson Thor"
 family: "OpenAI GPT OSS"
+visual_family: "openai-gpt-oss"
 icon: "🤖"
 is_new: false
 order: 2
@@ -12,6 +13,9 @@ memory_requirements: "64GB RAM"
 precision: "NVFP4"
 parameters: "117B total / 5.1B activated"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "128K"
 license: "Apache 2.0"
 model_size: "60GB"

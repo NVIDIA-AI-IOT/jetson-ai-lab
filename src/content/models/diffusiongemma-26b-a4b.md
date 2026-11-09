@@ -3,6 +3,8 @@ title: "DiffusionGemma 26B-A4B"
 model_id: "diffusiongemma-26b-a4b"
 short_description: "A diffusion language model with platform-specific NVFP4 and AWQ-INT4 checkpoints for Jetson Thor and Orin"
 family: "Google Gemma4"
+visual_family: "gemma"
+visual_variant: "4"
 icon: "💎"
 is_new: false
 order: 5
@@ -12,6 +14,9 @@ memory_requirements: "24GB RAM"
 precision: "NVFP4 / AWQ-INT4"
 parameters: "26B total / 4B active"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "8K"
 hf_checkpoint: "nvidia/diffusiongemma-26B-A4B-it-NVFP4"
 huggingface_url: "https://huggingface.co/nvidia/diffusiongemma-26B-A4B-it-NVFP4"

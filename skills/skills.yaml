@@ -1,16 +1,15 @@
-﻿# Jetson AI Lab — agent skills index.
-# Published to the NVIDIA Skills Catalog: https://github.com/NVIDIA/skills
+# Jetson AI Lab — repository skills index.
 # Follows the Agent Skills specification: https://agentskills.io/specification
 
 skills:
   - name: jetson-model-catalog-inference
-    path: .agents/skills/jetson-model-catalog-inference/SKILL.md
+    path: skills/jetson-model-catalog-inference/SKILL.md
     description: Configure Jetson AI Lab model pages — frontmatter for the Model Details sidebar (parameters, modalities, context length, license, precision pills), the Run on Jetson serve/call/one-shot UI, the three "block" levers (hide_run_button, matrix_modules_disabled, per-engine modules_supported), the join to src/data/benchmarks.json (benchmark_key, benchmark_series, OOM vs DNR vs null), and the auto-generated /llms.txt and /llms-full.txt discoverability indexes (src/pages/llms.txt.ts MODEL_SECTIONS — new vendors require a section entry). Use when adding or editing model pages, inference engines, serve/run commands, one-shot blocks, the details sidebar, benchmark wiring, deciding whether to mark a Jetson module as OOM, blocked, or simply untested, or introducing a brand-new model family.
 
   - name: jetson-ai-lab-verify-build
-    path: .agents/skills/jetson-ai-lab-verify-build/SKILL.md
+    path: skills/jetson-ai-lab-verify-build/SKILL.md
     description: Run npm run build and triage model collection (Zod), MDX, benchmarks.json, and asset errors after content changes. Use when verifying the site builds after content, model, tutorial, benchmark, or asset changes.
 
   - name: jetson-ai-lab-code-samples
-    path: .agents/skills/jetson-ai-lab-code-samples/SKILL.md
+    path: skills/jetson-ai-lab-code-samples/SKILL.md
     description: Place downloadable tutorial scripts under public/code-samples/ and link via production or raw GitHub URLs. Use when adding, moving, or linking downloadable scripts, assets, or code files for Jetson AI Lab tutorials.

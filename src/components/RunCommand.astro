@@ -285,9 +285,19 @@ const engineImagesThor: Record<string, string> = {
 const engineImages = engineImagesOrin;
 ---
 
-<button id={buttonId} data-run-open={modelId} class="px-3 py-1.5 rounded-md bg-nvidia-black text-nvidia-white hover:bg-nvidia-green hover:text-nvidia-black transition-colors text-xs font-bold">
-	Run
-	<span class="sr-only">Run {modelName}</span>
+<button
+	type="button"
+	id={buttonId}
+	data-run-open={modelId}
+	class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-nvidia-gray-300 bg-white text-nvidia-gray-700 transition-colors hover:border-nvidia-green hover:bg-nvidia-green/10 hover:text-nvidia-black"
+	aria-haspopup="dialog"
+	aria-controls={modalId}
+	aria-label={`Quick run ${modelName}`}
+	title="Quick run"
+>
+	<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+		<path stroke-linecap="round" stroke-linejoin="round" d="m5 7 4 4-4 4M12 17h7" />
+	</svg>
 </button>
 
 <div

@@ -3,6 +3,7 @@ title: "Muse Glimmer 30B"
 model_id: "muse-glimmer-30b"
 short_description: "Meta's local agentic model with reasoning, tool use, image understanding, and DFlash speculative decoding"
 family: "Meta Muse"
+visual_family: "meta-muse-glimmer"
 icon: "✨"
 is_new: false
 order: -1
@@ -12,6 +13,9 @@ memory_requirements: "24GB RAM"
 precision: "K-Quant (~4-bit) GGUF"
 parameters: "30B"
 modalities: ["Text", "Image"]
+input_modalities: ["text", "image"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "131K"
 license: "Apache 2.0"
 model_size: "17GB"

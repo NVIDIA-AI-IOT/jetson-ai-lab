@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "generator": "WebGL2/GLSL sources listed per family; committed WebP files are deterministic offline fallbacks",
+  "runtimeDefaults": "src/data/modelShaderDefaults.json",
+  "families": [
+    {
+      "id": "qwen",
+      "label": "Qwen",
+      "designRationale": { "officialBasis": "Current Qwen mark uses a blue 120-degree symmetric, compact isometric/hexagonal construction.", "modelConcept": "A family spanning multimodal models and successive generations without changing its core identity.", "visualTranslation": "Seven translucent rectangular slabs share one isometric projection and drift without forming a second logo.", "nonClaims": "The slab field is decorative Jetson AI Lab artwork, not official Alibaba or Qwen brand art.", "generator": "src/shaders/qwen-isometric.frag.glsl" },
+      "palette": { "background": "#070719", "accent": "#155EEF" },
+      "procedural": {
+        "revision": 5,
+        "grammar": "seven slowly drifting translucent rectangular slabs sharing one isometric projection",
+        "parameters": { "slabCount": 7, "projectionHorizontalSlope": -0.235, "officialMarkSymmetry": 3, "versionPresets": [3, 3.5, 3.8], "maxRuntimeFps": 20, "runtimeResolutionScale": 0.8, "exposedControls": ["speed", "center_x", "center_y", "scale", "motion"] },
+        "renderers": {
+          "heroAndCatalog": { "type": "shared-webgl2", "script": "scripts/render-model-visuals-webgl.mjs", "shader": "src/shaders/qwen-isometric.frag.glsl", "shaderRevision": 7, "runtimePrototype": true, "staticFallback": "offline-webp" }
+        }
+      },
+      "assets": {
+        "hero": "public/images/model-families/qwen/hero-3-8.webp",
+        "catalog": "public/images/model-families/qwen/catalog-3-8.webp"
+      },
+      "icon": { "strategy": "none", "status": "omitted-pending-approved-locally-distributable-first-party-asset" },
+      "provenance": {
+        "kind": "deterministic-shared-webgl2-with-text-identity",
+        "generatedAt": "2026-10-21",
+        "officialReferences": [
+          "https://img.alicdn.com/imgextra/i3/O1CN01JLF4IJ1yAv1ZE7bfQ_!!6000000006539-2-tps-180-48.png",
+          "https://github.com/QwenLM/qwenlm.github.io/blob/main/config.yml",
+          "https://github.com/QwenLM/Qwen-MM-Plugins/blob/main/src/capabilities/video-edit/skill/assets/images/qwen-icon.svg"
+        ],
+        "reviewStatus": "prototype"
+      }
+    },
+    {
+      "id": "gemma",
+      "label": "Google Gemma",
+      "designRationale": { "officialBasis": "Gemma launch material consistently uses a pale-blue Spark, construction lines, and blue luminous fields.", "modelConcept": "A compact open-model family whose generations add capability while retaining one identity.", "visualTranslation": "Analytic pale-blue streams become denser and more curved from Gemma 3 to Gemma 4.", "nonClaims": "The shader is not an official Google background and intentionally excludes Gemini's four-color system.", "generator": "src/shaders/gemma-streams.frag.glsl" },
+      "palette": { "background": "#071D41", "accent": "#4285F4" },
+      "procedural": {
+        "revision": 8,
+        "grammar": "pale-blue analytic ribbon field; six quiet strands for Gemma 3 and twelve more strongly curved strands with sparse particulate highlights for Gemma 4",
+        "parameters": { "gemma3Strands": 6, "gemma4Strands": 12, "paletteColorCount": 1, "explicitLogoShapeCount": 0, "versionPresets": [3, 4], "runtimeMaxFps": 20, "runtimeResolutionScale": { "3": 0.7, "4": 0.5 }, "exposedControls": ["breeze_speed", "streak_width", "streak_bend", "streak_intensity"] },
+        "renderers": {
+          "heroAndCatalog": { "type": "shared-webgl2", "script": "scripts/render-gemma-visuals-webgl.mjs", "shader": "src/shaders/gemma-streams.frag.glsl", "shaderRevision": 9, "runtimePrototype": true, "staticFallback": "offline-webp" }
+        }
+      },
+      "assets": {
+        "hero": "public/images/model-families/gemma/hero-4.webp",
+        "catalog": "public/images/model-families/gemma/catalog-4.webp"
+      },
+      "icon": { "strategy": "none", "status": "omitted-pending-approved-first-party-asset" },
+      "provenance": {
+        "kind": "deterministic-shared-webgl2-without-reconstructed-brand-assets",
+        "generatedAt": "2026-10-21",
+        "officialReferences": [
+          "https://ai.google.dev/gemma/docs",
+          "https://blog.google/innovation-and-ai/technology/developers-tools/gemma-3/",
+          "https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/"
+        ],
+        "reviewStatus": "prototype"
+      }
+    },
+    {
+      "id": "liquid-d1",
+      "label": "Liquid AI d1",
+      "designRationale": { "officialBasis": "Liquid's official d1 launch diagram shows unstructured text and image inputs becoming probabilistic decisions; the open d1 family also includes a text-and-audio checkpoint, while Liquid has used a sphere in System 1 communication.", "modelConcept": "d1 reads an input in one forward pass and returns a probability for each possible answer rather than generated tokens.", "visualTranslation": "Three deliberately unequal, gently drifting violet ribbons follow smooth paths from different positions, converge over a broad edge-free spherical haze, and resolve into one weighted output stream. Five tightly packed probability traces subtly vary that stream's width instead of separating into parallel wires. The sphere is kept behind the flow at low contrast rather than used as a foreground symbol.", "nonClaims": "The ribbons and sphere do not claim to expose d1's internal topology and are not a Liquid logo; provider and model identity remain accessible text.", "generator": "src/shaders/liquid-decision.frag.glsl" },
+      "palette": { "background": "#0D0913", "accent": "#7C3CFF" },
+      "procedural": {
+        "revision": 4,
+        "grammar": "three unequal smooth input ribbons converging over a broad edge-free sphere haze before resolving into one weighted stream with five tightly packed internal probability traces",
+        "parameters": { "decorativeRibbonCount": 3, "sphereHazePositionRatio": 0.73, "probabilityTraceCount": 5, "runtimeMaxFps": 20, "runtimeResolutionScale": 0.75, "exposedControls": ["speed", "flow_amplitude", "convergence", "field_density", "field_orbit", "pulse", "sphere_haze"] },
+        "renderers": {
+          "heroAndCatalog": { "type": "shared-webgl2", "script": "scripts/render-additional-visuals-webgl.mjs", "shader": "src/shaders/liquid-decision.frag.glsl", "shaderRevision": 6, "runtimePrototype": true, "staticFallback": "offline-webp" }
+        }
+      },
+      "assets": {
+        "hero": "public/images/model-families/liquid-d1/hero.webp",
+        "catalog": "public/images/model-families/liquid-d1/catalog.webp"
+      },
+      "icon": { "strategy": "none", "status": "omitted-pending-approved-locally-distributable-first-party-asset" },
+      "provenance": {
+        "kind": "deterministic-shared-webgl2-with-text-identity",
+        "generatedAt": "2026-10-21",
+        "officialReferences": ["https://www.liquid.ai/blog/d1-decision-model", "https://www.liquid.ai/icon.png"],
+        "reviewStatus": "prototype"
+      }
+    },
+    {
+      "id": "nvidia-nemotron",
+      "label": "NVIDIA Nemotron",
+      "designRationale": { "officialBasis": "NVIDIA has repeatedly paired Nemotron with neural-network cube imagery and CUDA-era luminous compute surfaces.", "modelConcept": "A compute-efficient reasoning family whose inference is expressed as coordinated expert computation.", "visualTranslation": "A close DLP-like mirror grid is driven by an analytic Z height field: each cell center is displaced in projection, its square basis is deformed by the local gradient, and the same gradient determines its reflective normal and contact shadow.", "nonClaims": "The micromirror field is not an official Nemotron mark; the official NVIDIA-hosted cube stays separate.", "generator": "src/shaders/nemotron-microcube.frag.glsl" },
+      "palette": { "background": "#050706", "accent": "#76B900" },
+      "procedural": {
+        "revision": 6,
+        "grammar": "close-up oblique DLP-like mirror surface whose analytic Z height field displaces projected cell centers, deforms projected tile bases, derives normals from height gradients, and produces directional specular reflection plus contact shadow",
+        "parameters": { "waveCount": 2, "lightCount": 2, "maxZDisplacement": 5, "adaptiveSearch": { "defaultCandidates": 9, "expandedCandidates": 25, "expandAboveDensity": 7, "expandWhenZoomedOutBelowScale": 1.0 }, "leftFieldOptimization": { "earlyOutBeforeX": 0.12, "featherThroughX": 0.32 }, "fixedCaptureTimeSeconds": 60, "highlightDisplayColor": "#76B900", "versionPresets": [3, 3.5], "runtimeMaxFps": 20, "runtimeResolutionScale": 1.0, "exposedControls": ["render_scale", "soft_focus", "speed", "center_x", "center_y", "scale", "surface_angle", "tile_count", "wave_scale", "wave_amplitude", "mirror_tilt"] },
+        "renderers": {
+          "heroAndCatalog": { "type": "shared-webgl2", "script": "scripts/render-nvidia-visuals-webgl.mjs", "shader": "src/shaders/nemotron-microcube.frag.glsl", "shaderRevision": 9, "runtimePrototype": true, "staticFallback": "offline-webp" }
+        }
+      },
+      "assets": {
+        "hero": "public/images/model-families/nvidia-nemotron/hero.webp",
+        "catalog": "public/images/model-families/nvidia-nemotron/catalog.webp",
+        "icon": "public/images/model-families/nvidia-nemotron/icon-official.svg"
+      },
+      "icon": { "strategy": "official", "name": "NVIDIA containerized-model neural-network cube used for Nemotron", "status": "source-reviewed", "source": "https://developer.download.nvidia.com/images/logos/m48-containerized-model-76b900(1).svg" },
+      "provenance": {
+        "kind": "deterministic-shared-webgl2-with-official-corporate-icon",
+        "generatedAt": "2026-10-21",
+        "officialReferences": [
+          "https://developer-blogs.nvidia.com/wp-content/uploads/2012/10/CUDA_Cube_1K-e1753800226468-1024x577.webp",
+          "https://developer.nvidia.com/ai-models",
+          "https://developer.download.nvidia.com/images/logos/m48-containerized-model-76b900(1).svg",
+          "https://nvidianews.nvidia.com/news/nvidia-debuts-nemotron-3-family-of-open-models"
+        ],
+        "reviewStatus": "prototype"
+      }
+    },
+    {
+      "id": "nvidia-cosmos",
+      "label": "NVIDIA Cosmos",
+      "designRationale": { "officialBasis": "The official Cosmos identity contains a two-arm galaxy inside a cube and NVIDIA green/gold light.", "modelConcept": "World models represent and evolve physical state; Cosmos 3 adds richer multimodal and policy structure.", "visualTranslation": "Two logarithmic yellow-green particle arms rotate around an offset core. Cosmos 3 adds a phase-displaced parallel violet spiral outside the bright core, using hue replacement rather than additive color so the original yellow-green arms remain saturated.", "nonClaims": "The animated galaxy field is family decoration and not a replacement for the official galaxy-in-cube mark.", "generator": "src/shaders/cosmos-galaxy.frag.glsl" },
+      "palette": { "background": "#030706", "accent": "#76B900" },
+      "procedural": {
+        "revision": 4,
+        "grammar": "two logarithmic spiral density arms and attached particle clumps rotating as one galaxy-space field around an offset core, with optional Cosmos 3 purple-blue spectral filaments layered inside the unchanged two-arm silhouette, then projected through an adjustable oblique view",
+        "parameters": { "armCount": 2, "phaseOffsetRadians": 3.141592653589793, "centerXRatio": 0.72, "maximumArmWidth": 4.0, "particleField": "bilinearly interpolated galaxy-space value noise", "armWidthMetric": "approximate perpendicular distance in galaxy plane", "fixedCaptureTimeSeconds": 24, "rotationRadiansPerShaderSecond": 0.26, "versionPresets": [2, 3], "runtimeMaxFps": 20, "runtimeResolutionScale": 0.75, "exposedControls": ["speed", "center_x", "center_y", "scale", "arm_width", "brightness", "view_tilt", "view_angle", "galaxy_rotation", "particle_twinkle", "spectral_intensity", "spectral_offset", "spectral_width", "spectral_hue", "spectral_brightness", "spectral_paleness"] },
+        "renderers": {
+          "heroAndCatalog": { "type": "shared-webgl2", "script": "scripts/render-nvidia-visuals-webgl.mjs", "shader": "src/shaders/cosmos-galaxy.frag.glsl", "shaderRevision": 7, "runtimePrototype": true, "staticFallback": "offline-webp" }
+        }
+      },
+      "assets": {
+        "hero": "public/images/model-families/nvidia-cosmos/hero-3.webp",
+        "catalog": "public/images/model-families/nvidia-cosmos/catalog-3.webp",
+        "icon": "public/images/model-families/nvidia-cosmos/icon-official.png"
+      },
+      "icon": { "strategy": "official", "name": "NVIDIA Cosmos galaxy-in-cube mark", "status": "source-reviewed", "source": "https://avatars.githubusercontent.com/u/201181124?v=4" },
+      "provenance": {
+        "kind": "deterministic-shared-webgl2-with-official-corporate-icon",
+        "generatedAt": "2026-10-21",
+        "officialReferences": [
+          "https://research.nvidia.com/labs/cosmos-lab/cosmos3/",
+          "https://www.nvidia.com/en-us/ai/cosmos/",
+          "https://github.com/NVIDIA/Cosmos/blob/main/assets/brand/cosmos-logo.png"
+        ],
+        "reviewStatus": "prototype"
+      }
+    },
+    {
+      "id": "meta-llama",
+      "label": "Meta Llama",
+      "designRationale": { "officialBasis": "Meta presents Llama as an open model ecosystem using a restrained blue identity; its official family materials still require a dedicated source review.", "modelConcept": "Llama is an extensible open-model family with multiple sizes and generations.", "visualTranslation": "As a provisional Llama-only treatment, layered open blue orbital paths circulate around an offset field while one node travels across generations.", "nonClaims": "The orbit field does not redraw the Meta infinity mark, is not an official Llama identity asset, and does not represent Muse Glimmer.", "generator": "src/shaders/llama-orbit.frag.glsl" },
+      "palette": { "background": "#06183F", "accent": "#5AA7FF" },
+      "procedural": { "revision": 1, "grammar": "layered open blue orbital paths and one travelling node", "parameters": { "runtimeMaxFps": 20, "runtimeResolutionScale": 0.75, "exposedControls": ["orbit_speed", "openness", "layers"] }, "renderers": { "heroAndCatalog": { "type": "shared-webgl2", "script": "scripts/render-additional-visuals-webgl.mjs", "shader": "src/shaders/llama-orbit.frag.glsl", "shaderRevision": 1, "runtimePrototype": true, "staticFallback": "offline-webp" } } },
+      "assets": { "hero": "public/images/model-families/meta-llama/hero.webp", "catalog": "public/images/model-families/meta-llama/catalog.webp" },
+      "icon": { "strategy": "none", "status": "omitted-pending-approved-locally-distributable-first-party-asset" },
+      "provenance": { "kind": "deterministic-shared-webgl2-with-text-identity", "generatedAt": "2026-10-21", "officialReferences": ["https://ai.meta.com/llama/", "https://github.com/meta-llama", "https://research.meta.ai/navigation/meta-logo-primary-dark_standardsize.svg"], "reviewStatus": "prototype" }
+    },
+    {
+      "id": "meta-muse-glimmer",
+      "label": "Meta Muse Glimmer",
+      "designRationale": {
+        "officialBasis": "Meta's official Muse Glimmer launch key visual uses a near-black field, fine directed blue edges, luminous nodes, and sparse glimmer particles.",
+        "modelConcept": "Muse Glimmer is presented by Meta as a local agent model for long-horizon work, tool use, multimodal understanding, and recovery from failures.",
+        "visualTranslation": "Nodes drift slowly while connected directed edges follow them, small light orbs burst from source nodes and decelerate into their destinations, and a temporary branch appears and rejoins as a restrained tool-call or recovery metaphor.",
+        "nonClaims": "The graph is decorative and is not a model architecture diagram. No unofficial Muse Glimmer logo is created; provider and model identity remain accessible text.",
+        "generator": "src/components/LayeredModelShaderCanvas.astro"
+      },
+      "palette": { "background": "#02050D", "accent": "#1687FF" },
+      "procedural": {
+        "revision": 4,
+        "grammar": "sixteen-node directed blue graph with drifting luminous nodes, burst-eased light-orb signals, optional soft focus, and one transient branch/rejoin",
+        "parameters": {
+          "runtimeMaxFps": 20,
+          "runtimeResolutionScale": 1.0,
+          "runtimeBackgroundResolutionScale": 0.1,
+          "runtimeGeometryResolutionScale": 1.0,
+          "exposedControls": ["render_scale", "geometry_scale", "soft_focus", "darkness", "node_drift", "signal_speed", "branch_activity"]
+        },
+        "renderers": {
+          "heroAndCatalog": {
+            "type": "layered-webgl2-instanced-geometry",
+            "script": "scripts/render-additional-visuals-webgl.mjs",
+            "shader": "src/shaders/muse-glimmer-graph.frag.glsl",
+            "runtime": "src/components/LayeredModelShaderCanvas.astro",
+            "backgroundShader": "src/shaders/muse-glimmer-background.frag.glsl",
+            "geometryShader": "src/shaders/muse-glimmer-geometry.vert.glsl",
+            "shaderRevision": 4,
+            "runtimePrototype": true,
+            "staticFallback": "offline-webp"
+          }
+        }
+      },
+      "assets": {
+        "hero": "public/images/model-families/meta-muse-glimmer/hero.webp",
+        "catalog": "public/images/model-families/meta-muse-glimmer/catalog.webp"
+      },
+      "icon": {
+        "strategy": "none",
+        "status": "omitted-pending-approved-locally-distributable-first-party-asset"
+      },
+      "provenance": {
+        "kind": "deterministic-shared-webgl2-with-text-identity",
+        "generatedAt": "2026-10-21",
+        "officialReferences": [
+          "https://research.meta.ai/blog/introducing-muse-glimmer-open-agentic-model",
+          "https://research.meta.ai/media/muse-glimmer/hero/dark/v1?w=1440&cache=1",
+          "https://research.meta.ai/navigation/meta-logo-primary-dark_standardsize.svg"
+        ],
+        "reviewStatus": "prototype"
+      }
+    },
+    {
+      "id": "openai-gpt-oss",
+      "label": "OpenAI gpt-oss",
+      "designRationale": {
+        "officialBasis": "OpenAI's official identity is restrained and monochrome; it remains a separate, unmodified layer rather than being redrawn inside the background.",
+        "modelConcept": "gpt-oss is an open-weight reasoning family, but the background intentionally avoids literalizing its MoE architecture or Harmony interaction format.",
+        "visualTranslation": "A large plane of gray square tiles is viewed from a low, strongly oblique camera angle. At a deliberately low cadence, a very small number of foreground tiles remain flat but briefly shift toward a restrained launch-blue reflection.",
+        "nonClaims": "The generic mathematical grid does not represent experts, layers, tokens, Harmony channels, or a literal model topology and is not an official gpt-oss launch asset or logo.",
+        "generator": "src/shaders/gpt-oss-harmony.frag.glsl"
+      },
+      "palette": { "background": "#080909", "accent": "#E7ECEA", "eventHighlight": "#33A1FF" },
+      "procedural": { "revision": 7, "grammar": "strongly oblique monochrome plane of orderly flat gray square tiles with foreground-only launch-blue color pulses, progressive distance fog, and coherent far-field early-out", "parameters": { "runtimeMaxFps": 20, "runtimeResolutionScale": 1.0, "maxPulseCadence": 10.0, "farFieldEarlyOutThreshold": 0.002, "exposedControls": ["render_scale", "soft_focus", "grid_angle", "grid_density", "tile_contrast", "pulse_rate", "pulse_activity", "blue_highlight", "distance_fog"] }, "renderers": { "heroAndCatalog": { "type": "shared-webgl2", "script": "scripts/render-additional-visuals-webgl.mjs", "shader": "src/shaders/gpt-oss-harmony.frag.glsl", "shaderRevision": 6, "runtimePrototype": true, "staticFallback": "offline-webp" } } },
+      "assets": { "hero": "public/images/model-families/openai-gpt-oss/hero.webp", "catalog": "public/images/model-families/openai-gpt-oss/catalog.webp" },
+      "icon": { "strategy": "none", "status": "omitted-pending-approved-locally-distributable-first-party-asset" },
+      "provenance": { "kind": "deterministic-shared-webgl2-with-text-identity", "generatedAt": "2026-10-21", "officialReferences": ["https://openai.com/index/introducing-gpt-oss/", "https://github.com/openai/gpt-oss", "https://openai.com/brand/"], "reviewStatus": "prototype" }
+    },
+    {
+      "id": "mistral-ministral3",
+      "label": "Mistral AI Ministral 3",
+      "designRationale": {
+        "officialBasis": "Mistral's official Mistral 3 launch key visual uses a near-black field, a large pixel-built numeral three, and a yellow-to-orange-to-red stepped palette.",
+        "modelConcept": "Ministral 3 is the compact 3B, 8B, and 14B edge-focused family with instruct and reasoning variants and image understanding.",
+        "visualTranslation": "Warm rectangular steps form layered wind-like ribbons that move quietly across the frame, preserving the official pixel cadence and palette without redrawing the numeral or wordmark.",
+        "nonClaims": "The stepped ribbons are decorative and are not an official Mistral logo or model architecture diagram. No remote or reconstructed Mistral identity asset is shipped.",
+        "generator": "src/components/LayeredModelShaderCanvas.astro"
+      },
+      "palette": { "background": "#12121F", "accent": "#FF7A00" },
+      "procedural": { "revision": 3, "grammar": "layered yellow-orange-red pixel-step wind ribbons on a dark field", "parameters": { "runtimeMaxFps": 20, "runtimeResolutionScale": 1.0, "runtimeBackgroundResolutionScale": 0.5, "runtimeGeometryResolutionScale": 1.0, "runtimeSoftFocusPixels": 0, "exposedControls": ["render_scale", "geometry_scale", "soft_focus", "darkness", "drift_speed", "step_scale", "depth"] }, "renderers": { "heroAndCatalog": { "type": "layered-webgl2-instanced-geometry", "script": "scripts/render-additional-visuals-webgl.mjs", "shader": "src/shaders/ministral3-stepwind.frag.glsl", "runtime": "src/components/LayeredModelShaderCanvas.astro", "backgroundShader": "src/shaders/ministral3-background.frag.glsl", "geometryShader": "src/shaders/ministral3-geometry.vert.glsl", "shaderRevision": 2, "runtimePrototype": true, "staticFallback": "offline-webp" } } },
+      "assets": { "hero": "public/images/model-families/mistral-ministral3/hero.webp", "catalog": "public/images/model-families/mistral-ministral3/catalog.webp" },
+      "icon": { "strategy": "none", "status": "omitted-pending-approved-locally-distributable-first-party-asset" },
+      "provenance": { "kind": "deterministic-shared-webgl2-with-text-identity", "generatedAt": "2026-10-21", "officialReferences": ["https://mistral.ai/news/mistral-3/", "https://docs.mistral.ai/models/ministral-3-3b-25-12"], "reviewStatus": "prototype" }
+    },
+    {
+      "id": "minimax-m2",
+      "label": "MiniMax M2",
+      "designRationale": { "officialBasis": "MiniMax's official square mark uses a continuous white waveform over a magenta-to-coral gradient.", "modelConcept": "M2.7 participates in repeated agent-harness evaluation and self-improvement loops.", "visualTranslation": "Nested magenta and coral waves recur with decaying depth around one feedback pulse.", "nonClaims": "The recursive field is an explanatory background, not an official MiniMax logo or launch asset.", "generator": "src/shaders/minimax-recursion.frag.glsl" },
+      "palette": { "background": "#210318", "accent": "#F51B7B" },
+      "procedural": { "revision": 1, "grammar": "nested magenta-to-coral feedback waves", "parameters": { "runtimeMaxFps": 20, "runtimeResolutionScale": 0.75, "exposedControls": ["iteration_speed", "loop_depth", "wave_height"] }, "renderers": { "heroAndCatalog": { "type": "shared-webgl2", "script": "scripts/render-additional-visuals-webgl.mjs", "shader": "src/shaders/minimax-recursion.frag.glsl", "shaderRevision": 1, "runtimePrototype": true, "staticFallback": "offline-webp" } } },
+      "assets": { "hero": "public/images/model-families/minimax-m2/hero.webp", "catalog": "public/images/model-families/minimax-m2/catalog.webp" },
+      "icon": { "strategy": "none", "status": "omitted-pending-approved-locally-distributable-first-party-asset" },
+      "provenance": { "kind": "deterministic-shared-webgl2-with-text-identity", "generatedAt": "2026-10-21", "officialReferences": ["https://www.minimax.io/news/minimax-m27-en", "https://www.minimax.io/"], "reviewStatus": "prototype" }
+    },
+    {
+      "id": "flux3-action",
+      "label": "Black Forest Labs FLUX.3 Action",
+      "designRationale": { "officialBasis": "Official FLUX.3 Action launch art arranges observation frames on a black field with fine green technical guides.", "modelConcept": "The world-action model jointly predicts future video and an action chunk from cameras, robot state, and text.", "visualTranslation": "Perspective observation panes advance through time while one green joint trajectory and six command nodes cross the frame horizon.", "nonClaims": "The panes contain no generated imagery or robot footage and the field is not an official BFL brand asset.", "generator": "src/shaders/flux3-action-field.frag.glsl" },
+      "palette": { "background": "#050707", "accent": "#7CF0A7" },
+      "procedural": { "revision": 1, "grammar": "temporal observation-pane corridor crossed by one joint-action trajectory", "parameters": { "runtimeMaxFps": 20, "runtimeResolutionScale": 0.75, "exposedControls": ["horizon", "frame_depth", "action_energy"] }, "renderers": { "heroAndCatalog": { "type": "shared-webgl2", "script": "scripts/render-additional-visuals-webgl.mjs", "shader": "src/shaders/flux3-action-field.frag.glsl", "shaderRevision": 1, "runtimePrototype": true, "staticFallback": "offline-webp" } } },
+      "assets": { "hero": "public/images/model-families/flux3-action/hero.webp", "catalog": "public/images/model-families/flux3-action/catalog.webp" },
+      "icon": { "strategy": "none", "status": "omitted-pending-approved-locally-distributable-first-party-asset" },
+      "provenance": { "kind": "deterministic-shared-webgl2-with-text-identity", "generatedAt": "2026-10-21", "officialReferences": ["https://bfl.ai/models/flux-3-action", "https://github.com/black-forest-labs/flux-action"], "reviewStatus": "prototype" }
+    }
+  ]
+}

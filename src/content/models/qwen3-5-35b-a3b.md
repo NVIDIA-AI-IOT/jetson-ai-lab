@@ -3,15 +3,20 @@ title: "Qwen3.5 35B-A3B (MoE)"
 model_id: "qwen3-5-35b-a3b"
 short_description: "Alibaba's latest Mixture-of-Experts model with 35B total / 3B active parameters, featuring native tool calling and MTP speculative decoding"
 family: "Alibaba Qwen3.5"
+visual_family: "qwen"
+visual_variant: "3.5"
 icon: "🔮"
 is_new: false
 order: 1
-type: "Text"
-vision_capable: false
+type: "Multimodal"
+vision_capable: true
 memory_requirements: "20GB RAM"
 precision: "NVFP4 / W4A16"
 parameters: "35B total / 3B activated"
-modalities: ["Text", "Image"]
+modalities: ["Text", "Image", "Video"]
+input_modalities: ["text", "image", "video"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "18GB"

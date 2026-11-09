@@ -3,6 +3,7 @@ title: "MiniMax M2.7"
 model_id: "minimax-m2-7"
 short_description: "MiniMax's 230B agentic MoE flagship for software engineering and self-evolving agent harnesses with llama.cpp at 4-bit"
 family: "MiniMax M2.7"
+visual_family: "minimax-m2"
 icon: "🌀"
 is_new: false
 order: 1
@@ -12,6 +13,9 @@ memory_requirements: "128GB unified memory (Thor T5000)"
 precision: "UD-IQ4_XS GGUF"
 parameters: "229B total / 10B activated"
 modalities: ["Text"]
+input_modalities: ["text"]
+output_modalities: ["text"]
+tasks: ["text-generation"]
 context_length: "196K"
 license: "MiniMax Model License"
 model_size: "100.96 GiB"

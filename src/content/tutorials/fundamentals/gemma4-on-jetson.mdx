@@ -1,196 +1,171 @@
 ---
 title: "Gemma 4 on Jetson"
-description: "Run Google Gemma 4 models on Jetson with vLLM or llama.cpp. Covers E2B, E4B, 26B-A4B, and 31B on Orin and Thor, including reasoning, tool calling, and runtime selection."
+description: "Explore the Gemma 4 model family and its capabilities, then run E2B and E4B on Jetson with llama.cpp, browser chat, and API examples."
 category: "VLM"
 order: 1
-tags: ["gemma4", "gemma", "jetson", "llm", "vllm", "llama.cpp", "orin", "thor", "reasoning", "tool-calling", "audio"]
+tags: ["gemma4", "gemma", "jetson", "llm", "llama.cpp", "orin", "thor"]
 model: "Gemma 4"
 ---
 
 import Tabs from '../../../components/Tabs.astro';
-import Note from '../../../components/admonition/Note.astro';
-import Tip from '../../../components/admonition/Tip.astro';
-import Warning from '../../../components/admonition/Warning.astro';
 
-Gemma 4 was released in four practical variants for Jetson: **E2B**, **E4B**, **26B-A4B**, and **31B**. The **E2B** and **E4B** models support audio, text, and image input with text output. **26B-A4B** is the MoE model, and **31B** is the larger dense model.
+Gemma 4 is Google's family of open models for text generation, visual understanding, reasoning, and tool calling. On Jetson, you can use it to build local assistants, interpret images, and connect language models to your applications.
 
-The full family is supported on Jetson through both **vLLM** and **llama.cpp**. All of the models are supported on Orin and Thor, but memory is what really decides what makes sense. So far, **E2B** is the one that fits best on **Orin Nano**. On **Orin NX**, **E2B** and **E4B** are the natural choices. On **AGX Orin**, both small models fit well and give you good performance for different use cases, and that is where the larger models start to become realistic too. On **Thor**, the whole family is the intended path.
+The family includes four models:
 
-<Tip title="💡 Runtime choice">
-  In practice, `vLLM` tends to deliver better serving performance, while `llama.cpp` remains a good option if you want the GGUF path.
-</Tip>
+| Model | Architecture | Inputs | Context length |
+|---|---|---|---|
+| **E2B** | 2.3B effective parameters, 5.1B including embeddings | Text, image, audio | 128K |
+| **E4B** | 4.5B effective parameters, 8B including embeddings | Text, image, audio | 128K |
+| **26B-A4B** | Mixture of experts, 3.8B active parameters out of 25.8B | Text, image | 256K |
+| **31B** | 31B dense model | Text, image | 256K |
+
+All four generate text. E2B and E4B are the smaller models for on-device applications, while 26B-A4B and 31B need more memory. Their capabilities include answering questions about images, generating code, and producing tool calls that an application can execute. E2B and E4B also support audio tasks such as transcription and translation. Available input modes depend on the runtime and model files used.
+
+On Jetson, E2B and E4B have llama.cpp configurations for Orin Nano 8GB, Orin NX 16GB, AGX Orin 64GB, and Thor. The larger models have configurations for AGX Orin 64GB and Thor.
 
 ## Prerequisites
 
 | Requirement | Details |
 |---|---|
 | **Devices** | Jetson Orin Nano, Orin NX, AGX Orin, Jetson Thor |
-| **JetPack** | JP 6 (L4T r36.x) for Orin, JP 7 (L4T r38.x) for Thor |
+| **JetPack** | JetPack 7.2.1 |
 | **Storage** | NVMe SSD strongly recommended for model downloads and container caches |
 
-## What fits where
+## 1. Run Gemma 4 with llama.cpp
 
-| Device | Best Gemma 4 choices |
-|---|---|
-| **Orin Nano** | **E2B** |
-| **Orin NX** | **E2B**, **E4B** |
-| **AGX Orin** | Full Gemma 4 family |
-| **Jetson Thor** | Full Gemma 4 family |
+We'll use **E2B** and **E4B** as examples. Choose one model below and run the command for your Jetson in its terminal.
 
-## Loading Gemma 4 with vLLM
+The Orin commands apply to Orin Nano 8GB, Orin NX 16GB, and AGX Orin 64GB. The Thor commands apply to T4000 and T5000. Run one model at a time.
 
-If you are on Orin NX, AGX Orin, or Thor, this is the cleanest place to start. The flow is the same for the whole family. You mainly change the container image for your device and the model ID for the variant you want.
+### Gemma 4 E2B
 
 <Tabs labels={["Jetson Orin", "Jetson Thor"]}>
   <div class="nv-tab-panel active">
 
 ```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host \
-  -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-  ghcr.io/nvidia-ai-iot/vllm:gemma4-jetson-orin \
-  vllm serve MODEL_ID \
-    --enable-auto-tool-choice \
-    --reasoning-parser gemma4 \
-    --tool-call-parser gemma4
+docker run --rm -it --pull always --runtime nvidia --network host \
+-v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
+llama-server \
+-hf google/gemma-4-E2B-it-qat-q4_0-gguf \
+--hf-file gemma-4-E2B_q4_0-it.gguf \
+--host 0.0.0.0 \
+--port 8000 \
+--ctx-size 36864 \
+--parallel 1 \
+--n-gpu-layers 999 \
+--jinja \
+--lazy-mode on \
+--load-mode mmap \
+--cache-ram 0
 ```
 
   </div>
   <div class="nv-tab-panel">
 
 ```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host \
-  -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-  ghcr.io/nvidia-ai-iot/vllm:gemma4-jetson-thor \
-  vllm serve MODEL_ID \
-    --enable-auto-tool-choice \
-    --reasoning-parser gemma4 \
-    --tool-call-parser gemma4
+docker run --rm -it --pull always --runtime nvidia --network host \
+-v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
+llama-server \
+-hf google/gemma-4-E2B-it-qat-q4_0-gguf \
+--hf-file gemma-4-E2B_q4_0-it.gguf \
+--host 0.0.0.0 \
+--port 8000 \
+--ctx-size 36864 \
+--parallel 1 \
+--n-gpu-layers 999 \
+--jinja \
+--lazy-mode on \
+--load-mode mmap \
+--cache-ram 0
 ```
 
   </div>
 </Tabs>
 
-Use these model IDs:
+### Gemma 4 E4B
 
-| Model | Orin `MODEL_ID` | Thor `MODEL_ID` |
-|---|---|---|
-| **E2B** | `google/gemma-4-E2B-it` | `google/gemma-4-E2B-it` |
-| **E4B** | `google/gemma-4-E4B-it` | `google/gemma-4-E4B-it` |
-| **26B-A4B** | `cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit` | `bg-digitalservices/Gemma-4-26B-A4B-it-NVFP4` |
-| **31B** | `cyankiwi/gemma-4-31B-it-AWQ-4bit` | `nvidia/Gemma-4-31B-IT-NVFP4` |
-
-<Note title="🔊 Audio on E2B and E4B">
-  If you are on **E2B** or **E4B**, you do not need to enable audio separately. It is supported by default on those models.
-</Note>
-
-<Note title="🖼️ 26B-A4B and 31B">
-  **26B-A4B** and **31B** are the larger text-and-image Gemma 4 models. They are not the audio-capable part of the family.
-</Note>
-
-<Tip title="🧠 Reasoning and tool calling">
-  The important flags are `--enable-auto-tool-choice`, `--reasoning-parser gemma4`, and `--tool-call-parser gemma4`. If you want the Gemma 4 reasoning and tool-calling path ready from the start, keep those in the launch command.
-</Tip>
-
-## Orin Nano
-
-If you are on **Orin Nano**, **E2B** is a great fit and `llama.cpp` is the straightforward path.
+<Tabs labels={["Jetson Orin", "Jetson Thor"]}>
+  <div class="nv-tab-panel active">
 
 ```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host \
-  -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-  ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
-  llama-server -hf unsloth/gemma-4-E2B-it-GGUF:Q4_K_S
+docker run --rm -it --pull always --runtime nvidia --network host \
+-v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
+llama-server \
+-hf google/gemma-4-E4B-it-qat-q4_0-gguf \
+--hf-file gemma-4-E4B_q4_0-it.gguf \
+--host 0.0.0.0 \
+--port 8000 \
+--ctx-size 36864 \
+--parallel 1 \
+--n-gpu-layers 999 \
+--jinja \
+--lazy-mode on \
+--load-mode mmap \
+--cache-ram 0
 ```
 
-Then, access `http://localhost:8080` to see the UI.
-
-<Note title="ℹ️ Ollama on Orin Nano">
-  With `Ollama`, Gemma 4 does not work on **Orin Nano** right now. The Ollama path still works on the others if that interests you.
-</Note>
-
-If you want the same GGUF-style `llama.cpp` flow on bigger Jetson devices, the pattern stays the same and you mainly swap the container image and checkpoint.
-
-| Model | GGUF checkpoint |
-|---|---|
-| **E2B** | `unsloth/gemma-4-E2B-it-GGUF:Q4_K_S` |
-| **E4B** | `ggml-org/gemma-4-E4B-it-GGUF:Q4_K_M` |
-| **26B-A4B** | `ggml-org/gemma-4-26B-A4B-it-GGUF:Q4_K_M` |
-| **31B** | `ggml-org/gemma-4-31B-it-GGUF:Q4_K_M` |
-
-On Thor, use `ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor` instead.
-
-<Warning title="⚠️ E2B audio on llama.cpp for Orin">
-  There is currently an audio issue with **E2B** under `llama.cpp`. If audio is important for your setup, use the small Gemma 4 models through `vLLM`.
-</Warning>
-
-## Reasoning and Tool Calling
-
-Gemma 4 supports reasoning and tool calling, but reasoning is **not enabled by default** at request time.
-
-```json
-{
-  "chat_template_kwargs": {
-    "enable_thinking": true
-  }
-}
-```
-
-Here is a minimal request example:
+  </div>
+  <div class="nv-tab-panel">
 
 ```bash
-curl -sN http://127.0.0.1:8000/v1/chat/completions \
+docker run --rm -it --pull always --runtime nvidia --network host \
+-v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
+llama-server \
+-hf google/gemma-4-E4B-it-qat-q4_0-gguf \
+--hf-file gemma-4-E4B_q4_0-it.gguf \
+--host 0.0.0.0 \
+--port 8000 \
+--ctx-size 36864 \
+--parallel 1 \
+--n-gpu-layers 999 \
+--jinja \
+--lazy-mode on \
+--load-mode mmap \
+--cache-ram 0
+```
+
+  </div>
+</Tabs>
+
+The first run downloads the container and model. Wait for the model to finish loading, and leave the server terminal running while you use the browser or API.
+
+## 2. Chat in Your Browser
+
+On your laptop, open `http://JETSON_IP:8000`, replacing `JETSON_IP` with your Jetson's network address. If you're connected over USB, open [http://192.168.55.1:8000](http://192.168.55.1:8000). If your browser is running on the Jetson itself, open [http://localhost:8000](http://localhost:8000).
+
+To find the Jetson's network address, run `hostname -I` in a terminal on the Jetson. Use its Wi-Fi or Ethernet address for network access; `192.168.55.1` is the USB address. Your laptop must be able to reach the Jetson over that connection.
+
+Type a message in the chat box and send it. Keep the server terminal running while you chat.
+
+## 3. Use the Model in Your App
+
+The same server exposes an OpenAI-compatible API. This request uses E2B as the example. If you started E4B, change the model ID to `google/gemma-4-E4B-it-qat-q4_0-gguf`. Open a second terminal on the Jetson and send the request:
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "google/gemma-4-E2B-it",
-    "messages": [{"role": "user", "content": "hi"}],
-    "chat_template_kwargs": {"enable_thinking": true},
-    "stream": true
+    "model": "google/gemma-4-E2B-it-qat-q4_0-gguf",
+    "messages": [
+      {"role": "user", "content": "Suggest three things a plant-watering robot should check before watering."}
+    ],
+    "max_tokens": 512
   }'
 ```
 
-<Note title="📝 Important">
-  Even if you launched the server with the Gemma 4 parser flags, you still need `chat_template_kwargs.enable_thinking=true` in the request if you want thinking mode.
-</Note>
-
-## Audio Support
-
-| Model | Input mode |
-|---|---|
-| **E2B** | text, image, audio |
-| **E4B** | text, image, audio |
-| **26B-A4B** | text, image |
-| **31B** | text, image |
-
-For Jetson, the practical takeaway is simple: use `vLLM` if you want the small-model audio path, and keep in mind that there is currently an audio issue for **E2B** under `llama.cpp`.
-
-## Things to Watch Out For with vLLM
-
-If you are using Gemma 4 through `vLLM`, this is the main thing to watch out for. If you are using streaming, you are generally good. If you are not, you should look out for cases where the model's thought text can leak into `content` instead of being cleanly separated from the final answer.
-
-If you are testing with non-streaming requests, try:
-
-```json
-{
-  "skip_special_tokens": false
-}
-```
-
-Do not mix formats casually. Use the listed `vLLM` checkpoints with the Gemma 4 `vLLM` containers, and use the listed **GGUF** checkpoints with `llama.cpp`.
-
-For **26B-A4B** and **31B**, startup problems are often memory-related rather than model-related.
+The response is JSON. Read the reply from `choices[0].message.content`. From your laptop, replace `localhost` with the Jetson's network IP address or `192.168.55.1` over USB.
 
 ## Troubleshooting
 
-If you are retrying a large model launch, clear the page cache first:
+If the chat page does not open, check that the server has finished loading and that your laptop can reach the Jetson over USB or the network. Use the port from the launch command.
 
-```bash
-sudo sysctl -w vm.drop_caches=3
-```
-
-Before launching another model, make sure the previous server or container is no longer holding memory. If a model hangs during load or fails to start, free memory, clear caches, and retry with the exact command for your device.
+If a model fails to load, check the error in the server terminal. Make sure the container and model downloads completed and that there is enough free storage and memory. Stop any previous model server before starting another one.
 
 ## Next Steps
 
-- Browse the [Supported Models](/models) page for copy/paste commands by device
-- Read [Introduction to GenAI on Jetson: How to Run LLMs and VLMs](/tutorials/genai-on-jetson-llms-vlms) for the broader runtime picture
-- Use [Ollama on Jetson](/tutorials/ollama) if you want a simpler local LLM workflow
+To try a larger Gemma 4 model on AGX Orin 64GB or Thor, see [26B-A4B](/models/gemma4-26b-a4b/) or [31B](/models/gemma4-31b/). Use the command for your module and check its port and model ID when adapting the browser and API examples above.
