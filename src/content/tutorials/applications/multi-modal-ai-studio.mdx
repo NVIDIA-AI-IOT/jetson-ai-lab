@@ -104,7 +104,7 @@ The first build and checkpoint downloads can take time. This launcher manages **
 Use the **vLLM Reasoner** deployment, not the vLLM-Omni Generator / Action deployment, on the [Cosmos3-Edge model page](/models/cosmos3-edge/). The following single-session settings shorten the context and leave shared-GPU memory for ASR and TTS; port 18087 also avoids replacing an existing E2B server:
 
 ```bash
-sudo docker run -it --rm --pull always \
+sudo docker run -it --rm --init --pull always \
   --runtime=nvidia --network host \
   -v $HOME/.cache/huggingface:/root/.cache/huggingface \
   --entrypoint "" \
