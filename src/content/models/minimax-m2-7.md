@@ -47,7 +47,6 @@ serving:
             --port 8080 \
             --alias my_model \
             --n-gpu-layers 999
-benchmark_key: "MiniMax M2.7"
 ---
 
 [MiniMax M2.7](https://www.minimax.io/news/minimax-m27-en) is MiniMax's flagship agentic Mixture-of-Experts model, designed to build complex agent harnesses and complete highly elaborate productivity tasks. M2.7 is the first MiniMax model that deeply participates in its own evolution — during development the model autonomously updated its own memory, built dozens of complex skills for RL experiments, and improved its own learning process based on experiment results.

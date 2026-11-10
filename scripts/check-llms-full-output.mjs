@@ -29,15 +29,19 @@ for (const file of (await readdir(modelDirectory)).filter((name) => name.endsWit
 	if (title) modelsWithCommands.push({ file, title });
 }
 
+const modelsStart = output.indexOf('\n## Supported Models\n');
+if (modelsStart < 0) throw new Error('Supported Models section not found');
+const modelOutput = output.slice(modelsStart);
+
 const missing = [];
 for (const { file, title } of modelsWithCommands) {
-	const start = output.indexOf(`### ${title}\n`);
+	const start = modelOutput.indexOf(`### ${title}\n`);
 	if (start < 0) {
 		missing.push(`${file}: model section not found`);
 		continue;
 	}
-	const next = output.indexOf('\n### ', start + 5);
-	const section = output.slice(start, next < 0 ? output.length : next);
+	const next = modelOutput.indexOf('\n### ', start + 5);
+	const section = modelOutput.slice(start, next < 0 ? modelOutput.length : next);
 	if (!commandOutput.test(section)) missing.push(`${file}: no emitted runnable command`);
 }
 

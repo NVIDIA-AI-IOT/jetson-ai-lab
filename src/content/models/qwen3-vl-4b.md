@@ -42,9 +42,6 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         cpatonn/Qwen3-VL-4B-Instruct-AWQ-4bit
-benchmark_key: "Qwen3-VL-4B"
-benchmark_series:
-  - "Qwen3-VL-8B"
 ---
 
 Meet Qwen3-VL — the most powerful vision-language model in the Qwen series to date.

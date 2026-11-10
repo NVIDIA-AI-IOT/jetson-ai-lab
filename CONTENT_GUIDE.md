@@ -23,7 +23,7 @@ src/
 │   ├── projects/        # Community project entries
 │   └── gtc26/           # GTC workshop lab content
 ├── data/
-│   ├── benchmarks.json  # Benchmark chart data (joined to models by benchmark_key)
+│   ├── benchmarks.json  # Benchmark numbers by model slug
 │   └── categories.json  # Tutorial category display metadata
 └── pages/               # Astro routes (including tutorial page wrappers)
 ```
@@ -87,9 +87,9 @@ supported_inference_engines:
 ---
 ```
 
-To wire benchmark charts, set `benchmark_key` to match a `name` in `src/data/benchmarks.json`. A mismatch does not fail the build; the chart simply will not render, so confirm it on `/models/<slug>`.
+Benchmark numbers live only in `src/data/benchmarks.json`, keyed by model slug: `{ "<slug>": { "released": "YYYY-MM-DD", "<thor|orin|orin-nano>": { "<engine>": { "off": { "throughput": { "c1": n, "c8": n } }, "<MTP|DFlash|DSpark|…>": { "speedbench": { "c1": n, "c8": n } } } } } }` (output tokens/s; Throughput without speculative decoding, SPEED-Bench with it; leave out anything not measured). A model with an entry gets the Performance section on its page and a place on the models page timeline; a model without one gets neither.
 
-For inference commands, the module matrix, benchmark wiring, and OOM/blocked handling, follow `docs/jetson-matrix-and-run-modal.md`.
+For inference commands, the module matrix, and blocked handling, follow `docs/jetson-matrix-and-run-modal.md`.
 
 ## Tutorials (`src/content/tutorials/`)
 

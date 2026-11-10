@@ -1,0 +1,167 @@
+---
+import { getBenchmarks, JETSONS, BENCHMARKS, CONCURRENCY, OFF } from '../lib/benchmarks';
+import { fmtValue as fmt, engineOf, engineOrder } from '../lib/benchmarkFormat';
+
+interface Props { model: string }
+const { model } = Astro.props;
+
+const mine = (await getBenchmarks()).results.filter((r) => r.model === model);
+const benchmarks = BENCHMARKS.filter((b) => mine.some((r) => r.bench === b.id));
+const concurrency = CONCURRENCY.filter((c) => mine.some((r) => r.c === c.id));
+
+function view(bench: string, c: string) {
+	const rows = mine.filter((r) => r.bench === bench && r.c === c).sort((x, y) => engineOrder(x.engine) - engineOrder(y.engine));
+	const groups = JETSONS.map((jetson) => ({ jetson, bars: rows.filter((r) => r.jetson === jetson.id) })).filter((g) => g.bars.length);
+	return {
+		groups,
+		top: Math.max(...rows.map((r) => r.value)) * 1.12,
+		engines: [...new Set(rows.map((r) => r.engine))],
+		methods: rows.some((r) => r.method !== OFF),
+	};
+}
+---
+
+<div class="mp" data-mp>
+	<h2 class="text-3xl font-bold text-nvidia-black" id="model-performance-heading">Performance on Jetson</h2>
+	<div class="mp-frame">
+		<div class="mp-tabs" role="tablist" aria-label="Benchmark">
+			{benchmarks.map((b, i) => (
+				<button type="button" role="tab" class="mp-tab" id={`mp-tab-${b.id}`} aria-controls="mp-panel" data-mp-bench={b.id} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>{b.title}</button>
+			))}
+			{benchmarks.map((b, i) => (
+				<span class="mp-context" data-mp-context={b.id} hidden={i !== 0}>{b.summary}</span>
+			))}
+		</div>
+		<div class="mp-body" role="tabpanel" id="mp-panel" aria-labelledby={`mp-tab-${benchmarks[0].id}`}>
+			<div class="mp-filter">
+				<span id="mp-c-label">Concurrent requests</span>
+				<div class="mp-seg" role="radiogroup" aria-labelledby="mp-c-label" data-mp-c>
+					{concurrency.map((c, i) => (
+						<button type="button" role="radio" data-v={c.id} aria-checked={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>{c.label}</button>
+					))}
+				</div>
+			</div>
+			{benchmarks.flatMap((b, bi) => concurrency.map((c, ci) => {
+				const v = view(b.id, c.id);
+				return (
+					<div class="mp-view" data-mp-view={`${b.id} ${c.id}`} hidden={bi + ci > 0}>
+						<div class="mp-key">
+							{v.engines.map((e) => <span><i style={`background:${engineOf(e).color}`}></i>{engineOf(e).label}</span>)}
+						</div>
+						<ul class:list={['mp-groups', { methods: v.methods }]}>
+							{v.groups.map((g) => (
+								<li class="mp-group">
+									<div class="mp-cols">
+										{g.bars.map((r) => (
+											<span class="mp-col" title={engineOf(r.engine).label} style={`height:${(r.value / v.top) * 100}%;--c:${engineOf(r.engine).color}`}>
+												<em>{fmt(r.value)}</em>
+												{r.method !== OFF && <small class="mp-method" aria-hidden="true">{r.method}</small>}
+												<span class="sr-only">{engineOf(r.engine).label}{r.method !== OFF ? ` with ${r.method}` : ''} on {g.jetson.label}: {fmt(r.value)} tok/s</span>
+											</span>
+										))}
+									</div>
+									<div class="mp-jetson">{g.jetson.label}<small>{g.jetson.memory}</small></div>
+								</li>
+							))}
+						</ul>
+						<p class="mp-unit">Output tokens/s</p>
+					</div>
+				);
+			}))}
+		</div>
+	</div>
+</div>
+
+<style is:global>
+	.mp [hidden] { display: none !important; }
+	.mp :focus-visible { outline: 2px solid #76b900; outline-offset: 2px; }
+	.mp-frame { margin-top: 20px; border: 1px solid #e6e6e1; border-radius: 12px; background: #fff; overflow: hidden; }
+	.mp-tabs { display: flex; align-items: center; padding: 0 20px 0 8px; border-bottom: 1px solid #e6e6e1; background: #fafaf8; overflow-x: auto; scrollbar-width: none; }
+	.mp-tab { flex: none; position: relative; padding: 15px 16px 14px; font-size: 14px; font-weight: 600; color: #333; white-space: nowrap; }
+	.mp-tab:hover, .mp-tab[aria-selected='true'] { color: #000; }
+	.mp-tab[aria-selected='true']::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: #76b900; }
+	.mp-context { margin-left: auto; padding-left: 16px; font-size: 13px; color: #626262; white-space: nowrap; }
+	.mp-body { position: relative; padding: 16px 24px 20px; }
+	.mp-filter { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #626262; }
+	.mp-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: #efefeb; }
+	.mp-seg button { min-width: 34px; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; color: #444; }
+	.mp-seg button:hover { color: #000; }
+	.mp-seg button[aria-checked='true'] { background: #fff; color: #000; }
+	.mp-key { position: absolute; top: 20px; right: 24px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 16px; font-size: 12.5px; color: #555; }
+	.mp-key span { display: inline-flex; align-items: center; gap: 6px; }
+	.mp-key i { width: 10px; height: 10px; border-radius: 3px; }
+	.mp-groups { display: flex; flex-wrap: wrap; justify-content: center; gap: 28px 56px; margin: 28px 0 0; padding: 0; list-style: none; }
+	.mp-group { display: flex; flex-direction: column; align-items: stretch; min-width: 160px; }
+	.mp-cols { display: flex; align-items: flex-end; justify-content: center; gap: 8px; height: 200px; padding: 26px 12px 0; border-bottom: 1px solid #d9d9d3; }
+	.mp-col { position: relative; width: 52px; border-radius: 6px 6px 0 0; background: var(--c); }
+	.mp-col em { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 5px; font-style: normal; font-size: 14px; font-weight: 700; color: #1a1a1a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+	.mp-method { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 6px; font-size: 11.5px; font-weight: 600; color: #6b6b6b; white-space: nowrap; }
+	.mp-groups.methods .mp-jetson { margin-top: 30px; }
+	.mp-jetson { margin-top: 10px; text-align: center; font-size: 15px; font-weight: 700; color: #1a1a1a; }
+	.mp-jetson small { display: block; margin-top: 1px; font-size: 12px; font-weight: 500; color: #888; }
+	.mp-unit { margin: 14px 0 0; text-align: center; font-size: 12.5px; color: #8c8c86; }
+	@media (max-width: 640px) {
+		.mp-key { position: static; justify-content: flex-start; margin-top: 12px; }
+		.mp-context { display: none; }
+		.mp-body { padding: 14px 14px 18px; }
+		.mp-groups { flex-direction: column; }
+		.mp-cols { gap: 6px; }
+		.mp-col { width: 40px; }
+		.mp-method { font-size: 10.5px; }
+		.mp-col em { font-size: 12px; }
+	}
+</style>
+
+<script>
+	for (const root of document.querySelectorAll<HTMLElement>('[data-mp]')) {
+		const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-mp-bench]')];
+		const seg = root.querySelector<HTMLElement>('[data-mp-c]')!;
+		const panel = root.querySelector<HTMLElement>('[role="tabpanel"]')!;
+		let bench = tabs[0].dataset.mpBench!;
+		let c = seg.querySelector<HTMLButtonElement>('[aria-checked="true"]')!.dataset.v!;
+		const apply = () => {
+			for (const t of tabs) {
+				const on = t.dataset.mpBench === bench;
+				t.setAttribute('aria-selected', String(on));
+				t.tabIndex = on ? 0 : -1;
+				if (on) panel.setAttribute('aria-labelledby', t.id);
+			}
+			root.querySelectorAll<HTMLElement>('[data-mp-context]').forEach((x) => (x.hidden = x.dataset.mpContext !== bench));
+			seg.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+				const on = b.dataset.v === c;
+				b.setAttribute('aria-checked', String(on));
+				b.tabIndex = on ? 0 : -1;
+			});
+			root.querySelectorAll<HTMLElement>('[data-mp-view]').forEach((v) => (v.hidden = v.dataset.mpView !== `${bench} ${c}`));
+		};
+		const tablist = root.querySelector<HTMLElement>('[role="tablist"]')!;
+		tablist.addEventListener('click', (e) => {
+			const t = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-mp-bench]');
+			if (t) { bench = t.dataset.mpBench!; apply(); }
+		});
+		tablist.addEventListener('keydown', (e) => {
+			const i = tabs.findIndex((t) => t.dataset.mpBench === bench);
+			const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+			if (to == null) return;
+			e.preventDefault();
+			bench = tabs[(to + tabs.length) % tabs.length].dataset.mpBench!;
+			apply();
+			tabs.find((t) => t.dataset.mpBench === bench)!.focus();
+		});
+		seg.addEventListener('click', (e) => {
+			const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
+			if (b) { c = b.dataset.v!; apply(); }
+		});
+		seg.addEventListener('keydown', (e) => {
+			const bs = [...seg.querySelectorAll<HTMLButtonElement>('button')];
+			const i = bs.findIndex((b) => b.dataset.v === c);
+			const to = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: bs.length - 1 }[e.key];
+			if (to == null) return;
+			e.preventDefault();
+			const b = bs[(to + bs.length) % bs.length];
+			c = b.dataset.v!;
+			apply();
+			b.focus();
+		});
+	}
+</script>

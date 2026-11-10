@@ -2,8 +2,11 @@
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import ModelServeSection from '../../components/ModelServeSection.astro';
+import RecipeModal from '../../components/RecipeModal.astro';
+import ModelPerformance from '../../components/ModelPerformance.astro';
+import { getBenchmarks } from '../../lib/benchmarks';
+import { getRecipeModels } from '../../lib/recipes';
 import ModelCallSection from '../../components/ModelCallSection.astro';
-import ModelBenchmarkSection from '../../components/ModelBenchmarkSection.astro';
 import ModelOneShotSection from '../../components/ModelOneShotSection.astro';
 import ModelShaderCanvas from '../../components/ModelShaderCanvas.astro';
 import { getSupportedInferenceEngines, sortEnginesForUi } from '../../lib/modelFrontmatterAdapter';
@@ -11,7 +14,6 @@ import { isModelNew, MODEL_NEW_WINDOW_DAYS } from '../../lib/modelFreshness';
 import { modalityIcon, modalityLabel } from '../../lib/modelModalities';
 import { modelFamilyVisual } from '../../data/modelVisuals';
 import { modelShaderDefaults } from '../../data/modelShaderDefaults.mjs';
-import benchmarksData from '../../data/benchmarks.json';
 
 export async function getStaticPaths() {
   const models = await getCollection('models');
@@ -59,20 +61,9 @@ const huggingfaceUrl = data.huggingface_url || (data.hf_checkpoint ? `https://hu
 const isGemma4Family = data.family === 'Google Gemma4';
 
 const sortedEngines = sortEnginesForUi(getSupportedInferenceEngines(data));
+const hasRunPanel = (await getRecipeModels()).some((m) => m.slug === entry.slug);
+const hasPerformance = (await getBenchmarks()).results.some((r) => r.model === entry.slug);
 
-const benchmarkEntry = data.benchmark_key
-  ? ((benchmarksData.models as any[]).find((m) => m.name === data.benchmark_key) ?? null)
-  : null;
-
-const allModelEntries = await getCollection('models');
-const benchmarkSeries = (data.benchmark_series ?? [])
-  .map((k) => {
-    const bm = (benchmarksData.models as any[]).find((m) => m.name === k) ?? null;
-    if (!bm) return null;
-    const page = allModelEntries.find((m) => m.data.benchmark_key === k);
-    return { ...bm, link: page ? `/models/${page.slug}#model-benchmark` : null };
-  })
-  .filter((m): m is NonNullable<typeof m> => m !== null);
 
 // Per-token precision pill — colors match benchmark bar palette
 function precisionPill(token: string) {
@@ -160,7 +151,7 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
           <span class="w-5 text-left" data-model-visual-state>On</span>
         </button>
       </>
-    )}
+  )}
     <div class="relative z-[1] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid md:grid-cols-2 gap-12 items-center">
         <div>
@@ -197,17 +188,6 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
                 Command to Run on Jetson
               </a>
             )}
-            {benchmarkEntry && (
-              <a
-                href="#model-benchmark"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-[#76b900]/60 text-nvidia-gray-200 hover:bg-[#76b900]/10 hover:text-white transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-nvidia-green flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                </svg>
-                Benchmark
-              </a>
-            )}
             <a
               href="#model-details"
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-[#76b900]/60 text-nvidia-gray-200 hover:bg-[#76b900]/10 hover:text-white transition-colors"
@@ -217,6 +197,17 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
               </svg>
               Model Details
             </a>
+            {hasPerformance && (
+              <a
+                href="#model-performance"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-[#76b900]/60 text-nvidia-gray-200 hover:bg-[#76b900]/10 hover:text-white transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-nvidia-green flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                </svg>
+                Performance
+              </a>
+            )}
           </div>
         </div>
         <div
@@ -318,28 +309,33 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
               Serve the model
             </h2>
           </div>
-          <ModelServeSection
-            modelSlug={entry.slug}
-            engines={sortedEngines}
-            needsHfToken={inferenceNeedsHfToken}
-            matrixModulesDisabled={data.matrix_modules_disabled}
-            sectionClass="!bg-transparent !border-b-0 !scroll-mt-0 pt-8 pb-8"
-          />
-          <ModelCallSection
-            modelSlug={entry.slug}
-            engines={sortedEngines}
-            hfCheckpoint={data.hf_checkpoint}
-            clientCall={data.client_call}
-            sectionClass="!bg-transparent !border-b-0 !border-t-0 !scroll-mt-0 pt-10 pb-16"
-          />
+          {hasRunPanel ? (
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-16">
+              <p class="text-sm text-nvidia-gray-600 mb-8">Pick your Jetson, then copy the command and paste it into a terminal on the Jetson. <a href="/tutorials/getting-started-with-jetson" class="font-semibold text-[#4a7500] hover:text-nvidia-black">New to Jetson? Setup guide</a></p>
+              <RecipeModal inline={entry.slug} />
+            </div>
+          ) : (
+            <ModelServeSection
+              modelSlug={entry.slug}
+              engines={sortedEngines}
+              needsHfToken={inferenceNeedsHfToken}
+              matrixModulesDisabled={data.matrix_modules_disabled}
+              sectionClass="!bg-transparent !border-b-0 !scroll-mt-0 pt-8 pb-8"
+            />
+          )}
+          {!hasRunPanel && (
+            <ModelCallSection
+              modelSlug={entry.slug}
+              engines={sortedEngines}
+              hfCheckpoint={data.hf_checkpoint}
+              clientCall={data.client_call}
+              sectionClass="!bg-transparent !border-b-0 !border-t-0 !scroll-mt-0 pt-10 pb-16"
+            />
+          )}
         </div>
       </section>
       <ModelOneShotSection oneShot={data.one_shot_inference} modelSlug={entry.slug} />
     </div>
-  )}
-
-  {benchmarkEntry && (
-    <ModelBenchmarkSection entry={benchmarkEntry} seriesEntries={benchmarkSeries} />
   )}
 
   {/* Model Details / Description Section */}
@@ -390,6 +386,14 @@ const inferenceNeedsHfToken = sortedEngines.some((e) => {
       </div>
     </div>
   </section>
+
+  {hasPerformance && (
+    <section id="model-performance" class="py-16 bg-nvidia-gray-50 border-t border-nvidia-gray-200 scroll-mt-20" aria-labelledby="model-performance-heading">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ModelPerformance model={entry.slug} />
+      </div>
+    </section>
+  )}
 </Layout>
 
 <script>

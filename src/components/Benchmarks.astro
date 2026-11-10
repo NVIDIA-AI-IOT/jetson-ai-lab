@@ -1,0 +1,398 @@
+---
+import { getCollection } from 'astro:content';
+import { getBenchmarks, JETSONS, BENCHMARKS, CONCURRENCY, OFF } from '../lib/benchmarks';
+
+const entries = await getCollection('models');
+const names = Object.fromEntries(entries.map((e) => [e.slug, String(e.data.title)]));
+const families = Object.fromEntries(entries.map((e) => [e.slug, String(e.data.family ?? '')]));
+const { results, released } = await getBenchmarks();
+const benchmarks = BENCHMARKS.filter((b) => results.some((r) => r.bench === b.id));
+const jetsons = JETSONS.filter((j) => results.some((r) => r.jetson === j.id));
+const payload = JSON.stringify({ results, released, names, families, benchmarks, jetsons, concurrency: CONCURRENCY, off: OFF });
+const uid = 'performance';
+---
+
+<div class="bm" data-bm>
+	<script type="application/json" data-bm-data set:html={payload} />
+	<h2 class="text-3xl font-bold text-nvidia-black" id={`${uid}-heading`}>Performance on Jetson</h2>
+	<div class="bm-frame">
+		<div class="bm-tabs" role="tablist" aria-label="Benchmark">
+			{benchmarks.map((b, i) => (
+				<button type="button" role="tab" class="bm-tab" id={`${uid}-tab-${b.id}`} aria-controls={`${uid}-panel`} data-bm-tab={b.id} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>
+					{b.title}
+				</button>
+			))}
+			<span class="bm-context" data-bm-context></span>
+		</div>
+		<div class="bm-body" role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-tab-${benchmarks[0]?.id}`}>
+			<p class="bm-context-m" data-bm-context-m></p>
+			<div class="bm-filters" data-bm-filters></div>
+			<div class="bm-chartwrap" data-bm-chartwrap>
+				<div class="bm-chart" data-bm-chart>
+					<svg class="bm-yaxis" data-bm-yaxis aria-hidden="true"></svg>
+					<svg data-bm-svg tabindex="0" role="img" aria-describedby="performance-keys"></svg>
+					<span id="performance-keys" class="sr-only">Use the left and right arrow keys to step through the models; Escape hides the details.</span>
+					<div class="bm-tip hidden" data-bm-tip></div>
+					<p class="sr-only" aria-live="polite" data-bm-live></p>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<style is:global>
+	.bm { --bm-on: #4d7f00; --bm-muted: #626262; }
+	.bm [hidden], .bm .hidden { display: none !important; }
+	.bm :focus-visible { outline: 2px solid #76b900; outline-offset: 2px; }
+	.bm-frame { margin-top: 20px; border: 1px solid #e6e6e1; border-radius: 12px; background: #fff; overflow: hidden; }
+	.bm-tabs { display: flex; align-items: center; padding: 0 20px 0 8px; border-bottom: 1px solid #e6e6e1; background: #fafaf8; overflow-x: auto; scrollbar-width: none; }
+	.bm-context { display: flex; align-items: center; gap: 10px; margin-left: auto; padding-left: 16px; font-size: 13px; color: var(--bm-muted); white-space: nowrap; }
+	.bm-context-m { display: none; }
+	.bm-select { display: none; }
+	.bm-tab { flex: none; position: relative; padding: 15px 16px 14px; font-size: 14px; font-weight: 600; color: #333; white-space: nowrap; }
+	.bm-tab:hover { color: #000; }
+	.bm-tab[aria-selected='true'] { color: #000; }
+	.bm-tab[aria-selected='true']::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: #76b900; }
+	.bm-tab:focus-visible { outline-offset: -4px; }
+	.bm-body { padding: 16px 24px 16px; }
+	.bm-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; }
+	.bm-filter { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--bm-muted); }
+	.bm-seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 8px; background: #efefeb; }
+	.bm-seg button { min-width: 34px; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; color: #444; }
+	.bm-seg button:hover { color: #000; }
+	.bm-seg button[aria-checked='true'] { background: #fff; color: #000; }
+
+	.bm-chartwrap { position: relative; }
+	.bm-chart { position: relative; display: flex; padding: 8px 0 8px; overflow-x: auto; scrollbar-width: thin; }
+	.bm-chart .bm-yaxis { flex: none; position: sticky; left: 0; z-index: 1; background: #fff; overflow: visible; }
+	.bm-chartwrap::after { content: ''; position: absolute; top: 34px; bottom: 16px; right: 0; width: 10px; pointer-events: none; opacity: 0; background: linear-gradient(270deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0)); transition: opacity 0.15s; z-index: 2; }
+	.bm-chartwrap.more-r::after { opacity: 1; }
+	.bm-chartwrap.more-l .bm-yaxis { box-shadow: 1px 0 0 #e6e6e1, 6px 0 8px -6px rgba(0, 0, 0, 0.18); }
+	.bm-chart svg { display: block; max-width: none; overflow: visible; font-family: inherit; }
+	.bm-chart .grid { stroke: #efefeb; stroke-width: 1; }
+	.bm-chart .axis { stroke: #d9d9d3; stroke-width: 1; }
+	.bm-chart .tick { fill: var(--bm-muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+	.bm-chart .ytitle { fill: var(--bm-muted); font-size: 12.5px; }
+	.bm-chart .dot { fill: var(--c, var(--bm-on)); stroke: #fff; stroke-width: 2; }
+	.bm-chart svg:focus-visible { outline: 2px solid #76b900; outline-offset: 4px; border-radius: 6px; }
+	.bm-chart .lbl { fill: #444; font-size: 12.5px; font-weight: 400; }
+	.bm-chart .lead { stroke: #cfcfc8; stroke-width: 1; }
+	.bm-chart .lbl tspan.k { fill: #8a8a85; font-weight: 600; }
+	.bm-chart .hot .dot { stroke: #1a1a1a; }
+	.bm-chart .hot .lbl { fill: #000; font-weight: 700; }
+	.bm-tip { position: absolute; z-index: 2; pointer-events: none; min-width: 160px; max-width: 260px; padding: 8px 10px; border-radius: 8px; background: #1a1a1a; color: #fff; font-size: 12px; line-height: 1.45; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); }
+	.bm-tip.hidden { display: none; }
+	.bm-tip b { display: block; font-size: 15px; font-weight: 700; }
+	.bm-tip span { display: block; color: #c8c8c8; }
+
+	@media (max-width: 640px) {
+		.bm-body { padding: 12px 14px 12px; }
+		.bm-tabs .bm-context { display: none; }
+		.bm-context-m { display: block; margin: 0 0 12px; font-size: 13px; color: var(--bm-muted); }
+		.bm-filter:first-child .bm-seg { display: none; }
+		.bm-select { display: block; height: 36px; padding: 0 32px 0 10px; border-radius: 8px; border: 1px solid #d9d9d3; background: #fff; font-size: 14px; font-weight: 600; color: #1a1a1a; }
+	}
+</style>
+
+<script>
+	import type { Result } from '../lib/benchmarks';
+	import { fmtValue as fmt, niceScale, familyOf } from '../lib/benchmarkFormat';
+	type Item = { id: string; label: string };
+	type Data = {
+		results: Result[]; released: Record<string, string>; names: Record<string, string>; families: Record<string, string>;
+		benchmarks: { id: string; title: string; summary: string }[]; jetsons: (Item & { engine: string })[]; concurrency: Item[]; off: string;
+	};
+	const SVG = 'http://www.w3.org/2000/svg';
+	const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+	for (const root of document.querySelectorAll<HTMLElement>('[data-bm]')) {
+		const { results, released, names, families, benchmarks, jetsons, concurrency, off } = JSON.parse(root.querySelector('[data-bm-data]')!.textContent!) as Data;
+		const q = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
+		const el = (tag: string, cls = '', text = '') => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+		const svgEl = (tag: string, attrs: Record<string, string | number> = {}, text = '') => { const e = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v)); if (text) e.textContent = text; return e; };
+		const label = (id: string) => jetsons.find((j) => j.id === id)!.label;
+		const meta = (r: Result) => [r.engine, r.method === off ? '' : r.method].filter(Boolean).join(' · ');
+
+		const params = new URLSearchParams(location.search);
+		let bench = benchmarks.find((b) => b.id === params.get('bench')) ?? benchmarks[0];
+		let jetson = jetsons.find((j) => j.id === params.get('jetson'))?.id ?? jetsons[0].id;
+		let pick = params.get('c');
+		let touched = params.has('bench');
+		const jetsonsHere = () => jetsons.filter((j) => results.some((r) => r.jetson === j.id && r.engine === j.engine && r.bench === bench.id && released[r.model] >= since)).map((j) => j.id);
+		const offered = () => concurrency.filter((c) => results.some((r) => r.jetson === jetson && r.bench === bench.id && r.c === c.id)).map((c) => c.id);
+		const conc = () => (pick && offered().includes(pick) ? pick : offered()[0]);
+
+		function group(key: string, text: string | null, options: Item[], onPick: (v: string) => void) {
+			const wrap = el('div', 'bm-filter');
+			const k = el('span', text ? '' : 'sr-only', text ?? 'Jetson'); k.id = `bm-${key}-label`;
+			const seg = el('div', 'bm-seg'); seg.setAttribute('role', 'radiogroup'); seg.setAttribute('aria-labelledby', k.id); seg.dataset.group = key;
+			for (const o of options) {
+				const b = el('button', '', o.label) as HTMLButtonElement;
+				b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.v = o.id;
+				b.addEventListener('click', () => onPick(o.id));
+				seg.append(b);
+			}
+			seg.addEventListener('keydown', (e) => {
+				const bs = [...seg.querySelectorAll<HTMLButtonElement>('button:not([hidden])')];
+				const i = bs.findIndex((b) => b.getAttribute('aria-checked') === 'true');
+				const to = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: bs.length - 1 }[e.key];
+				if (to == null) return;
+				e.preventDefault();
+				const b = bs[(to + bs.length) % bs.length];
+				b.click();
+				b.focus();
+			});
+			wrap.append(k, seg);
+			if (key === 'jetson') {
+				const sel = el('select', 'bm-select') as HTMLSelectElement;
+				sel.setAttribute('aria-labelledby', k.id); sel.dataset.groupSelect = key;
+				for (const o of options) { const op = el('option', '', o.label) as HTMLOptionElement; op.value = o.id; sel.append(op); }
+				sel.addEventListener('change', () => onPick(sel.value));
+				wrap.append(sel);
+			}
+			return wrap;
+		}
+		q('[data-bm-filters]').append(
+			group('jetson', null, jetsons, (v) => { jetson = v; touched = true; render(); }),
+			group('c', 'Concurrent requests', concurrency, (v) => { pick = v; touched = true; render(); }),
+		);
+		function syncFilters() {
+			root.querySelectorAll<HTMLElement>('[data-group]').forEach((seg) => {
+				const isJetson = seg.dataset.group === 'jetson';
+				const cur = isJetson ? jetson : conc();
+				const sel = root.querySelector<HTMLSelectElement>(`[data-group-select="${seg.dataset.group}"]`);
+				if (sel) { sel.value = cur; [...sel.options].forEach((o) => (o.hidden = isJetson && !jetsonsHere().includes(o.value))); }
+				seg.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+					b.hidden = !(isJetson ? jetsonsHere() : offered()).includes(b.dataset.v!);
+					const on = b.dataset.v === cur;
+					b.setAttribute('aria-checked', String(on));
+					b.tabIndex = on ? 0 : -1;
+				});
+			});
+		}
+
+		const since = `${Object.values(released).sort().at(-1)!.slice(0, 4)}-01-01`;
+		const inView = (r: Result) => r.engine === jetsons.find((j) => j.id === jetson)!.engine && r.bench === bench.id && r.jetson === jetson && r.c === conc();
+		function points() {
+			const shown = new Map<string, Result>();
+			for (const r of results.filter(inView)) {
+				if (released[r.model] < since) continue;
+				if (!shown.has(r.model)) shown.set(r.model, r);
+			}
+			return [...shown.values()];
+		}
+
+		function fades(toNewest: boolean) {
+			const c = q('[data-bm-chart]');
+			if (toNewest) c.scrollLeft = c.scrollWidth;
+			const wrap = q('[data-bm-chartwrap]');
+			wrap.classList.toggle('more-l', c.scrollLeft > 2);
+			wrap.classList.toggle('more-r', c.scrollLeft + c.clientWidth < c.scrollWidth - 2);
+		}
+		const AXIS = 56;
+		function drawTimeline(points: Result[], height?: number, width = 0) {
+			const chart = q('[data-bm-chart]');
+			const svg = q<SVGSVGElement & HTMLElement>('[data-bm-svg]');
+			const axis = q<SVGSVGElement & HTMLElement>('[data-bm-yaxis]');
+			const tip = q('[data-bm-tip]');
+			svg.replaceChildren();
+			axis.replaceChildren();
+			tip.classList.add('hidden');
+			const W = Math.max(chart.clientWidth - AXIS, width);
+			const H = height ?? Math.min(1000, Math.max(300, 170 + 11 * points.length));
+			const pad = { l: 10, r: 24, t: 34, b: 34 };
+			for (const [el2, w2] of [[svg, W], [axis, AXIS]] as [HTMLElement, number][]) {
+				el2.setAttribute('viewBox', `0 0 ${w2} ${H}`);
+				el2.setAttribute('height', String(points.length ? H : 0));
+				el2.style.width = `${w2}px`;
+			}
+			if (!points.length) return;
+			const time = (r: Result) => Date.parse(released[r.model]);
+			const times = points.map(time);
+			const margin = Math.max(20 * 864e5, (Math.max(...times) - Math.min(...times)) * 0.06);
+			const t0 = Math.min(...times) - margin;
+			const t1 = Math.max(...times) + margin;
+			const { step, top } = niceScale(Math.max(...points.map((r) => r.value)) * 1.06, 5);
+			const x = (t: number) => pad.l + ((t - t0) / (t1 - t0)) * (W - pad.l - pad.r);
+			const y = (v: number) => H - pad.b - (v / top) * (H - pad.t - pad.b);
+
+			for (let v = 0; v <= top + 1e-9; v += step) {
+				svg.append(svgEl('line', { class: v ? 'grid' : 'axis', x1: pad.l, x2: W - pad.r, y1: y(v), y2: y(v) }));
+				axis.append(svgEl('text', { class: 'tick', x: AXIS - 10, y: y(v) + 4, 'text-anchor': 'end' }, fmt(v)));
+			}
+			axis.append(svgEl('text', { class: 'ytitle', x: 10, y: pad.t - 18, 'text-anchor': 'start' }, 'Output tokens/s'));
+			const monthsSpan = (t1 - t0) / (30.4 * 864e5);
+			const every = (monthsSpan > 9 ? [3, 6, 12] : [1, 2, 3]).find((m) => ((W - pad.l - pad.r) / monthsSpan) * m >= 72) ?? 12;
+			const d = new Date(t0); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + 1);
+			for (; d.getTime() <= t1; d.setUTCMonth(d.getUTCMonth() + 1)) {
+				if (d.getUTCMonth() % every) continue;
+				svg.append(svgEl('text', { class: 'tick', x: x(d.getTime()), y: H - pad.b + 20, 'text-anchor': 'middle' }, `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`));
+			}
+
+			type P = { r: Result; px: number; py: number; g: SVGGElement };
+			const xs = new Map<Result, number>();
+			const sameDay = new Map<number, Result[]>();
+			for (const r of [...points].sort((a, b) => b.value - a.value)) sameDay.set(time(r), [...(sameDay.get(time(r)) ?? []), r]);
+			for (const [t, rs] of sameDay) {
+				const gap = Math.min(10, 48 / Math.max(1, rs.length - 1));
+				rs.forEach((r, k) => xs.set(r, x(t) + (rs.length > 1 ? (k - (rs.length - 1) / 2) * gap : 0)));
+			}
+			const ps: P[] = points.map((r) => {
+				const px = xs.get(r)!, py = y(r.value);
+				const g = svgEl('g') as SVGGElement;
+				const dot = svgEl('circle', { class: 'dot', cx: px, cy: py, r: 4.5 });
+				dot.style.setProperty('--c', familyOf(families[r.model], names[r.model]).color);
+				g.append(dot);
+				svg.append(g);
+				return { r, px, py, g };
+			});
+
+			const ctx = document.createElement('canvas').getContext('2d')!;
+			ctx.font = `400 12.5px ${getComputedStyle(root).fontFamily}`;
+			type Box = { x: number; y: number; w: number; h: number };
+			const dotBoxes = new Map(ps.map((p) => [p, { x: p.px - 5, y: p.py - 5, w: 10, h: 10 } as Box]));
+			const boxes: Box[] = [];
+			const near = (b: Box, o: Box, m: number) => b.x < o.x + o.w + m && o.x < b.x + b.w + m && b.y < o.y + o.h + m && o.y < b.y + b.h + m;
+			const free = (b: Box, own: P) => b.x >= pad.l + 2 && b.x + b.w <= W - 2 && b.y >= 0 && b.y + b.h <= H - pad.b - 2 &&
+				![...dotBoxes].some(([p, o]) => p !== own && near(b, o, 10)) && !boxes.some((o) => near(b, o, 5));
+			let hidden = 0;
+			const leads: [number, number, number, number][] = [];
+			const cross = (a: number[], b: number[]) => {
+				const d = (p: number[], q: number[], r: number[]) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+				const [p1, p2, p3, p4] = [[a[0], a[1]], [a[2], a[3]], [b[0], b[1]], [b[2], b[3]]];
+				return d(p3, p4, p1) * d(p3, p4, p2) < 0 && d(p1, p2, p3) * d(p1, p2, p4) < 0;
+			};
+			const clearLine = (own: P, s: { x: number; y: number; a: string }, w: number, h: number) => {
+				const ex = s.a === 'start' ? s.x - 2 : s.x + w + 2, ey = s.y + h / 2;
+				const seg = [own.px, own.py, ex, ey];
+				if ([...dotBoxes.keys()].some((o) => {
+					if (o === own || Math.hypot(o.px - own.px, o.py - own.py) < 12) return false;
+					const t = Math.max(0, Math.min(1, ((o.px - own.px) * (ex - own.px) + (o.py - own.py) * (ey - own.py)) / ((ex - own.px) ** 2 + (ey - own.py) ** 2)));
+					return Math.hypot(own.px + t * (ex - own.px) - o.px, own.py + t * (ey - own.py) - o.py) < 8;
+				})) return false;
+				if (leads.some((l) => cross(seg, l))) return false;
+				return !boxes.some((b) => [[b.x, b.y, b.x + b.w, b.y], [b.x, b.y + b.h, b.x + b.w, b.y + b.h], [b.x, b.y, b.x, b.y + b.h], [b.x + b.w, b.y, b.x + b.w, b.y + b.h]].some((e) => cross(seg, e)));
+			};
+			for (const p of [...ps].sort((a, b) => b.r.value - a.r.value)) {
+				const name = names[p.r.model];
+				const extra = p.r.method === off ? '' : ` · ${p.r.method}`;
+				const w = ctx.measureText(name + extra).width + (extra ? 6 : 2), h = 15;
+				const right = { x: p.px + 9, y: p.py - h / 2, a: 'start', lead: false }, left = { x: p.px - 9 - w, y: p.py - h / 2, a: 'end', lead: false };
+				const away = [-12, 12, -20, 20, -30, 30, -40, 40, -60, 60, -80, 80, -100, 100, -120, 120, -140, 140, -160, 160].flatMap((dy) => [16, 30, 44].flatMap((dx) => [
+					{ x: p.px + dx, y: p.py + dy - h / 2, a: 'start', lead: true }, { x: p.px - dx - w, y: p.py + dy - h / 2, a: 'end', lead: true },
+				]));
+				const nudged = [-5, 5, -9, 9].flatMap((dy) => [{ ...right, y: right.y + dy }, { ...left, y: left.y + dy }]);
+				const stacked = [{ x: p.px - w / 2, y: p.py - 8 - h, a: 'middle', lead: false }, { x: p.px - w / 2, y: p.py + 8, a: 'middle', lead: false }];
+				away.sort((a, b) => Math.hypot(a.x - p.px, a.y - p.py) - Math.hypot(b.x - p.px, b.y - p.py));
+				let spot = [right, left, ...nudged, ...stacked, ...away].find((s) => free({ x: s.x, y: s.y, w, h }, p) && (!s.lead || clearLine(p, s, w, h)));
+				for (let r = 24; !spot && r <= 260; r += 12) for (let k = 0; !spot && k < 16; k++) {
+					const ang = (k / 16) * Math.PI * 2, cx = p.px + Math.cos(ang) * r, cy = p.py + Math.sin(ang) * r;
+					const c = Math.cos(ang) >= 0 ? { x: cx, y: cy - h / 2, a: 'start', lead: true } : { x: cx - w, y: cy - h / 2, a: 'end', lead: true };
+					if (free({ x: c.x, y: c.y, w, h }, p) && clearLine(p, c, w, h)) spot = c;
+				}
+				if (!spot) { hidden++; continue; }
+				if (spot.lead) {
+					const ex = spot.a === 'start' ? spot.x - 2 : spot.x + w + 2, ey = spot.y + h / 2;
+					p.g.append(svgEl('line', { class: 'lead', x1: p.px, y1: p.py, x2: ex, y2: ey }));
+					leads.push([p.px, p.py, ex, ey]);
+				}
+				boxes.push({ x: spot.x, y: spot.y, w, h });
+				const tx = spot.a === 'start' ? spot.x : spot.a === 'end' ? spot.x + w : spot.x + w / 2;
+				const t = svgEl('text', { class: 'lbl', x: tx, y: spot.y + 12, 'text-anchor': spot.a }, name);
+				if (extra) t.append(svgEl('tspan', { class: 'k' }, extra));
+				p.g.append(t);
+			}
+
+			if (hidden && W < 820) return drawTimeline(points, H, 900);
+			if (hidden && H < 1600) return drawTimeline(points, H + 120, width);
+			if (hidden && W < 3200) return drawTimeline(points, H, W + 400);
+
+			const show = (p: P | null) => {
+				ps.forEach((o) => o.g.classList.toggle('hot', o === p));
+				if (!p) { tip.classList.add('hidden'); return; }
+				const r = p.r;
+				const dt = new Date(time(r));
+				tip.replaceChildren(
+					el('b', '', `${fmt(r.value)} tok/s`),
+					el('span', '', names[r.model]),
+					el('span', '', meta(r)),
+					el('span', '', `Released ${MONTHS[dt.getUTCMonth()]} ${dt.getUTCFullYear()}`),
+				);
+				tip.classList.remove('hidden');
+				const left = Math.min(Math.max(p.px + 14, 0), W - tip.offsetWidth);
+				const flip = p.px + 14 + tip.offsetWidth > W;
+				tip.style.left = `${AXIS + (flip ? Math.max(0, p.px - 14 - tip.offsetWidth) : left)}px`;
+				tip.style.top = `${p.py > H * 0.55 ? Math.max(0, p.py - tip.offsetHeight - 6) : Math.max(0, p.py - tip.offsetHeight / 2 + 8)}px`;
+			};
+			svg.onpointermove = (e) => {
+				const b = svg.getBoundingClientRect();
+				const mx = e.clientX - b.left, my = e.clientY - b.top;
+				let best: P | null = null, bd = 24 * 24;
+				for (const p of ps) {
+					const dd = (p.px - mx) ** 2 + (p.py - my) ** 2;
+					if (dd < bd) { bd = dd; best = p; }
+				}
+				show(best);
+			};
+			svg.onpointerdown = svg.onpointermove;
+			svg.onpointerleave = (e) => { if (e.pointerType === 'mouse') show(null); };
+			const order = [...ps].sort((a, b) => a.px - b.px);
+			let at = -1;
+			svg.onkeydown = (e) => {
+				if (e.key === 'Escape') { show(null); at = -1; return; }
+				const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: order.length - 1 }[e.key];
+				if (to == null) return;
+				e.preventDefault();
+				at = Math.max(0, Math.min(order.length - 1, to));
+				show(order[at]);
+				const c = q('[data-bm-chart]'), bx = order[at].g.getBBox();
+				if (bx.x < c.scrollLeft || bx.x + bx.width > c.scrollLeft + c.clientWidth - AXIS) { c.scrollLeft = Math.max(0, bx.x - 40); fades(false); }
+				q('[data-bm-live]').textContent = tip.textContent ?? '';
+			};
+			svg.onblur = () => { show(null); at = -1; };
+			svg.setAttribute('aria-label', `${bench.title} on ${label(jetson)}: ${ps.length} models by release date.`);
+		}
+
+		function render() {
+			if (!jetsonsHere().includes(jetson)) jetson = jetsonsHere()[0];
+			root.querySelectorAll<HTMLButtonElement>('[data-bm-tab]').forEach((t) => {
+				const on = t.dataset.bmTab === bench.id;
+				t.setAttribute('aria-selected', String(on));
+				t.tabIndex = on ? 0 : -1;
+				if (on) q('[role="tabpanel"]').setAttribute('aria-labelledby', t.id);
+			});
+			syncFilters();
+			q('[data-bm-context]').textContent = bench.summary;
+			q('[data-bm-context-m]').textContent = bench.summary;
+			const shown = points();
+			drawTimeline(shown);
+			fades(true);
+			if (touched) {
+				const u = new URL(location.href);
+				u.searchParams.set('bench', bench.id);
+				u.searchParams.set('jetson', jetson);
+				u.searchParams.set('c', conc());
+				history.replaceState(history.state, '', u);
+			}
+		}
+
+		const tabs = q('.bm-tabs');
+		const choose = (id: string) => { bench = benchmarks.find((b) => b.id === id)!; touched = true; render(); };
+		tabs.addEventListener('click', (e) => {
+			const t = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-bm-tab]');
+			if (t) choose(t.dataset.bmTab!);
+		});
+		tabs.addEventListener('keydown', (e) => {
+			const i = benchmarks.indexOf(bench);
+			const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: benchmarks.length - 1 }[(e as KeyboardEvent).key];
+			if (to == null) return;
+			e.preventDefault();
+			choose(benchmarks[(to + benchmarks.length) % benchmarks.length].id);
+			q<HTMLButtonElement>(`[data-bm-tab="${bench.id}"]`).focus();
+		});
+		let lastWidth = 0;
+		new ResizeObserver(() => { const w = q('[data-bm-chart]').clientWidth; if (w && w !== lastWidth) { lastWidth = w; drawTimeline(points()); fades(true); } }).observe(q('[data-bm-chart]'));
+		q('[data-bm-chart]').addEventListener('scroll', () => fades(false), { passive: true });
+		render();
+	}
+</script>

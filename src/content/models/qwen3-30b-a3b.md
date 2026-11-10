@@ -24,15 +24,6 @@ hf_checkpoint: "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
 huggingface_url: "https://huggingface.co/Qwen/Qwen3-30B-A3B"
 minimum_jetson: "Orin AGX"
 # Optional: gray tabs via matrix_modules_disabled. Per-engine allowlists: supported_inference_engines[].modules_supported (from minimum_jetson).
-benchmark:
-  orin:
-    concurrency1: 31.43
-    concurrency8: 76.69
-    ttftMs: 0
-  thor:
-    concurrency1: 61.01
-    concurrency8: 226.42
-    ttftMs: 0
 supported_inference_engines:
   - engine: "vLLM"
     type: "Container"
@@ -50,9 +41,6 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         RedHatAI/Qwen3-30B-A3B-quantized.w4a16
-benchmark_key: "Qwen3-30B-A3B"
-benchmark_series:
-  - "Qwen3-32B"
 ---
 
 Qwen3 30B-A3B is a Mixture-of-Experts (MoE) model from Alibaba Cloud's Qwen3 family. It features 30 billion total parameters with only 3 billion active during inference, providing excellent performance with improved efficiency.

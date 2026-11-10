@@ -3,8 +3,9 @@ import { getCollection } from 'astro:content';
 import type { InferenceCategory } from '../../lib/engines';
 import Layout from '../../layouts/Layout.astro';
 import RunCommand from '../../components/RunCommand.astro';
-import ModelPerformanceCharts from '../../components/ModelPerformanceCharts.astro';
-import llmBenchmarks from '../../data/benchmarks.json';
+import RecipeModal from '../../components/RecipeModal.astro';
+import Benchmarks from '../../components/Benchmarks.astro';
+import { getRecipeModels } from '../../lib/recipes';
 import { JETSON_MATRIX_MODULES } from '../../lib/inferenceCommands';
 import { oneShotHasRunModalContent } from '../../lib/evalRunModal';
 import { getSupportedInferenceEngines, sortEnginesForUi } from '../../lib/modelFrontmatterAdapter';
@@ -126,6 +127,7 @@ function inferCatalogModelType(inputs: string[], outputs: string[]): CatalogMode
 const moduleFilterOptions = JETSON_MATRIX_MODULES.filter((m) => m.showInMatrixUi !== false);
 
 const modelEntries = await getCollection('models');
+const recipeSlugs = new Set((await getRecipeModels()).map((m) => m.slug));
 
 // Official source assets use different transparent safe areas. Keep the source
 // artwork intact and normalize only its optical size inside the catalog frame.
@@ -376,7 +378,11 @@ const catalogTypeCounts = new Map(
                     <div class="mt-auto flex min-h-10 items-center border-t border-nvidia-gray-100 pt-4">
                       {!model.hideRunButton &&
                         (model.supported_inference_engines.length > 0 || oneShotHasRunModalContent(model.one_shot_inference)) && (
+                          recipeSlugs.has(model.id) ? (
+                          <button data-recipe-run={model.id} class="px-3 py-1.5 rounded-md bg-nvidia-black text-nvidia-white hover:bg-nvidia-green hover:text-nvidia-black transition-colors text-xs font-bold">Run</button>
+                          ) : (
                           <RunCommand modelId={model.id} modelName={model.name} category={model.category} forceModal={model.category === 'Image'} supportedEngines={model.supported_inference_engines} hfCheckpoint={model.hf_checkpoint} matrixModulesDisabled={model.matrix_modules_disabled} oneShotInference={model.one_shot_inference} />
+                          )
                         )}
                     </div>
                   </div>
@@ -877,7 +883,11 @@ const catalogTypeCounts = new Map(
                       </span>
                       {!model.hideRunButton &&
                         (model.supported_inference_engines.length > 0 || oneShotHasRunModalContent(model.one_shot_inference)) && (
+                        recipeSlugs.has(model.id) ? (
+                        <button data-recipe-run={model.id} class="px-3 py-1.5 rounded-md bg-nvidia-black text-nvidia-white hover:bg-nvidia-green hover:text-nvidia-black transition-colors text-xs font-bold">Run</button>
+                        ) : (
                         <RunCommand modelId={model.id} modelName={model.name} category={model.category} forceModal={model.category === 'Image'} supportedEngines={model.supported_inference_engines} hfCheckpoint={model.hf_checkpoint} matrixModulesDisabled={model.matrix_modules_disabled} oneShotInference={model.one_shot_inference} />
+                        )
                       )}
                     </div>
                   </div>
@@ -1066,7 +1076,11 @@ const catalogTypeCounts = new Map(
                     <div class="flex items-center justify-end gap-2 flex-wrap">
                       {!model.hideRunButton &&
                         (model.supported_inference_engines.length > 0 || oneShotHasRunModalContent(model.one_shot_inference)) && (
+                          recipeSlugs.has(model.id) ? (
+                          <button data-recipe-run={model.id} class="px-3 py-1.5 rounded-md bg-nvidia-black text-nvidia-white hover:bg-nvidia-green hover:text-nvidia-black transition-colors text-xs font-bold">Run</button>
+                          ) : (
                           <RunCommand modelId={model.id} modelName={model.name} category={model.category} forceModal={model.category === 'Image'} supportedEngines={model.supported_inference_engines} hfCheckpoint={model.hf_checkpoint} matrixModulesDisabled={model.matrix_modules_disabled} oneShotInference={model.one_shot_inference} />
+                          )
                         )}
                     </div>
                   </td>
@@ -1089,17 +1103,13 @@ const catalogTypeCounts = new Map(
     </div>
   </section>
 
-  <!-- Benchmarks Section -->
-  <section id="performance-comparison" class="py-20 bg-nvidia-gray-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-16">
-        <h2 class="text-4xl font-bold text-nvidia-black mb-6">Performance Comparison</h2>
-        <p class="text-xl text-nvidia-gray-600">Benchmarks on Jetson across supported inference runtimes</p>
-      </div>
-
-      <ModelPerformanceCharts benchmarks={llmBenchmarks} />
+  <section id="performance" class="py-16 bg-nvidia-gray-50 border-t border-nvidia-gray-200 scroll-mt-20" aria-labelledby="performance-heading">
+    <span id="performance-comparison" class="block scroll-mt-20" aria-hidden="true"></span>
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      <Benchmarks />
     </div>
   </section>
+  <RecipeModal />
 </Layout>
 
 <script>

@@ -24,15 +24,6 @@ huggingface_url: "https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct"
 build_nvidia_url: "https://build.nvidia.com/meta/llama-3_1-8b-instruct"
 minimum_jetson: "Orin NX"
 # Optional: gray tabs via matrix_modules_disabled. Per-engine allowlists: supported_inference_engines[].modules_supported (from minimum_jetson).
-benchmark:
-  orin:
-    concurrency1: 28.14
-    concurrency8: 112.33
-    ttftMs: 0
-  thor:
-    concurrency1: 44
-    concurrency8: 251
-    ttftMs: 0
 supported_inference_engines:
   - engine: "Ollama"
     type: "Container"

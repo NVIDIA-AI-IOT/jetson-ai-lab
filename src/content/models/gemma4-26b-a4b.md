@@ -11,7 +11,7 @@ order: 3
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "24GB RAM"
-precision: "NVFP4 / W4A16 / Q4_K_M GGUF"
+precision: "NVFP4 / AWQ-4bit / Q4_0 GGUF"
 parameters: "3.8B active (25.8B total, MoE)"
 modalities: ["Text", "Image", "Video"]
 input_modalities: ["text", "image", "video"]
@@ -32,9 +32,9 @@ serving:
         - thor_t4000
         - orin_agx_64
       serve_command_orin: >-
-        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest NeoChen1024/gemma-4-26B-A4B-it-qat-W4A16 --max-model-len 8192 --gpu-memory-utilization 0.7 --enforce-eager --trust-remote-code --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-26B-A4B-it-assistant","num_speculative_tokens":3}'
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit --max-model-len 8192 --gpu-memory-utilization 0.7 --trust-remote-code --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-26B-A4B-it-assistant","num_speculative_tokens":3}'
       serve_command_thor: >-
-        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:v0.24.0 RedHatAI/gemma-4-26B-A4B-it-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-26B-A4B-it-assistant","num_speculative_tokens":3}'
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest RedHatAI/gemma-4-26B-A4B-it-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --attention-backend TRITON_ATTN --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-26B-A4B-it-assistant","num_speculative_tokens":3}'
     - engine: "llama.cpp"
       type: "Container"
       modules_supported:
@@ -46,17 +46,13 @@ serving:
           --runtime=nvidia --network host \
           -v $HOME/.cache/huggingface:/root/.cache/huggingface \
           ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
-          llama-server -hf ggml-org/gemma-4-26B-A4B-it-GGUF:Q4_K_M
+          llama-server -hf ggml-org/gemma-4-26B-A4B-it-GGUF:Q4_0 --jinja
       serve_command_thor: |-
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
           -v $HOME/.cache/huggingface:/root/.cache/huggingface \
           ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
-          llama-server -hf ggml-org/gemma-4-26B-A4B-it-GGUF:Q4_K_M
-benchmark_key: "Gemma 4 26B-A4B"
-benchmark_series:
-  - "Gemma 4 E2B"
-  - "Gemma 4 31B"
+          llama-server -hf ggml-org/gemma-4-26B-A4B-it-GGUF:Q4_0 --jinja
 ---
 
 Gemma 4 26B-A4B is a larger Gemma 4 variant that can be served on Jetson with `llama.cpp`. Google presents this model as the latency-optimized high-end option in the family: a Mixture-of-Experts model that targets much better throughput than a dense model of similar total size.

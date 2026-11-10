@@ -11,7 +11,7 @@ order: 4
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "32GB RAM"
-precision: "NVFP4 / W4A16 / Q4_K_M GGUF"
+precision: "W4A16 QAT / Q4_0 GGUF"
 parameters: "31B"
 modalities: ["Text", "Image", "Video"]
 input_modalities: ["text", "image", "video"]
@@ -34,7 +34,7 @@ serving:
       serve_command_orin: >-
         sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest google/gemma-4-31B-it-qat-w4a16-ct --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-31B-it-assistant","num_speculative_tokens":3}'
       serve_command_thor: >-
-        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:v0.26.0 nvidia/Gemma-4-31B-IT-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --attention-backend TRITON_ATTN --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-31B-it-assistant","num_speculative_tokens":3}'
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest google/gemma-4-31B-it-qat-w4a16-ct --max-model-len 8192 --gpu-memory-utilization 0.7 --attention-backend TRITON_ATTN --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-31B-it-assistant","num_speculative_tokens":3}'
     - engine: "llama.cpp"
       type: "Container"
       modules_supported:
@@ -46,17 +46,13 @@ serving:
           --runtime=nvidia --network host \
           -v $HOME/.cache/huggingface:/root/.cache/huggingface \
           ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
-          llama-server -hf ggml-org/gemma-4-31B-it-GGUF:Q4_K_M
+          llama-server -hf ggml-org/gemma-4-31B-it-GGUF:Q4_0 --jinja
       serve_command_thor: |-
         sudo docker run -it --rm --pull always \
           --runtime=nvidia --network host \
           -v $HOME/.cache/huggingface:/root/.cache/huggingface \
           ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
-          llama-server -hf ggml-org/gemma-4-31B-it-GGUF:Q4_K_M
-benchmark_key: "Gemma 4 31B"
-benchmark_series:
-  - "Gemma 4 E2B"
-  - "Gemma 4 26B-A4B"
+          llama-server -hf ggml-org/gemma-4-31B-it-GGUF:Q4_0 --jinja
 ---
 
 Gemma 4 31B is the largest model in the current Gemma 4 set here, and it can be served on Jetson with `llama.cpp`. In Google's launch post, 31B is the flagship dense model in the family, aimed at the best possible raw quality for local reasoning, coding, and agentic workflows.
