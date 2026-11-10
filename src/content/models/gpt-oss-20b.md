@@ -50,7 +50,6 @@ supported_inference_engines:
         -e TIKTOKEN_ENCODINGS_BASE=/etc/encodings \
         vllm/vllm-openai:latest \
         openai/gpt-oss-20b --gpu-memory-utilization 0.8
-benchmark_key: "GPT-OSS-20B"
 ---
 
 [OpenAI GPT OSS 20B](https://huggingface.co/openai/gpt-oss-20b) is OpenAI's open-source 20 billion parameter language model. This model requires tiktoken encodings to be downloaded before serving.

@@ -4,7 +4,7 @@
 skills:
   - name: jetson-model-catalog-inference
     path: skills/jetson-model-catalog-inference/SKILL.md
-    description: Configure Jetson AI Lab model pages — frontmatter for the Model Details sidebar (parameters, modalities, context length, license, precision pills), the Run on Jetson serve/call/one-shot UI, the three "block" levers (hide_run_button, matrix_modules_disabled, per-engine modules_supported), the join to src/data/benchmarks.json (benchmark_key, benchmark_series, OOM vs DNR vs null), and the auto-generated /llms.txt and /llms-full.txt discoverability indexes (src/pages/llms.txt.ts MODEL_SECTIONS — new vendors require a section entry). Use when adding or editing model pages, inference engines, serve/run commands, one-shot blocks, the details sidebar, benchmark wiring, deciding whether to mark a Jetson module as OOM, blocked, or simply untested, or introducing a brand-new model family.
+    description: Configure Jetson AI Lab model pages — frontmatter for the Model Details sidebar (parameters, modalities, context length, license, precision pills), the Run on Jetson serve/call/one-shot UI, the three "block" levers (hide_run_button, matrix_modules_disabled, per-engine modules_supported), where benchmark numbers live (src/data/benchmarks.json), and the auto-generated /llms.txt and /llms-full.txt discoverability indexes (src/pages/llms.txt.ts MODEL_SECTIONS — new vendors require a section entry). Use when adding or editing model pages, inference engines, serve/run commands, one-shot blocks, the details sidebar, benchmark data, deciding whether to block or gray a Jetson module, or introducing a brand-new model family.
 
   - name: jetson-ai-lab-verify-build
     path: skills/jetson-ai-lab-verify-build/SKILL.md

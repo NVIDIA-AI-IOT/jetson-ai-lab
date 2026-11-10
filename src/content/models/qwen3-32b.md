@@ -24,15 +24,6 @@ hf_checkpoint: "RedHatAI/Qwen3-32B-quantized.w4a16"
 huggingface_url: "https://huggingface.co/Qwen/Qwen3-32B"
 minimum_jetson: "Thor"
 # Optional: gray tabs via matrix_modules_disabled. Per-engine allowlists: supported_inference_engines[].modules_supported (from minimum_jetson).
-benchmark:
-  orin:
-    concurrency1: 6.22
-    concurrency8: 16.84
-    ttftMs: 0
-  thor:
-    concurrency1: 13.19
-    concurrency8: 79.1
-    ttftMs: 0
 supported_inference_engines:
   - engine: "vLLM"
     type: "Container"
@@ -49,9 +40,6 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         RedHatAI/Qwen3-32B-quantized.w4a16
-benchmark_key: "Qwen3-32B"
-benchmark_series:
-  - "Qwen3-30B-A3B"
 ---
 
 Qwen3 32B is the flagship dense model in Alibaba Cloud's Qwen3 family. With 32 billion parameters, it delivers exceptional performance across complex reasoning, coding, and language understanding tasks.

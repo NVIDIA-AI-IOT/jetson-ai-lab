@@ -20,25 +20,50 @@ try {
 	assert((await page.locator('.model-card .model-card-meta').count()) === 0, 'Catalog cards should reserve their width for model names instead of parameter metadata');
 	assert((await page.locator('.model-table-row [data-model-link]').count()) === totalModels, 'Every table model name should link to its model page');
 	assert((await page.getByRole('link', { name: 'Details', exact: true }).count()) === 0, 'Legacy Details links are still present');
-	const quickRunButtons = page.locator('[data-run-open]');
-	assert((await quickRunButtons.count()) > 0, 'Quick run controls are missing');
+	const catalogRunButton = page.locator('#models-directory-cards [data-recipe-run]').first();
+	assert(await catalogRunButton.isVisible(), 'Catalog Run control is missing');
+	assert((await catalogRunButton.textContent())?.trim() === 'Run', 'Run control should have a visible label');
+	const recipeSlug = await catalogRunButton.getAttribute('data-recipe-run');
+	await catalogRunButton.click();
+	const catalogRunModal = page.locator('#recipe-modal');
+	assert(await catalogRunModal.isVisible(), 'Catalog Run should open its recipe modal');
+	assert((await catalogRunModal.locator('[data-code="serve"]').textContent())?.trim(), 'Run panel should contain a serve command');
 	assert(
-		(await quickRunButtons.first().getAttribute('title')) === 'Quick run',
-		'Run modal trigger should expose a Quick run tooltip'
-	);
-	assert(
-		(await quickRunButtons.first().getAttribute('aria-label'))?.startsWith('Quick run ') === true,
-		'Icon-only Quick run control should have an accessible label'
-	);
-	const catalogQuickRun = page.locator('#models-directory-cards [data-run-open]').first();
-	await catalogQuickRun.click();
-	const catalogRunModal = page.locator('#models-directory-cards [data-run-modal]:not(.hidden)').first();
-	assert(await catalogRunModal.isVisible(), 'Catalog Quick run should open its modal');
-	assert(
-		await page.evaluate(() => Boolean(document.elementFromPoint(window.innerWidth / 2, window.innerHeight * 0.7)?.closest('[data-run-modal]'))),
+		await page.evaluate(() => Boolean(document.elementFromPoint(window.innerWidth / 2, window.innerHeight * 0.7)?.closest('#recipe-modal'))),
 		'Catalog cards should not paint over the open Run modal'
 	);
-	await catalogRunModal.locator('[data-run-close]').click();
+	await catalogRunModal.locator('button[data-recipe-close]').click();
+	assert(!(await catalogRunModal.isVisible()), 'Closing Run should hide the modal');
+	await catalogRunButton.focus();
+	await catalogRunButton.press('Enter');
+	assert(await catalogRunModal.isVisible(), 'Run should open with the keyboard');
+	await page.keyboard.press('Escape');
+	assert(!(await catalogRunModal.isVisible()), 'Escape should close Run');
+	assert(await catalogRunButton.evaluate((button) => button === document.activeElement), 'Closing Run should restore keyboard focus');
+
+	const benchmarks = page.locator('[data-bm]');
+	await benchmarks.scrollIntoViewIfNeeded();
+	assert((await benchmarks.locator('[data-bm-svg] circle').count()) > 0, 'Benchmark chart should render model points');
+	const benchmarkTab = benchmarks.locator('[data-bm-tab]').last();
+	await benchmarkTab.click();
+	assert((await benchmarkTab.getAttribute('aria-selected')) === 'true', 'Benchmark tabs should change selection');
+	const concurrency = benchmarks.locator('[data-group="c"] button:visible').last();
+	await concurrency.click();
+	assert((await concurrency.getAttribute('aria-checked')) === 'true', 'Benchmark concurrency should change selection');
+
+	await page.goto(new URL(`/models/${recipeSlug}/`, baseUrl).toString(), { waitUntil: 'networkidle' });
+	const inlineRun = page.locator('#recipe-modal[data-inline]');
+	assert(await inlineRun.isVisible(), 'Model page should show its inline Run panel');
+	assert((await inlineRun.locator('[data-code="serve"]').textContent())?.trim(), 'Inline Run should contain a serve command');
+	await page.goto(new URL('/models/gemma4-26b-a4b/', baseUrl).toString(), { waitUntil: 'networkidle' });
+	const performance = page.locator('[data-mp]');
+	await performance.locator('[data-mp-bench]').last().click();
+	assert((await performance.locator('[data-mp-view]:visible').count()) === 1, 'Model performance should show one benchmark view');
+	const modelConcurrency = performance.locator('[data-mp-c] button').last();
+	await modelConcurrency.click();
+	assert((await modelConcurrency.getAttribute('aria-checked')) === 'true', 'Model concurrency should change selection');
+	assert((await performance.locator('[data-mp-view]:visible .mp-col').count()) > 0, 'Selected model performance should contain results');
+	await page.goto(baseUrl, { waitUntil: 'networkidle' });
 
 	const visualModelHref = await page.locator('.model-card[data-has-model-art="true"] [data-model-link]').first().getAttribute('href');
 	assert(visualModelHref, 'Expected at least one catalog model with family artwork');
@@ -243,6 +268,7 @@ try {
 		await page.evaluate(() => localStorage.getItem('jetson-ai-lab-models-card-fit')) === 'content',
 		'Content-fit preference was not stored'
 	);
+	await page.locator('.model-family-group[style*="grid-row-end: span"]').first().waitFor({ state: 'attached' });
 	assert(
 		(await page.locator('.model-family-group[style*="grid-row-end: span"]').count()) > 0,
 		'Content-fit layout did not measure family cards'

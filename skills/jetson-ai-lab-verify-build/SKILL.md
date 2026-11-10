@@ -14,7 +14,7 @@ Run a full static build **after** any change to:
 - `src/content/models/*.md` (model catalog frontmatter / Run / Serve / one-shot)
 - `src/content/tutorials/**/*.{md,mdx}`
 - `src/content/projects/**`, `src/content/gtc26/**`, or any other `src/content/` collection
-- `src/data/benchmarks.json` (the model-page benchmark chart joins on this)
+- `src/data/benchmarks.json` (benchmark numbers by model slug)
 - `public/` (including `public/code-samples/`)
 
 When writing or editing tutorials, include `authors` in frontmatter.
@@ -47,21 +47,11 @@ Other typical model-page schema failures:
 
 - `Invalid url` on `huggingface_url` / `build_nvidia_url` → must be a full `https://...` URL, not a slug.
 - `Required` on `title`, `short_description`, or `precision` → these three are the only top-level required fields.
-- Type errors on `modalities` / `matrix_modules_disabled` / `benchmark_series` → these must be **arrays of strings**, not comma-separated text.
+- Type errors on `modalities` / `matrix_modules_disabled` → these must be **arrays of strings**, not comma-separated text.
 
-### Benchmark reference validation
+### Benchmark data errors
 
-The model page joins to `src/data/benchmarks.json` by `benchmark_key === models[].name`. The prebuild validator fails when `benchmark_key` or a `benchmark_series` entry does not resolve, and names the model file and bad key.
-
-After adding or changing benchmark references, run `npm run check:benchmarks` for a focused check or `npm run build` for the complete validation chain.
-
-### Benchmark product id mismatches
-
-`src/data/benchmarks.json` uses **different ids** from the matrix module list. Valid benchmark product ids are:
-
-`t5000`, `t4000`, `agx_orin_64gb`, `orin_nx_16gb`, `orin_nano_8gb`, `dgx_spark`
-
-If you accidentally use matrix ids (`orin_agx_64`, `orin_nano_8`, etc.) inside `concurrency1` / `concurrency8` / `oom` / `dnr`, `npm run check:benchmarks` fails with the benchmark model, engine, quantization, field, and invalid product id. See the matrix-id ↔ product-id table in skill **`jetson-model-catalog-inference`**.
+`src/data/benchmarks.json` is checked while the site builds (schema in `src/lib/benchmarks.ts`). The error names the bad path, e.g. `qwen3-5-4b.thor.vLLM.MTP.throughput.c1: Expected number`, or a slug with no page in `src/content/models/`.
 
 ### MDX / Astro parse errors
 

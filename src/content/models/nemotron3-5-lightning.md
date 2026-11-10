@@ -11,7 +11,7 @@ order: -2
 type: "Text"
 vision_capable: false
 memory_requirements: "64GB RAM"
-precision: "NVFP4"
+precision: "NVFP4 / Q4_0 GGUF"
 parameters: "30B total / 3B active"
 modalities: ["Text"]
 input_modalities: ["text"]
@@ -30,103 +30,20 @@ serving:
         - thor_t5000
         - thor_t4000
         - orin_agx_64
-      serve_command_thor: |-
-        docker run --pull always --rm -it \
-          --name nemotron35-vllm \
-          --runtime=nvidia \
-          --network host \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          -v $HOME/.cache/vllm:/root/.cache/vllm \
-          vllm/vllm-openai:v0.27.1 \
-          --model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 \
-          --served-model-name nemotron35 \
-          --reasoning-parser nemotron_v3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder \
-          --max-model-len 128000 \
-          --kv-cache-dtype fp8 \
-          --gpu-memory-utilization 0.7 \
-          --trust-remote-code \
-          --max-num-batched-tokens 16384 \
-          --enable-prefix-caching \
-          --speculative_config.method dspark \
-          --speculative_config.model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark \
-          --speculative_config.num_speculative_tokens 5 \
-          --mamba-backend flashinfer \
-          --mamba-ssm-cache-dtype float16 \
-          --enable-mamba-cache-stochastic-rounding \
-          --mamba-cache-philox-rounds 5 \
-          --mamba-cache-mode align
-      serve_command_orin: |-
-        docker run --pull always --rm -it \
-          --name nemotron35-vllm \
-          --runtime=nvidia \
-          --network host \
-          -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-          -v $HOME/.cache/vllm:/root/.cache/vllm \
-          vllm/vllm-openai:v0.27.1 \
-          --model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 \
-          --served-model-name nemotron35 \
-          --reasoning-parser nemotron_v3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder \
-          --max-model-len 128000 \
-          --trust-remote-code \
-          --kv-cache-dtype bfloat16 \
-          --gpu-memory-utilization 0.7 \
-          --max-num-batched-tokens 16384 \
-          --enable-prefix-caching \
-          --speculative_config.method dspark \
-          --speculative_config.model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark \
-          --speculative_config.num_speculative_tokens 5 \
-          --speculative_config.kv_cache_dtype bfloat16 \
-          --mamba-backend flashinfer \
-          --mamba-ssm-cache-dtype float16 \
-          --enable-mamba-cache-stochastic-rounding \
-          --mamba-cache-philox-rounds 5 \
-          --mamba-cache-mode align
+      serve_command_thor: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 --served-model-name nemotron35 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser nemotron_v3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --kv-cache-dtype fp8 --trust-remote-code --max-num-batched-tokens 16384 --mamba-backend flashinfer --mamba-ssm-cache-dtype float16 --enable-mamba-cache-stochastic-rounding --mamba-cache-philox-rounds 5 --speculative-config '{"method":"dspark","model":"nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark","num_speculative_tokens":5}'
+      serve_command_orin: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest --model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 --served-model-name nemotron35 --reasoning-parser nemotron_v3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --max-model-len 8192 --trust-remote-code --kv-cache-dtype bfloat16 --gpu-memory-utilization 0.7 --max-num-batched-tokens 16384 --speculative_config.method dspark --speculative_config.model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark --speculative_config.num_speculative_tokens 5 --speculative_config.kv_cache_dtype bfloat16 --mamba-backend flashinfer --mamba-ssm-cache-dtype float16 --enable-mamba-cache-stochastic-rounding --mamba-cache-philox-rounds 5
     - engine: "llama.cpp"
       type: "Container"
       modules_supported:
         - thor_t5000
         - thor_t4000
         - orin_agx_64
-      serve_command_orin: |-
-        docker run --rm -it \
-          --pull=always \
-          --runtime nvidia \
-          --network host \
-          -v ~/.cache/huggingface:/data/models/huggingface \
-          ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin \
-          llama-server \
-            -hf ggml-org/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF:Q4_K_M \
-            -hfd apolo13x/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-DFlash-GGUF \
-            --spec-type draft-dflash \
-            -ngl all \
-            -ngld all \
-            -fa on \
-            --temp 1.0 \
-            --top-p 0.95 \
-            --host 0.0.0.0 \
-            --port 8080
-      serve_command_thor: |-
-        docker run --rm -it \
-          --pull=always \
-          --runtime nvidia \
-          --network host \
-          -v ~/.cache/huggingface:/data/models/huggingface \
-          ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor \
-          llama-server \
-            -hf ggml-org/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF:Q4_K_M \
-            -hfd apolo13x/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-DFlash-GGUF \
-            --spec-type draft-dflash \
-            -ngl all \
-            -ngld all \
-            -fa on \
-            --temp 1.0 \
-            --top-p 0.95 \
-            --host 0.0.0.0 \
-            --port 8080
+      serve_command_orin: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-orin llama-server -hf ggml-org/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF:Q4_0 -hfd apolo13x/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-DFlash-GGUF --spec-type draft-dflash -ngl all -ngld all -fa on --jinja --temp 1.0 --top-p 0.95 --host 0.0.0.0 --port 8080
+      serve_command_thor: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface ghcr.io/nvidia-ai-iot/llama_cpp:latest-jetson-thor llama-server -hf ggml-org/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF:Q4_0 -hfd apolo13x/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-DFlash-GGUF --spec-type draft-dflash -ngl all -ngld all -fa on --jinja --temp 1.0 --top-p 0.95 --host 0.0.0.0 --port 8080
     - engine: "TensorRT Edge-LLM"
       type: "Container"
       modules_supported:
@@ -134,7 +51,6 @@ serving:
         - thor_t4000
       install_command: |-
         mkdir -p "$HOME/tensorrt-edgellm-workspace" "$HOME/.cache/huggingface"
-        # This production URL is published when this change is merged and deployed.
         curl -fsSL https://www.jetson-ai-lab.com/code-samples/tensorrt_edge_llm/run_nemotron35_lightning.sh -o "$HOME/run-nemotron35-lightning"
         chmod +x "$HOME/run-nemotron35-lightning"
       serve_command_thor: |-
@@ -144,8 +60,6 @@ serving:
 NVIDIA Nemotron 3.5 Lightning is a fast, open-weight 30B Mixture-of-Experts model that activates only 3B parameters per token. It brings performance close to the much larger Nemotron 3 Super while remaining practical for local coding assistants, research agents, tool-calling workflows, and other always-on applications.
 
 The model supports context lengths of up to one million tokens. Reasoning can be enabled or disabled, and a configurable reasoning budget lets users control how much reasoning the model performs before answering.
-
-The best performance we saw with this model averaged 115 tokens/sec on Jetson AGX Thor and 89 tokens/sec on Jetson AGX Orin across multi-step agentic workloads involving reasoning and tool calls.
 
 Nemotron 3.5 Lightning supports several speculative decoding options, including built-in Multi-Token Prediction, DSpark, and DFlash. We tested the available approaches and found DSpark with vLLM delivered the best performance on both Jetson AGX Thor and Jetson AGX Orin.
 
@@ -179,20 +93,9 @@ The vLLM server exposes an OpenAI-compatible API on port `8000` with reasoning p
 
 The TensorRT Edge-LLM command is an experimental, **Thor-only** NVFP4 path. Its default engine is intentionally conservative: batch size 1, maximum input length 2048 tokens, and KV-cache capacity 2200 tokens. The model's 1M-token capability is not enabled by this engine configuration.
 
-Standard OpenAI-compatible chat completions have been validated on Jetson AGX Thor. OpenAI `tools` requests are not supported by this TensorRT Edge-LLM 0.10.0 sample because the shipped tokenizer configuration cannot apply its tool-aware chat template. Use the vLLM command above for validated tool calling, structured reasoning parsing, long-context tuning, or speculative decoding.
+Standard OpenAI-compatible chat completions are validated on Jetson AGX Thor. For tool calling, structured reasoning parsing, or speculative decoding, use the vLLM command above.
 
 The helper serves on port `8000` by default. If that port is already in use, append `--port 8001` after `--stage serve` in the Docker command, then use port `8001` for the OpenAI-compatible API.
-
-### Pre-merge staging validation
-
-The public helper URL in the install command is published only after this change is merged and deployed to `jetson-ai-lab`. It returns `404` before then by design. For staging validation, obtain the helper from the checked-out staging branch instead of using the production URL:
-
-```bash
-cp public/code-samples/tensorrt_edge_llm/run_nemotron35_lightning.sh "$HOME/run-nemotron35-lightning"
-chmod +x "$HOME/run-nemotron35-lightning"
-```
-
-Alternatively, a reviewer with access to the private staging repository can download that same file with `gh api` and the `feat/nemotron-3-5-lightning-edgellm` ref. The staging Pages site is access-controlled and is not a reliable unauthenticated `curl` distribution endpoint.
 
 ## Additional Resources
 

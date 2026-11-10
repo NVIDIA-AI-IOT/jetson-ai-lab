@@ -35,10 +35,6 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         nvidia/NVIDIA-Nemotron-Nano-9B-v2-NVFP4
-benchmark_key: "Nemotron Nano 9B V2"
-benchmark_series:
-  - "Nemotron 3 30B-A3B"
-  - "Nemotron3 Nano 4B"
 ---
 
 NVIDIA Nemotron Nano 9B v2 is a quantized large language model trained from scratch by NVIDIA, designed as a unified model for both reasoning and non-reasoning tasks. It generates a reasoning trace before concluding with a final response, with configurable reasoning via system prompt.

@@ -11,7 +11,7 @@ order: 2
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "16GB RAM"
-precision: "NVFP4 / Q4_0 QAT GGUF"
+precision: "W4A16 QAT / Q4_0 QAT GGUF"
 parameters: "12B"
 modalities: ["Text", "Image", "Video", "Audio"]
 input_modalities: ["text", "image", "video", "audio"]
@@ -20,26 +20,20 @@ tasks: ["text-generation", "automatic-speech-recognition"]
 context_length: "256K"
 license: "Apache 2.0"
 model_size: "10GB"
-hf_checkpoint: "RedHatAI/gemma-4-12B-it-NVFP4"
+hf_checkpoint: "google/gemma-4-12B-it-qat-w4a16-ct"
 huggingface_url: "https://huggingface.co/google/gemma-4-12B-it"
 minimum_jetson: "AGX Orin"
 supported_inference_engines:
   - engine: "vLLM"
     type: "Container"
     modules_supported:
+      - orin_agx_64
       - thor_t5000
       - thor_t4000
-    serve_command_thor: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        -v ~/.cache/huggingface:/root/.cache/huggingface \
-        -v ~/.cache/vllm:/root/.cache/vllm \
-        --entrypoint "" \
-        vllm/vllm-openai:latest \
-        vllm serve RedHatAI/gemma-4-12B-it-NVFP4 \
-          --gpu-memory-utilization 0.7 \
-          --max-model-len 8192 \
-          --reasoning-parser gemma4
+    serve_command_thor: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest google/gemma-4-12B-it-qat-w4a16-ct --max-model-len 8192 --gpu-memory-utilization 0.7 --attention-backend TRITON_ATTN --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-12B-it-assistant","num_speculative_tokens":3}'
+    serve_command_orin: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest google/gemma-4-12B-it-qat-w4a16-ct --max-model-len 8192 --gpu-memory-utilization 0.7 --trust-remote-code --reasoning-parser gemma4 --enable-auto-tool-choice --tool-call-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --speculative-config '{"method":"mtp","model":"google/gemma-4-12B-it-assistant","num_speculative_tokens":3}'
   - engine: "llama.cpp"
     type: "Container"
     modules_supported:
@@ -59,7 +53,8 @@ supported_inference_engines:
           --ctx-size 8192 \
           --n-gpu-layers 999 \
           --port 8080 \
-          --alias my_model
+          --alias my_model \
+          --jinja
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
@@ -73,14 +68,11 @@ supported_inference_engines:
           --ctx-size 8192 \
           --n-gpu-layers 999 \
           --port 8080 \
-          --alias my_model
-benchmark_key: "Gemma 4 12B"
-benchmark_series:
-  - "Gemma 4 E2B"
-  - "Gemma 4 26B-A4B"
+          --alias my_model \
+          --jinja
 ---
 
-Gemma 4 12B is Google's mid-size dense Gemma 4 model — the step up from the edge-sized E2B/E4B variants for workloads that need stronger reasoning while fitting on a single Jetson. This page covers the **NVFP4** checkpoint for vLLM on Thor (efficient 4-bit inference on Blackwell) and Google's official **quantization-aware-trained Q4_0 GGUF** for llama.cpp on Thor and AGX Orin.
+Gemma 4 12B is Google's mid-size dense Gemma 4 model — the step up from the edge-sized E2B/E4B variants for workloads that need stronger reasoning while fitting on a single Jetson. This page covers Google's official **quantization-aware-trained** checkpoints: **W4A16** for vLLM and **Q4_0 GGUF** for llama.cpp, on Thor and AGX Orin.
 
 - Local assistants and RAG that outgrow the E-series models
 - Document, chart, and image understanding workloads
@@ -95,8 +87,8 @@ Gemma 4 12B is Google's mid-size dense Gemma 4 model — the step up from the ed
 
 ## Supported Platforms
 
-- Jetson Thor (vLLM NVFP4, llama.cpp GGUF)
-- Jetson AGX Orin 64GB (llama.cpp GGUF)
+- Jetson Thor (vLLM W4A16, llama.cpp GGUF)
+- Jetson AGX Orin 64GB (vLLM W4A16, llama.cpp GGUF)
 
 ## Inference Engine
 

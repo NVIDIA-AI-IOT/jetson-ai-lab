@@ -55,9 +55,6 @@ supported_inference_engines:
           --n-gpu-layers 999 \
           --port 8080 \
           --alias my_model
-benchmark_key: "Nemotron 3 Super 120B-A12B"
-benchmark_series:
-  - "Nemotron 3 30B-A3B"
 ---
 
 Nemotron 3 Super 120B-A12B is a large hybrid Mixture-of-Experts reasoning model from the NVIDIA Nemotron family — **120B total parameters with ~12B active per forward pass**. This page covers the **NVFP4** checkpoint, which fits in ~60 GB and runs natively on Jetson Thor (Blackwell, sm_110) for efficient 4-bit inference. The checkpoint is **ungated** — no Hugging Face token required.

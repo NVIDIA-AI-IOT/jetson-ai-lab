@@ -23,15 +23,6 @@ hf_checkpoint: "espressor/meta-llama.Llama-3.2-3B-Instruct_W4A16"
 huggingface_url: "https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct"
 minimum_jetson: "Orin Nano"
 # Optional: gray tabs via matrix_modules_disabled. Per-engine allowlists: supported_inference_engines[].modules_supported (from minimum_jetson).
-benchmark:
-  orin:
-    concurrency1: 52.58
-    concurrency8: 240.68
-    ttftMs: 0
-  thor:
-    concurrency1: 65.83
-    concurrency8: 330.72
-    ttftMs: 0
 supported_inference_engines:
   - engine: "Ollama"
     type: "Container"

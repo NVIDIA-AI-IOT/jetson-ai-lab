@@ -67,12 +67,6 @@ const servingEntrySchema = z.object({
 	run_commands_by_module: z.record(z.string()).optional(),
 });
 
-const benchmarkPlatformSchema = z.object({
-	concurrency1: z.number(),
-	concurrency8: z.number(),
-	ttftMs: z.number().optional(),
-});
-
 const modelTaskSchema = z.enum([
 	'text-generation',
 	'text-to-image',
@@ -148,10 +142,6 @@ const modelsSchema = z.object({
 	minimum_jetson: z.string().optional(),
 	/** Matrix tab ids to show grayed / non-clickable (e.g. not validated for this model yet). */
 	matrix_modules_disabled: z.array(z.string()).optional(),
-	/** Key matching the `name` field in benchmarks.json — links this model to its benchmark data. */
-	benchmark_key: z.string().optional(),
-	/** Other benchmark_key names to show as side-by-side reference bars (lineup/series comparison). */
-	benchmark_series: z.array(z.string()).optional(),
 	supported_inference_engines: z.array(supportedInferenceEngineEntrySchema).optional(),
 	serving: z
 		.object({
@@ -175,12 +165,6 @@ const modelsSchema = z.object({
 			intro: z.string().optional(),
 			shell_by_module: z.record(z.string()).optional(),
 			python_by_module: z.record(z.string()).optional(),
-		})
-		.optional(),
-	benchmark: z
-		.object({
-			orin: benchmarkPlatformSchema.optional(),
-			thor: benchmarkPlatformSchema.optional(),
 		})
 		.optional(),
 });

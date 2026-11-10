@@ -28,15 +28,9 @@ supported_inference_engines:
       - thor_t4000
       - orin_agx_64
     serve_command_orin: >-
-      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest cyankiwi/Qwen3.6-27B-AWQ-INT4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest cyankiwi/Qwen3.6-27B-AWQ-INT4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --max-num-seqs 128 --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
     serve_command_thor: >-
       sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest nvidia/Qwen3.6-27B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
-benchmark:
-  thor:
-    concurrency1: 13
-    concurrency8: 55
-    ttftMs: 0
-benchmark_key: "Qwen3.6-27B"
 ---
 
 Qwen3.6 27B is a dense language model from Alibaba Cloud's Qwen3.6 family. With 27 billion parameters, it delivers strong performance across complex reasoning, coding, and language understanding tasks.
@@ -54,24 +48,6 @@ Qwen3.6 27B is a dense language model from Alibaba Cloud's Qwen3.6 family. With 
 - **Multilingual Instruction Following**: Following instructions across 100+ languages
 - **Code Generation**: Programming assistance in multiple languages
 - **Translation**: High-quality translation between supported languages
-
-## Running with vLLM
-
-### Jetson Orin
-
-```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest cyankiwi/Qwen3.6-27B-AWQ-INT4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":3}'
-```
-
-### Jetson Thor
-
-```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest nvidia/Qwen3.6-27B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.7 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
-```
-
-## Speculative Decoding with MTP
-
-Both platform commands enable native **Multi-Token Prediction (MTP-3)** speculative decoding.
 
 ## Qwen3.6 Family
 

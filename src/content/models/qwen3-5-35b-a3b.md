@@ -11,7 +11,7 @@ order: 1
 type: "Multimodal"
 vision_capable: true
 memory_requirements: "20GB RAM"
-precision: "NVFP4 / W4A16"
+precision: "NVFP4 / AWQ-4bit"
 parameters: "35B total / 3B activated"
 modalities: ["Text", "Image", "Video"]
 input_modalities: ["text", "image", "video"]
@@ -31,42 +31,10 @@ supported_inference_engines:
       - thor_t5000
       - thor_t4000
       - orin_agx_64
-    serve_command_orin: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        -v ~/.cache/huggingface:/root/.cache/huggingface \
-        -v ~/.cache/vllm:/root/.cache/vllm \
-        ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
-        vllm serve Kbenkhaled/Qwen3.5-35B-A3B-quantized.w4a16 \
-          --gpu-memory-utilization 0.8 \
-          --enable-prefix-caching \
-          --reasoning-parser qwen3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder
-    serve_command_thor: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        -v ~/.cache/huggingface:/root/.cache/huggingface \
-        -v ~/.cache/vllm:/root/.cache/vllm \
-        vllm/vllm-openai:latest \
-        AxionML/Qwen3.5-35B-A3B-NVFP4 \
-          --gpu-memory-utilization 0.8 \
-          --enable-prefix-caching \
-          --reasoning-parser qwen3 \
-          --enable-auto-tool-choice \
-          --tool-call-parser qwen3_coder
-benchmark:
-  orin:
-    concurrency1: 30
-    concurrency8: 80
-    ttftMs: 0
-  thor:
-    concurrency1: 35
-    concurrency8: 125
-    ttftMs: 0
-benchmark_key: "Qwen3.5-35B-A3B"
-benchmark_series:
-  - "Qwen3.5-27B"
+    serve_command_orin: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest cyankiwi/Qwen3.5-35B-A3B-AWQ-4bit --max-model-len 8192 --gpu-memory-utilization 0.8 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
+    serve_command_thor: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest AxionML/Qwen3.5-35B-A3B-NVFP4 --max-model-len 8192 --gpu-memory-utilization 0.8 --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
 ---
 
 Qwen3.5 35B-A3B is a Mixture-of-Experts (MoE) model from Alibaba Cloud's Qwen3.5 family. It features 35 billion total parameters with only 3 billion active during inference, delivering strong performance with excellent efficiency on edge devices.
@@ -85,51 +53,6 @@ Qwen3.5 35B-A3B is a Mixture-of-Experts (MoE) model from Alibaba Cloud's Qwen3.5
 - **Code Generation**: Programming assistance in multiple languages
 - **Translation**: High-quality translation between supported languages
 
-## Running with vLLM
-
-<div class="device-tabs">
-<div class="device-tab-bar">
-<button class="device-tab active" data-target="orin">Jetson Orin</button>
-<button class="device-tab" data-target="thor">Jetson Thor</button>
-</div>
-<div class="device-panel" data-panel="orin">
-
-```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host \
-  -v ~/.cache/huggingface:/root/.cache/huggingface \
-  -v ~/.cache/vllm:/root/.cache/vllm \
-  ghcr.io/nvidia-ai-iot/vllm:latest-jetson-orin \
-  vllm serve Kbenkhaled/Qwen3.5-35B-A3B-quantized.w4a16 \
-    --gpu-memory-utilization 0.8 --enable-prefix-caching \
-    --reasoning-parser qwen3 \
-    --enable-auto-tool-choice --tool-call-parser qwen3_coder
-```
-
-</div>
-<div class="device-panel" data-panel="thor" style="display:none">
-
-```bash
-sudo docker run -it --rm --pull always --runtime=nvidia --network host \
-  -v ~/.cache/huggingface:/root/.cache/huggingface \
-  -v ~/.cache/vllm:/root/.cache/vllm \
-  vllm/vllm-openai:latest \
-  AxionML/Qwen3.5-35B-A3B-NVFP4 \
-    --gpu-memory-utilization 0.8 --enable-prefix-caching \
-    --reasoning-parser qwen3 \
-    --enable-auto-tool-choice --tool-call-parser qwen3_coder
-```
-
-</div>
-</div>
-
-## Speculative Decoding with MTP
-
-This model supports **Multi-Token Prediction (MTP)** speculative decoding, which can significantly improve generation throughput. To enable it, add the following flag to your `vllm serve` command:
-
-```bash
---speculative-config '{"method": "mtp", "num_speculative_tokens": 4}'
-```
-
 ## Qwen3.5 Family
 
 | Model | Parameters | Active Params | Type | Best For |
@@ -141,4 +64,4 @@ This model supports **Multi-Token Prediction (MTP)** speculative decoding, which
 
 - [Hugging Face Model](https://huggingface.co/Qwen/Qwen3.5-35B-A3B) - Original model weights
 - [NVFP4 Checkpoint (Thor)](https://huggingface.co/AxionML/Qwen3.5-35B-A3B-NVFP4) - Quantized for Jetson Thor
-- [W4A16 Checkpoint (Orin)](https://huggingface.co/Kbenkhaled/Qwen3.5-35B-A3B-quantized.w4a16) - Quantized for Jetson Orin
+- [AWQ-4bit Checkpoint (Orin)](https://huggingface.co/cyankiwi/Qwen3.5-35B-A3B-AWQ-4bit) - Quantized for Jetson Orin

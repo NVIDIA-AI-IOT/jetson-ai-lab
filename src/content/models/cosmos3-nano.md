@@ -43,9 +43,6 @@ supported_inference_engines:
           --gpu-memory-utilization 0.8 \
           --trust-remote-code \
           --limit-mm-per-prompt '{"image": 1, "video": 0}'
-benchmark_key: "Cosmos3 Nano"
-benchmark_series:
-  - "Cosmos Reasoning 2 8B"
 ---
 
 [Cosmos3 Nano](https://huggingface.co/nvidia/Cosmos3-Nano) is a compact (16B) vision-language reasoning model from the NVIDIA Cosmos family. It performs chain-of-thought reasoning over text, images, and video, producing text output. This page covers the **NVFP4** checkpoint, which runs natively on Jetson Thor (Blackwell, sm_110) for efficient 4-bit inference.
