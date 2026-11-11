@@ -77,9 +77,6 @@ supported_inference_engines:
       - orin_agx_64
     serve_command_thor: ollama run nemotron3:33b-q4_K_M
     serve_command_orin: ollama run nemotron3:33b-q4_K_M
-benchmark_key: "Nemotron 3 Nano Omni"
-benchmark_series:
-  - "Nemotron 3 30B-A3B"
 ---
 
 Nemotron Nano 3 Omni is NVIDIA's multimodal reasoning model combining language, vision, audio, and video understanding. It uses a Mixture-of-Experts architecture with 30B total parameters and 3B active per forward pass, delivering strong multimodal reasoning with efficient inference on Jetson platforms.

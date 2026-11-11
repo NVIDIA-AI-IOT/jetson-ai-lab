@@ -11,7 +11,7 @@ order: 0
 type: "Text"
 vision_capable: false
 memory_requirements: "4GB RAM"
-precision: "Q4_K_M GGUF"
+precision: "FP8 / BF16 / Q4_K_M GGUF"
 parameters: "4B"
 modalities: ["Text"]
 input_modalities: ["text"]
@@ -24,6 +24,15 @@ hf_checkpoint: "nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF"
 minimum_jetson: "Jetson Orin"
 # Optional: gray tabs via matrix_modules_disabled. Per-engine allowlists: supported_inference_engines[].modules_supported (from minimum_jetson).
 supported_inference_engines:
+  - engine: "vLLM"
+    type: "Container"
+    modules_supported:
+      - thor_t5000
+      - orin_agx_64
+    serve_command_thor: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest nvidia/NVIDIA-Nemotron-3-Nano-4B-FP8 --max-model-len 8192 --gpu-memory-utilization 0.7 --trust-remote-code --mamba-ssm-cache-dtype float32 --kv-cache-dtype fp8 --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser nemotron_v3
+    serve_command_orin: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 --max-model-len 8192 --gpu-memory-utilization 0.7 --trust-remote-code --mamba-ssm-cache-dtype float32 --kv-cache-dtype fp8 --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser nemotron_v3
   - engine: "llama.cpp"
     type: "Container"
     modules_supported:
@@ -40,9 +49,10 @@ supported_inference_engines:
         llama-server \
           --hf-repo nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF \
           --hf-file NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf \
-          --ctx-size 8196 \
+          --ctx-size 8192 \
           --alias my_model \
-          --n-gpu-layers 999
+          --n-gpu-layers 999 \
+          --jinja
     serve_command_thor: |-
       sudo docker run -it --rm --pull always \
         --runtime=nvidia --network host \
@@ -51,16 +61,13 @@ supported_inference_engines:
         llama-server \
           --hf-repo nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF \
           --hf-file NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf \
-          --ctx-size 8196 \
+          --ctx-size 8192 \
           --alias my_model \
-          --n-gpu-layers 999
-benchmark_key: "Nemotron3 Nano 4B"
-benchmark_series:
-  - "Nemotron Nano 9B V2"
-  - "Nemotron 3 30B-A3B"
+          --n-gpu-layers 999 \
+          --jinja
 ---
 
-Nemotron3 Nano 4B is a compact NVIDIA language model that can be served locally on Jetson with `llama.cpp`, giving Jetson Orin and Jetson Thor day-0 support through a simple OpenAI-compatible `llama-server` workflow.
+Nemotron3 Nano 4B is a compact NVIDIA language model that can be served locally on Jetson Orin and Jetson Thor with `vLLM` or `llama.cpp`, both through an OpenAI-compatible API.
 
 ## Inputs and Outputs
 
@@ -75,7 +82,7 @@ Nemotron3 Nano 4B is a compact NVIDIA language model that can be served locally 
 
 ## Inference Engine
 
-This model is currently configured for `llama.cpp` using the GGUF checkpoint `NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf`.
+This model runs with `vLLM` (FP8 on Jetson Thor, BF16 on Jetson AGX Orin) or with `llama.cpp` using the GGUF checkpoint `NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf`.
 
 ## Notes
 

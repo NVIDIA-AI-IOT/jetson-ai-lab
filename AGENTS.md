@@ -16,9 +16,9 @@ source of truth so guidance does not drift.
 ## Validation
 
 Run `npm run build` from the repository root after content, model, tutorial,
-benchmark, feed, or asset changes. The `prebuild` chain checks model metadata,
-benchmark references, and model freshness before Astro validates and builds the
-content collections.
+benchmark, feed, or asset changes. The `prebuild` chain checks model metadata
+and model freshness; Astro then validates the content collections and
+`src/data/benchmarks.json` while it builds.
 
 For focused failures, use the commands documented in `package.json` and the
 triage guidance in `skills/jetson-ai-lab-verify-build/SKILL.md`.

@@ -15,15 +15,6 @@ if (undefinedCount) {
 	process.exit(1);
 }
 
-// Tutorials can contain headings with the same names as catalog models.
-// Inspect only the generated model catalog, not an earlier tutorial example.
-const catalogStart = output.search(/^## Supported Models\r?$/m);
-if (catalogStart < 0) {
-	console.error(`${outputPath}: Supported Models section not found`);
-	process.exit(1);
-}
-const catalogOutput = output.slice(catalogStart);
-
 const commandField =
 	/^\s+(?:install_command(?:_orin|_thor)?|serve_command_(?:orin|thor)|run_command(?:_orin|_thor)?|shell|python):\s*(?:\S|[>|]-?)\s*$/m;
 const commandOutput =
@@ -38,15 +29,19 @@ for (const file of (await readdir(modelDirectory)).filter((name) => name.endsWit
 	if (title) modelsWithCommands.push({ file, title });
 }
 
+const modelsStart = output.indexOf('\n## Supported Models\n');
+if (modelsStart < 0) throw new Error('Supported Models section not found');
+const modelOutput = output.slice(modelsStart);
+
 const missing = [];
 for (const { file, title } of modelsWithCommands) {
-	const start = catalogOutput.indexOf(`### ${title}\n`);
+	const start = modelOutput.indexOf(`### ${title}\n`);
 	if (start < 0) {
 		missing.push(`${file}: model section not found`);
 		continue;
 	}
-	const next = catalogOutput.indexOf('\n### ', start + 5);
-	const section = catalogOutput.slice(start, next < 0 ? catalogOutput.length : next);
+	const next = modelOutput.indexOf('\n### ', start + 5);
+	const section = modelOutput.slice(start, next < 0 ? modelOutput.length : next);
 	if (!commandOutput.test(section)) missing.push(`${file}: no emitted runnable command`);
 }
 

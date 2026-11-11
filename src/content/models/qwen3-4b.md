@@ -24,15 +24,6 @@ hf_checkpoint: "RedHatAI/Qwen3-4B-quantized.w4a16"
 huggingface_url: "https://huggingface.co/Qwen/Qwen3-4B"
 minimum_jetson: "Orin Nano"
 # Optional: gray tabs via matrix_modules_disabled. Per-engine allowlists: supported_inference_engines[].modules_supported (from minimum_jetson).
-benchmark:
-  orin:
-    concurrency1: 42.15
-    concurrency8: 193.83
-    ttftMs: 0
-  thor:
-    concurrency1: 56.46
-    concurrency8: 273.37
-    ttftMs: 0
 supported_inference_engines:
   - engine: "vLLM"
     type: "Container"
@@ -52,9 +43,6 @@ supported_inference_engines:
         --runtime=nvidia --network host \
         vllm/vllm-openai:latest \
         RedHatAI/Qwen3-4B-quantized.w4a16
-benchmark_key: "Qwen 3 4B"
-benchmark_series:
-  - "Qwen 3 8B"
 ---
 
 Qwen3 is Alibaba Cloud's latest generation of large language models, offering state-of-the-art performance across a wide range of tasks. The Qwen3 4B model provides an excellent balance of capability and efficiency for edge deployment.

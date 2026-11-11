@@ -262,6 +262,8 @@ When you stop the session, select it in the left sidebar to review the transcrip
 
 Start with the **Browser / WebRTC** microphone and speaker selections in the **Devices** tab. They use the computer that opened the page, while model inference runs on Jetson. This is the simplest way to compare models, adjust the system prompt, and measure responsiveness without attaching audio hardware to the robot.
 
+For Linux **Server USB** audio, the ALSA device path uses `arecord` and `aplay`. If these commands are missing, install them with `sudo apt install alsa-utils`. This path does not require the PyAudio extra; see the [0.2.0 device dependencies](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/v0.2.0/INSTALL.md#1-optional-device-system-dependencies) for other device types.
+
 Once the conversation works, connect a USB microphone and speaker to Jetson and select the **Server USB** devices instead. Save a separate preset with those device choices so the robot uses its own audio hardware, not the laptop's. Recheck capture, playback, and barge-in: acoustic echo, device sample rates, and microphone levels differ between the two paths. A speakerphone with acoustic echo cancellation or a headset is useful during testing.
 
 The CLI also offers experimental headless operation using a saved configuration. See the [device and headless setup instructions](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/INSTALL.md) before deploying without a browser; a successful browser test alone does not qualify the server-local device path.
@@ -282,6 +284,27 @@ voice-ai-workbench --preset speaches-realtime-asr-jetson --port 8092
 ```
 
 Speaches emits Realtime session and speech-boundary events, then transcribes each completed speech segment with Faster-Whisper. This is not token-by-token model-native Faster-Whisper decoding, so partial transcript deltas may not be available.
+
+## Stop the demo
+
+Stop the foreground workbench process with **Ctrl+C** in its terminal. Closing the browser or ending a conversation does not stop the model services. Stop only the services you started for this tutorial.
+
+For the Orin Speaches + Gemma path:
+
+```bash
+cd ~/voice-workbench-backends
+./scripts/gemma4_llm.sh stop
+./scripts/speaches_speech.sh stop
+```
+
+For the Thor path, stop the foreground Cosmos vLLM process with **Ctrl+C** in its terminal, then stop the speech services:
+
+```bash
+cd ~/voice-workbench-backends
+./scripts/nvidia_open_models_speech.sh stop
+```
+
+The launcher stop commands preserve the model caches. Use the corresponding `start` and `verify` commands above when you return to the demo.
 
 ## Compare other models after the baseline
 

@@ -33,28 +33,10 @@ supported_inference_engines:
       - thor_t5000
       - thor_t4000
       - orin_agx_64
-    serve_command_thor: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-        --entrypoint "" \
-        vllm/vllm-openai:cosmos3 \
-        vllm serve nvidia/Cosmos3-Edge \
-          --host 0.0.0.0 --port 8000 \
-          --trust-remote-code \
-          --max-model-len 16384 \
-          --gpu-memory-utilization 0.3
-    serve_command_orin: |-
-      sudo docker run -it --rm --pull always \
-        --runtime=nvidia --network host \
-        -v $HOME/.cache/huggingface:/root/.cache/huggingface \
-        --entrypoint "" \
-        vllm/vllm-openai:cosmos3 \
-        vllm serve nvidia/Cosmos3-Edge \
-          --host 0.0.0.0 --port 8000 \
-          --trust-remote-code \
-          --max-model-len 16384 \
-          --gpu-memory-utilization 0.3
+    serve_command_thor: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest nvidia/Cosmos3-Edge --trust-remote-code --max-model-len 8192 --gpu-memory-utilization 0.3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser qwen3
+    serve_command_orin: >-
+      sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest nvidia/Cosmos3-Edge --trust-remote-code --max-model-len 8192 --gpu-memory-utilization 0.3 --enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser qwen3
   - engine: "vLLM-Omni"
     type: "Generator / Action"
     modules_supported:
@@ -70,10 +52,6 @@ supported_inference_engines:
           --host 0.0.0.0 --port 8000 \
           --trust-remote-code \
           --init-timeout 1800
-benchmark_key: "Cosmos3 Edge (Reasoner)"
-benchmark_series:
-  - "Cosmos3 Nano"
-  - "Cosmos Reasoning 2 2B"
 ---
 
 [Cosmos3 Edge](https://huggingface.co/nvidia/Cosmos3-Edge) is the edge-optimized member of the NVIDIA Cosmos3 family of omnimodal world models: a 2.4B multimodal reasoner paired with a diffusion-based generative tower (~4B total). It understands text, images, and video; generates images and video; and produces chunked robot action trajectories — designed for embedded deployment from Jetson Thor down to Jetson Orin-class devices.
@@ -86,18 +64,6 @@ One checkpoint, two servers: the **vLLM** container serves the reasoner for text
 - **Robot Action Policy**: chunked action inference (32 actions per call) via vLLM-Omni, with a DROID-post-trained checkpoint available ([Cosmos3-Edge-Policy-DROID](https://huggingface.co/nvidia/Cosmos3-Edge-Policy-DROID))
 - **World Generation**: text-to-video, image-to-video, and text-to-image via the diffusion tower
 - **Forward / Inverse Dynamics**: action-conditioned world modeling for Physical AI pipelines
-
-## Reasoner Performance on Jetson
-
-Text, image, and video understanding through the vLLM chat API (BF16, batch 1, streaming chat API, up to 128 output tokens, greedy; decode tok/s):
-
-| Module | Text | Image | Video |
-|---|---|---|---|
-| Thor T5000 | 68.2 | 67.2 | 67.1 |
-| Thor T4000 | 63.9 | 65.6 | 65.5 |
-| AGX Orin 64GB | 44.1 | 45.2 | 45.1 |
-
-Single-stream decode is memory-bandwidth-bound, so the Thor modules land close together. At 8 concurrent streams the same server sustains ~293 tok/s aggregate on Thor T5000 and ~171 tok/s on AGX Orin.
 
 ## Inputs and Outputs
 

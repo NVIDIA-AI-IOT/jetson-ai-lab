@@ -1,6 +1,6 @@
 ---
 name: jetson-model-catalog-inference
-description: Configure Jetson AI Lab model pages — frontmatter for the Model Details sidebar (parameters, modalities, context length, license, precision pills), the Run on Jetson serve/call/one-shot UI, the three "block" levers (hide_run_button, matrix_modules_disabled, per-engine modules_supported), and the join to src/data/benchmarks.json (benchmark_key, benchmark_series, OOM vs DNR vs null). Use when adding or editing model pages, inference engines, serve/run commands, one-shot blocks, the details sidebar, benchmark wiring, or deciding whether to mark a Jetson module as OOM, blocked, or simply untested.
+description: Configure Jetson AI Lab model pages — frontmatter for the Model Details sidebar (parameters, modalities, context length, license, precision pills), the Run on Jetson serve/call/one-shot UI, the three "block" levers (hide_run_button, matrix_modules_disabled, per-engine modules_supported), and where benchmark numbers live (src/data/benchmarks.json). Use when adding or editing model pages, inference engines, serve/run commands, one-shot blocks, the details sidebar, benchmark data, or deciding whether to block or gray a Jetson module.
 license: Apache-2.0
 compatibility: Requires Node.js and npm for build verification of model schema changes.
 ---
@@ -22,12 +22,12 @@ Do **not** invent a base URL for "the Jetson AI Lab inference API" — there isn
 
 | Section | Driven by | Component / file |
 |---|---|---|
-| Hero (title, badges, "Command to Run on Jetson" / "Benchmark" / "Model Details" chips) | `title`, `is_new`, `type`, `short_description`, presence of engines and `benchmark_key` | `src/pages/models/[slug].astro` |
+| Hero (title, badges, "Command to Run on Jetson" / "Benchmark" / "Model Details" chips) | `title`, `is_new`, `type`, `short_description`, presence of engines and of results in `src/data/benchmarks.json` | `src/pages/models/[slug].astro` |
 | Specs sidebar (Parameters, Modalities, Context Length, License, Precision pills) | `parameters` (or `model_size`), `modalities` (or `vision_capable`), `context_length`, `license`, `precision` (per-token) | `src/pages/models/[slug].astro` L137–193 |
 | **Run on Jetson** → Serve matrix | `serving.entries` (preferred) or `supported_inference_engines`, plus `matrix_modules_disabled` | `ModelServeSection.astro` |
 | Call the model | `client_call.{shell,python,intro}` (or auto-built from engines + `hf_checkpoint`) | `ModelCallSection.astro` |
 | One-shot inference (per-module tabs) | `one_shot_inference.*` | `ModelOneShotSection.astro` + `src/lib/evalRunModal.ts` |
-| Benchmark chart | `benchmark_key` (+ optional `benchmark_series`) → joins `src/data/benchmarks.json` | `ModelBenchmarkSection.astro` |
+| Performance on Jetson (only with results) | the model's entry in `src/data/benchmarks.json` | `ModelPerformance.astro` |
 | Model Details prose + external links (`Try on build.nvidia.com`, `View on HuggingFace`) | Body Markdown + `build_nvidia_url`, `huggingface_url` (or `hf_checkpoint`) | `src/pages/models/[slug].astro` L242–289 |
 
 ---
@@ -71,8 +71,6 @@ Only add these when the model needs them.
 | `build_nvidia_url` | Model has an NVIDIA Build page → adds the **Try on build.nvidia.com** button. | ~67% of models |
 | `matrix_modules_disabled` | Some matrix module tabs should be grayed out / non-clickable for **every engine** of this model. | ~10% of models |
 | `hide_run_button` | Hide the **entire** Run on Jetson UI (Serve + Call + one-shot) even when engine data is present. | ~5% of models |
-| `benchmark_key` | Model has measured perf in `src/data/benchmarks.json`. Value must equal the `name` field of that benchmarks entry. | ~30% of models |
-| `benchmark_series: [...]` | Show extra side-by-side comparison bars (e.g. compare against the previous generation of the same family). Each value is another `name` from `benchmarks.json`. | A handful |
 
 ### Inference blocks (at least one required unless `hide_run_button: true`)
 
@@ -103,16 +101,11 @@ These are **layered**. The serve matrix evaluates them in this order:
    - Omit the field entirely → engine supports all matrix modules. An empty array means the engine supports nothing (rare).
    - Use when the model runs everywhere but a specific engine only works on a subset (e.g. vLLM Thor-only, Ollama Orin+Thor).
 
-**OOM is a different concept and lives in `src/data/benchmarks.json` — see [Benchmarks](#benchmarks-data) below.**
-
 | You want to express… | Use… |
 |---|---|
 | "This model isn't ready to be run from the site at all" | `hide_run_button: true` |
 | "This model can't run on Orin Nano (any engine)" | `matrix_modules_disabled: [orin_nano_8]` |
 | "vLLM only works on Thor for this model; llama.cpp works everywhere" | `vLLM` entry: `modules_supported: [thor_t5000, thor_t4000]`; omit on `llama.cpp` |
-| "We benchmarked this and it ran out of memory on T4000" | Add `"oom": ["t4000"]` to that quant in `benchmarks.json` (does **not** belong in model frontmatter) |
-| "We benchmarked this and the model just doesn't run on Orin Nano" | Add `"dnr": ["orin_nano_8gb"]` to that quant in `benchmarks.json` |
-| "We haven't measured this combination yet" | Set the value to `null` in `benchmarks.json`. No marker is drawn; the bar is just absent. |
 
 ---
 
@@ -199,84 +192,11 @@ Omit `client_call` entirely to let `ModelCallSection.astro` synthesize an exampl
 
 ## Benchmarks data
 
-Benchmark numbers do **not** live in model frontmatter. They live in **`src/data/benchmarks.json`** under `models[]`. The model page joins via the frontmatter field `benchmark_key`, which must match `models[].name` exactly.
-
-### Adding benchmark data
-
-1. Add an entry to `models[]` in `src/data/benchmarks.json`:
-
-```json
-{
-  "family": "Family Name",
-  "name": "Exact Name (this is the join key)",
-  "releaseDate": "YYYY-MM-DD",
-  "capabilities": { "language": true, "vision": false, "audio": false, "vla": false },
-  "isl": 2048,
-  "osl": 128,
-  "engines": {
-    "vLLM": {
-      "NVFP4": {
-        "concurrency1": { "t5000": 63.3, "t4000": 51.8, "agx_orin_64gb": null, "orin_nx_16gb": null, "orin_nano_8gb": null, "dgx_spark": 59.6 },
-        "concurrency8": { "t5000": 181.2, "t4000": 147.4, "agx_orin_64gb": null, "orin_nx_16gb": null, "orin_nano_8gb": null, "dgx_spark": 191.2 }
-      },
-      "FP8": {
-        "concurrency1": { "t5000": 54.7, "t4000": null, "agx_orin_64gb": null, "orin_nx_16gb": null, "orin_nano_8gb": null, "dgx_spark": 52.3 },
-        "concurrency8": { "t5000": 129.8, "t4000": null, "agx_orin_64gb": null, "orin_nx_16gb": null, "orin_nano_8gb": null, "dgx_spark": 138.6 },
-        "oom": ["t4000"]
-      }
-    },
-    "Ollama": {
-      "Q4_K_M": {
-        "concurrency1": { "t5000": 27, "t4000": null, "agx_orin_64gb": 17, "orin_nx_16gb": null, "orin_nano_8gb": null, "dgx_spark": null },
-        "concurrency8": { "t5000": 28, "t4000": null, "agx_orin_64gb": 17, "orin_nx_16gb": null, "orin_nano_8gb": null, "dgx_spark": null },
-        "oom": ["orin_nx_16gb", "orin_nano_8gb"]
-      }
-    }
-  }
-}
-```
-
-2. In the model frontmatter add:
-
-```yaml
-benchmark_key: "Exact Name (this is the join key)"
-benchmark_series:
-  - "Predecessor Family Name"   # optional — overlays comparison bars
-```
-
-### Benchmark product ids ≠ matrix module ids (critical gotcha)
-
-The benchmark axis uses different ids than the Run/Serve matrix:
-
-| Hardware | Matrix module id (frontmatter) | Benchmark product id (`benchmarks.json`) |
-|---|---|---|
-| Jetson Thor T5000 | `thor_t5000` | `t5000` |
-| Jetson Thor T4000 | `thor_t4000` | `t4000` |
-| Jetson AGX Orin 64GB | `orin_agx_64` | `agx_orin_64gb` |
-| Jetson Orin NX 16GB | `orin_nx_16` | `orin_nx_16gb` |
-| Jetson Orin Nano 8GB | `orin_nano_8` | `orin_nano_8gb` |
-| DGX Spark GB10 | _(not in matrix)_ | `dgx_spark` |
-
-Use the right ids for the right file. Don't paste matrix ids into `benchmarks.json` or vice versa.
-
-### `oom` vs `dnr` vs `null` (per-quant markers)
-
-Inside any `engines[engine][quant]` you may add either array; both expect **benchmark product ids**:
-
-| Marker | Frontmatter shape | UI rendering | Use when |
-|---|---|---|---|
-| Numeric value | `"t5000": 63.3` | Real bar at that value | We measured throughput. |
-| `null` value | `"t5000": null` | No marker, no bar (label grayed) | We haven't measured this combo yet. |
-| `"oom": [productId, ...]` | Sibling of `concurrency1` / `concurrency8` | Small green-tinted **OOM** pill in place of the bar | We attempted the run and it OOM'd. Soft failure — keep visible to communicate "tried, ran out of memory". |
-| `"dnr": [productId, ...]` | Sibling of `concurrency1` / `concurrency8` | Red **✕** in place of the bar | Hard failure — model genuinely cannot run on this hardware (architectural / driver / unsupported precision). |
-
-Rule of thumb: **OOM = "the box was the wrong size", DNR = "the box was the wrong shape", null = "we didn't try the box".**
-
-OOM and DNR are read by `ModelBenchmarkSection.astro` (lines ~494–516). They have **no effect** on the Serve / Run matrix above — that only respects `hide_run_button` / `matrix_modules_disabled` / per-engine `modules_supported`.
-
-### Comparison series (`benchmark_series`)
-
-Each value in the array must be another `models[].name` from `benchmarks.json`. The page page renders them as paler bars next to the main model and auto-links them to the corresponding `/models/<slug>#model-benchmark` page when one exists.
+Benchmark numbers live only in **`src/data/benchmarks.json`**, keyed by model page slug:
+`{ "<slug>": { "released": "YYYY-MM-DD", "<thor|orin|orin-nano>": { "<engine>": { "off": { "throughput": { "c1": n, "c8": n } }, "<MTP|DFlash|DSpark|…>": { "speedbench": { "c1": n, "c8": n } } } } } }`
+(output tokens/s; Throughput without speculative decoding, SPEED-Bench with it; schema in `src/lib/benchmarks.ts`). A model with an entry gets a "Performance on Jetson" section (and the hero
+"Performance" link) and appears on the models page timeline; a model without one gets neither. Leave out anything
+not measured: it is simply not shown. The build fails on an unknown slug or a malformed entry.
 
 ---
 
@@ -324,7 +244,7 @@ Otherwise Zod reports a custom error on `supported_inference_engines`:
 - [ ] Either `serving.entries` **or** `supported_inference_engines` **or** meaningful `one_shot_inference`, **or** `hide_run_button: true`.
 - [ ] `serve_command_*` preferred over deprecated `run_command_*` for serve flows.
 - [ ] All matrix ids in `modules_supported` / `matrix_modules_disabled` / `one_shot_inference.modules_supported` are from `JETSON_MATRIX_MODULES`.
-- [ ] If `benchmark_key` is set, it exactly matches a `models[].name` in `src/data/benchmarks.json`. All product ids in `concurrency*` / `oom` / `dnr` arrays are valid benchmark product ids (not matrix ids).
+- [ ] Benchmark numbers, if any, are in `src/data/benchmarks.json` under the model's slug (nothing in frontmatter).
 - [ ] OOM vs DNR vs null chosen per the [marker semantics](#oom-vs-dnr-vs-null-per-quant-markers) above.
 - [ ] `family` is set to a value listed in `MODEL_SECTIONS` (`src/pages/llms.txt.ts`). If the family is brand-new (new vendor), add a section to `MODEL_SECTIONS` so `/llms.txt` groups it correctly.
 - [ ] Run **`npm run build`** (see skill **`jetson-ai-lab-verify-build`**).
@@ -343,7 +263,7 @@ Otherwise Zod reports a custom error on `supported_inference_engines`:
 | Call / client examples | `src/components/ModelCallSection.astro` |
 | One-shot UI | `src/components/ModelOneShotSection.astro` |
 | One-shot snippet logic | `src/lib/evalRunModal.ts` |
-| Benchmark chart UI (OOM / DNR rendering) | `src/components/ModelBenchmarkSection.astro` |
+| Benchmark views (models page timeline, model page section) | `src/components/Benchmarks.astro`, `src/components/ModelPerformance.astro` |
 | Benchmark data file | `src/data/benchmarks.json` |
 | `/llms.txt` short index (auto-generated, vendor-grouped) | `src/pages/llms.txt.ts` (edit `MODEL_SECTIONS` for new vendors) |
 | `/llms-full.txt` long-form index (auto-generated) | `src/pages/llms-full.txt.ts` |

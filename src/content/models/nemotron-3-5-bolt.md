@@ -11,7 +11,7 @@ catalog_added_at: "2026-10-23"
 order: -8
 type: "Text"
 vision_capable: false
-precision: "Q4_K_M GGUF"
+precision: "BF16 / Q4_K_M GGUF"
 parameters: "8B total / 4B effective"
 modalities: ["Text"]
 context_length: "64K"
@@ -20,6 +20,15 @@ hf_checkpoint: "nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB"
 minimum_jetson: "Orin Nano"
 serving:
   entries:
+    - engine: "vLLM"
+      type: "Container"
+      modules_supported:
+        - thor_t5000
+        - orin_agx_64
+      serve_command_thor: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16 --max-model-len 8192 --gpu-memory-utilization 0.7 --dtype bfloat16 --attention-backend TRITON_ATTN --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --limit-mm-per-prompt '{"image":0,"video":0,"audio":0}' --speculative-config '{"method":"dflash","model":"nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16-DFlash-NVFP4","num_speculative_tokens":7,"attention_backend":"flash_attn"}'
+      serve_command_orin: >-
+        sudo docker run -it --rm --pull always --runtime=nvidia --network host -v ~/.cache/huggingface:/root/.cache/huggingface -v ~/.cache/vllm:/root/.cache/vllm vllm/vllm-openai:latest nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16 --max-model-len 8192 --gpu-memory-utilization 0.7 --dtype bfloat16 --attention-backend TRITON_ATTN --enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4 --default-chat-template-kwargs '{"enable_thinking":true}' --limit-mm-per-prompt '{"image":0,"video":0,"audio":0}' --speculative-config '{"method":"dflash","model":"nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16-DFlash-NVFP4","num_speculative_tokens":7,"attention_backend":"flash_attn"}'
     - engine: "llama.cpp"
       type: "Container"
       modules_supported:
@@ -74,7 +83,7 @@ NVIDIA's additional training focuses on:
 
 The model supports reasoning and non-reasoning modes through `enable_thinking`, plus an optional `conversational_mode` for interactive dialogue. The [model card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB#api-client) includes API examples for these options.
 
-The Q4_K_M GGUF release targets an approximately 4 GB model memory footprint. Total memory use also depends on context length and runtime overhead. This guide serves text chat with llama.cpp.
+The Q4_K_M GGUF release targets an approximately 4 GB model memory footprint. Total memory use also depends on context length and runtime overhead. This guide serves text chat with vLLM or llama.cpp.
 
 ## Run on Jetson
 

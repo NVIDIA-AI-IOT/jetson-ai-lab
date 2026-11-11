@@ -1,0 +1,1366 @@
+---
+import { getRecipeModels, RECIPE_DEVICES } from '../lib/recipes';
+
+interface Props { inline?: string }
+const { inline } = Astro.props;
+const models = (await getRecipeModels()).filter((m) => !inline || m.slug === inline).map(({ slug, name, recipes, defaults }) => ({ slug, name, recipes, defaults }));
+const payload = JSON.stringify({ models, devices: RECIPE_DEVICES });
+---
+
+<div id="recipe-modal" class={inline ? 'text-left' : 'hidden fixed inset-0 z-[60] text-left'} data-inline={inline}>
+	{!inline && <div data-recipe-close class="absolute inset-0 backdrop-blur-sm" style="background-color: rgba(0, 0, 0, 0.4);"></div>}
+	<div class={inline ? '' : 'absolute inset-0 flex items-start justify-center p-3 pt-[4vh] sm:p-6 sm:pt-[6vh] pointer-events-none'}>
+		<div
+			class={inline
+				? 'rm rm-inline w-full min-w-0 bg-white rounded-2xl border border-nvidia-gray-200 p-4 sm:p-6'
+				: 'rm w-full max-w-[860px] min-w-0 bg-white rounded-2xl shadow-2xl pointer-events-auto max-h-[90vh] overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6'}
+			tabindex="-1"
+			role={inline ? 'region' : 'dialog'}
+			aria-modal={inline ? undefined : 'true'}
+			aria-labelledby="recipe-title"
+			aria-describedby="rm-for-jetson rm-bar-serve rm-bar-serve-end"
+		>
+			<div class="rm-head">
+				<div class="rm-titles">
+					<h2 id="recipe-title" data-recipe-title class={inline ? 'sr-only' : 'text-lg font-bold text-nvidia-black'}></h2>
+					<a href="/tutorials/getting-started-with-jetson" class="rm-guide">New to Jetson? Setup guide</a>
+					<span class="rm-head-dev hidden" data-head-dev-wrap><span data-head-dev aria-hidden="true"></span><button type="button" class="rm-head-opt" data-head-options>Options</button></span>
+				</div>
+				{!inline && <button data-recipe-close aria-label="Close" class="rm-close text-nvidia-gray-500 hover:text-nvidia-black rounded-md">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+				</button>}
+			</div>
+
+			<div class="grid gap-2.5">
+				<div class="rm-row" data-key="device">
+					<div class="rm-k" id="rm-k-device">Run on your Jetson</div>
+					<div class="rm-seg" role="radiogroup" aria-labelledby="rm-k-device" data-row="device"></div>
+				</div>
+				<div class="rm-more" data-key="more">
+					<div class="rm-more-line">
+						<button type="button" data-recipe-toggle class="rm-link" aria-expanded="false" aria-controls="rm-engine-row rm-sd-row rm-quant-row" aria-describedby="rm-toggle-desc">
+							<svg class="rm-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+							<span data-recipe-toggle-label><span class="rm-lbl-long">More recipe options</span><span class="rm-lbl-short" aria-hidden="true">More options</span></span>
+						</button>
+						<span id="rm-toggle-desc" class="sr-only" data-recipe-toggle-desc></span>
+						<button type="button" data-recipe-reset class="rm-reset" title="Restore this model’s recommended options on every Jetson; keep the selected Jetson" aria-description="Restores this model’s recommended options on every Jetson; keeps the selected Jetson"><span class="rm-lbl-long">Reset all options</span><span class="rm-lbl-short" aria-hidden="true">Reset</span></button>
+					</div>
+				</div>
+				<div class="rm-row" data-key="engine" id="rm-engine-row">
+					<div class="rm-k" id="rm-k-engine">Engine</div>
+					<div class="rm-seg" role="radiogroup" aria-labelledby="rm-k-engine" data-row="engine"></div>
+				</div>
+				<div class="rm-row" data-key="sd" id="rm-sd-row">
+					<div class="rm-k" id="rm-k-sd">Speculative decoding</div>
+					<div class="rm-seg" role="radiogroup" aria-labelledby="rm-k-sd" data-row="sd"></div>
+				</div>
+				<div class="rm-row" data-key="quant" id="rm-quant-row">
+					<div class="rm-k" id="rm-k-quant">Weights</div>
+					<div class="rm-seg" role="radiogroup" aria-labelledby="rm-k-quant" data-row="quant"></div>
+				</div>
+
+				<div class="rm-code" data-block="setup">
+					<div class="rm-bar"><span id="rm-bar-setup">First, one-time setup</span><button type="button" data-recipe-copy="setup" class="rm-copy" data-label="Copy setup" aria-label="Copy setup commands">Copy setup</button></div>
+					<p class="rm-sub" data-setup-prose></p>
+					<pre id="rm-setup-pre" tabindex="0" role="region" aria-labelledby="rm-bar-setup" data-setup-pre><code data-code="setup"></code></pre>
+					<button type="button" class="rm-expand rm-expand-setup hidden" data-setup-expand></button>
+				</div>
+				<div class="rm-code">
+					<div class="rm-bar">
+						<div class="rm-bar-main" data-summary-full=""><span class="rm-sum-long"><span id="rm-bar-serve" data-recipe-summary></span><span class="rm-sum-sd" id="rm-bar-serve-end" data-summary-end></span></span><span class="rm-sum-short" aria-hidden="true" data-summary-short></span></div>
+						<div class="rm-bar-sd" aria-hidden="true" data-summary-sd2></div>
+						<div class="rm-bar-actions">
+							<button type="button" data-recipe-help class="rm-help" aria-expanded="false" aria-controls="rm-gloss" aria-label="What do these terms mean?" title="What do these terms mean?"><span aria-hidden="true">?</span></button>
+							<button type="button" data-recipe-copy="serve" class="rm-copy" data-label="Copy command" aria-label="Copy serve command">Copy command</button>
+						</div>
+					</div>
+					<ul id="rm-gloss" class="rm-gloss hidden" data-recipe-gloss></ul>
+					<pre id="rm-serve-pre" tabindex="0" role="region" aria-labelledby="rm-bar-serve rm-bar-serve-end" data-serve-pre><code data-code="serve"></code></pre>
+					<div class="rm-expand-row">
+						<button type="button" class="rm-expand hidden" data-recipe-expand aria-controls="rm-serve-pre"></button>
+					</div>
+					<div class="rm-step" data-block="test" tabindex="-1">
+						<div class="rm-step-head">
+							<button type="button" class="rm-step-toggle" data-recipe-testtoggle aria-expanded="false" aria-controls="rm-test-body">
+								<svg class="rm-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+								<span id="rm-bar-test" data-recipe-testhead>Then check that it’s running</span>
+							</button>
+							<span class="rm-step-static hidden" data-step-static>Then check that it’s running</span>
+							<button type="button" data-recipe-copy="test" class="rm-copy rm-copy-quiet hidden" data-label="Copy request" aria-label="Copy request to test the server">Copy request</button>
+						</div>
+						<div id="rm-test-body" class="hidden" data-recipe-testbody>
+							<p class="rm-cue" data-recipe-cue></p>
+							<div class="rm-req">
+								<p class="rm-req-bar" data-req-bar><span data-req-label></span></p>
+								<pre id="rm-test-pre" tabindex="0" role="region" aria-labelledby="rm-bar-test"><code data-code="test"></code></pre>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<p class="rm-fail hidden" data-copy-fail></p>
+			<span id="rm-for-jetson" class="sr-only" data-for-jetson></span>
+			<div class="rm-paste hidden" data-paste aria-hidden="true"></div>
+			<p class="sr-only" aria-live="polite" data-recipe-status></p>
+		</div>
+	</div>
+</div>
+
+<script type="application/json" id="recipe-data" set:html={payload} />
+
+<style is:global>
+	.rm-titles { display: flex; flex-direction: column; align-items: flex-start; row-gap: 2px; min-width: 0; }
+	.rm-guide { font-size: 12.5px; font-weight: 600; color: #4a7500; padding: 8px 0; margin: -8px 0; }
+	.rm-guide:hover { color: #000; }
+	.rm-head-dev { font-size: 12.5px; font-weight: 500; color: #555; padding: 8px 0; margin: -8px 0; }
+	.rm-head-dev.hidden, .rm-head.show-dev .rm-guide { display: none; }
+	.rm.dev-gone [data-key='device']:not(:focus-within) { opacity: 0; pointer-events: none; transition: opacity 0.12s; }
+	.rm-head-opt { margin-left: 12px; font-weight: 500; color: #3f6600; }
+	@media (hover: hover) { .rm-head-opt:hover { color: #2f5c00; text-decoration: underline; text-underline-offset: 3px; } }
+	.rm-close { display: grid; place-items: center; width: 36px; height: 36px; margin-right: -6px; overflow: visible; }
+	.rm [data-key], .rm .rm-more { scroll-margin-top: calc(var(--rm-head-h, 72px) + 24px); }
+	.rm-head { box-shadow: -24px 0 0 #fff, 24px 0 0 #fff; }
+	.rm-head.scrolled { box-shadow: -24px 0 0 #fff, 24px 0 0 #fff, 0 1px 0 #e6e6e1, -24px 1px 0 #e6e6e1, 24px 1px 0 #e6e6e1; }
+	.rm-head.scrolled.over-card { box-shadow: -24px 0 0 #fff, 24px 0 0 #fff; }
+	.rm-head { position: sticky; top: 0; z-index: 2; padding-right: 6px !important; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; background: #fff; padding: 20px 0 14px; }
+	.rm { container-type: inline-size; position: relative; }
+	.rm-inline .rm-code > .rm-bar { position: static; box-shadow: none; }
+	.rm-inline .rm-head { display: none; }
+	.rm-inline::after { display: none; }
+	@media (min-width: 640px) { .rm::after { bottom: -24px !important; } }
+	.rm::after { content: ''; display: block; position: sticky; bottom: -16px; height: 16px; margin-top: -16px; background: #fff; box-shadow: 0 -1px 0 #e6e6e1, 0 -8px 12px -8px rgba(0, 0, 0, 0.22); pointer-events: none; opacity: 0; transition: opacity 0.15s; }
+	.rm.more-below::after { opacity: 1; }
+	.rm-fail { scroll-margin-top: 80px; scroll-margin-bottom: 28px; }
+	.rm-step[data-block='test'] { scroll-margin-bottom: 24px; }
+	.rm-code pre, .rm-step, .rm-expand { scroll-margin-top: calc(var(--rm-head-h, 72px) + 52px); }
+	.rm .grid { grid-template-columns: minmax(0, 1fr); }
+	.rm .grid > * { min-width: 0; }
+	.rm-seg[data-row='device'] button { white-space: nowrap; }
+	.rm-row { display: grid; grid-template-columns: 160px minmax(0, 1fr); align-items: center; }
+	.rm-row.hidden { display: none; }
+	.rm-row.rm-in { animation: rm-in 0.15s ease-out; }
+	@keyframes rm-in { from { opacity: 0; transform: translateY(-4px); } }
+	@media (prefers-reduced-motion: reduce) { .rm-row.rm-in { animation: none; } .rm, .rm *, .rm *::after, .rm::after { transition: none !important; } }
+	.rm-k { font-size: 13.5px; font-weight: 600; color: #555; }
+	.rm-paste { position: absolute; z-index: 4; padding: 4px 0; color: #a3a3a3; font-size: 12px; font-weight: 500; white-space: nowrap; pointer-events: none; }
+	.rm-paste.on-light { color: #555; }
+	.rm-paste.chip { padding: 4px 9px; border-radius: 6px; background: #2a2a2a; color: #e5e5e5; }
+	.rm-seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(96px, auto); justify-self: start; max-width: 100%; gap: 3px; background: #f1f2ee; border-radius: 11px; padding: 4px; }
+	.rm-seg button { font-size: 13.5px; font-weight: 500; color: #222; padding: 8px 16px; border-radius: 8px; white-space: nowrap; line-height: 1.2; }
+	.rm-seg button small { display: block; font-size: 11.5px; font-weight: 500; color: #5f5f5f; margin-top: 2px; }
+	.rm-seg button:hover:not([aria-checked='true']) { color: #000; }
+	.rm-seg button[aria-checked='true'] { background: #fff; color: #000; text-shadow: 0.35px 0 0 currentColor; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 1.5px #5a9400; }
+
+	.rm-seg[data-row='sd'], .rm-seg[data-row='engine'] { grid-auto-columns: auto; }
+	.rm-seg[data-row='sd'] button { min-width: 0; }
+	@container (max-width: 720px) {
+	}
+	.rm:focus { outline: none; }
+	.rm button:focus-visible, .rm pre:focus-visible { outline: 2px solid #3f6600; outline-offset: 2px; }
+	.rm-code button:focus-visible, .rm-code pre:focus-visible { outline-color: #a3e635; outline-offset: -2px; }
+	.rm-code:not([data-block='setup']) .rm-bar-actions .rm-copy:focus-visible { outline-offset: 2px; }
+	.rm-link { color: #4a7500; }
+	@media (hover: hover) { .rm-link:hover, .rm-reset:hover { color: #2f5c00; text-decoration: underline; text-underline-offset: 3px; } }
+	.rm-code { border-radius: 12px; background: #111; overflow: clip; }
+	.rm-code::after { content: ''; display: block; position: sticky; bottom: -16px; height: 48px; margin-top: -48px; background: linear-gradient(rgba(17, 17, 17, 0), #111 55%); pointer-events: none; opacity: 0; z-index: 2; }
+	.rm-code[data-block='setup']::after { background: linear-gradient(rgba(246, 246, 243, 0), #f6f6f3 55%); }
+	.rm-code.cut::after { opacity: 1; }
+	@media (min-width: 640px) { .rm-code::after { bottom: -24px; } }
+	.rm.cut-card::after { opacity: 0 !important; }
+	.rm-code > .rm-bar { position: sticky; top: var(--rm-head-h, 72px); z-index: 3; background: #111; border-radius: 11px 11px 0 0; }
+	.rm-code[data-block='setup'] > .rm-bar { background: #f6f6f3; }
+	.rm-code > .rm-bar::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 20px; background: linear-gradient(#111 70%, rgba(17, 17, 17, 0)); pointer-events: none; opacity: 0; }
+	.rm-code > .rm-bar.stuck::after { opacity: 0; }
+	.rm-code > .rm-bar.stuck { box-shadow: 0 6px 0 #111; }
+	.rm-code[data-block='setup'] > .rm-bar.stuck { box-shadow: 0 6px 0 #f6f6f3; }
+	.rm-code[data-block='setup'] > .rm-bar::after { background: linear-gradient(#f6f6f3 70%, rgba(246, 246, 243, 0)); }
+
+	.rm-code.hidden { display: none; }
+	.rm-code[data-block='setup'] { background: #f6f6f3; }
+	.rm-code[data-block='setup'] pre { padding-top: 8px; padding-bottom: 10px; color: #1f2328; }
+	.rm-code[data-block='setup'] .rm-bar { color: #555; border-bottom-color: #e6e6e1; }
+	.rm-code[data-block='setup'] .rm-copy { color: #333; border-color: #cfcfca; }
+	@media (hover: hover) { .rm-code[data-block='setup'] .rm-copy:hover { color: #000; border-color: #999; } }
+	.rm-code[data-block='setup'] .rm-sub { color: #555; }
+	.rm-code[data-block='setup'] .rm-sub a { color: #2f5c00; }
+	.rm-code[data-block='setup'] pre.clamped { max-height: calc(1.6em * 4 + 8px); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.4em), rgba(0, 0, 0, 0.35)); mask-image: linear-gradient(to bottom, #000 calc(100% - 1.4em), rgba(0, 0, 0, 0.35)); }
+	.rm-code[data-block='setup'] .rm-expand { color: #555; padding-top: 0; }
+	@media (hover: hover) { .rm-code[data-block='setup'] .rm-expand:hover { color: #000; } }
+	.rm-code .hl-cmd { color: #8fd400; }
+	.rm-code .hl-flag { color: #7cc4f8; }
+	.rm-code .hl-str { color: #e9c46a; }
+	.rm-code .hl-var { color: #c3a6ff; }
+	.rm-code .hl-img { color: #5eead4; }
+	.rm-code .hl-url { color: #e9c46a; }
+	.rm-code .hl-op, .rm-code .tail { color: #8a8a8a; }
+	.rm-code .hl-com { color: #9ca3af; }
+	.rm-code[data-block='setup'] .hl-com { color: #6b6b6b; }
+	.rm-code[data-block='setup'] .hl-cmd { color: #3f7a00; }
+	.rm-code[data-block='setup'] .hl-flag { color: #0b62a3; }
+	.rm-code[data-block='setup'] .hl-str, .rm-code[data-block='setup'] .hl-url { color: #8a5a00; }
+	.rm-code[data-block='setup'] .hl-var { color: #7a3fc9; }
+	.rm-code[data-block='setup'] .hl-img { color: #0f766e; }
+	.rm-code[data-block='setup'] .hl-op, .rm-code[data-block='setup'] .tail { color: #8a8a8a; }
+	.rm-code[data-block='setup'] button:focus-visible, .rm-code[data-block='setup'] pre:focus-visible { outline-color: #3f6600; }
+	.rm-more { margin: 2px 0; }
+	[data-key='device']:has(+ .rm-more.hidden) { margin-bottom: 12px; }
+	.rm-more.hidden { display: none; }
+	.rm-more-line { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; font-size: 13px; font-weight: 600; }
+	.rm-more-line button { white-space: nowrap; }
+	.rm-more-line::after { content: ''; order: 2; flex: 1 1 24px; height: 1px; background: #e6e6e1; }
+	.rm-more-line .rm-reset { order: 3; }
+	.rm-more-line button { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; }
+	.rm-more-line button.hidden { display: none; }
+	.rm-chev { width: 14px; height: 14px; transition: transform 0.15s; }
+	[aria-expanded='true'] > .rm-chev { transform: rotate(90deg); }
+	.rm-reset { color: #6b6b6b; font-weight: 500; font-size: 12px; }
+	.rm-bar { display: flex; flex-wrap: nowrap; align-items: center; column-gap: 12px; padding: 8px 16px; border-bottom: 1px solid #262626; font-size: 13px; font-weight: 600; color: #c8c8c8; }
+	.rm-bar-main { display: block; min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
+.rm-sum-sd:not(:empty)::before { content: ' '; }
+	#rm-bar-serve, .rm-sum-short { color: #fff; font-weight: 700; font-size: 14px; }
+	.rm-sum-sd { white-space: nowrap; }
+	.rm-sum-long.sd-break .rm-sum-sd { display: block; white-space: normal; }
+	.rm-sum-long.sd-break .rm-sum-sd::before { content: none; }
+	.rm-sum-short { display: none; }
+	.rm-bar-sd { display: none; }
+	.rm-lbl-short { display: none; }
+	.rm-nw { white-space: nowrap; }
+	.rm-bar:has(.rm-bar-actions) { align-items: flex-start; }
+	.rm-bar:has(.rm-bar-actions) .rm-bar-main { padding-top: calc((30px - 1lh) / 2); }
+	.rm-bar-actions { display: contents; }
+	.rm-bar:has(.rm-bar-actions) .rm-bar-main { flex: 0 1 auto; }
+	.rm-bar-actions .rm-help { align-self: flex-start; margin: 1px 0 0 -6px; flex: none; }
+	.rm-bar-actions .rm-copy { margin-left: auto; flex: none; }
+	.rm-code:not([data-block='setup']) .rm-bar-actions .rm-copy.has-preview { min-width: 140px; }
+	.rm-help { display: inline-grid; place-items: center; vertical-align: middle; width: 28px; height: 28px; margin: -6px 0 -6px 6px; color: #d4d4d4; }
+	.rm .rm-help:focus-visible { outline: none; }
+	.rm-help:focus-visible > span { outline: 2px solid #a3e635; outline-offset: 2px; }
+	.rm-help > span { display: block; width: 20px; height: 20px; border-radius: 50%; border: 1px solid #666; font-size: 12px; line-height: 18px; text-align: center; }
+	.rm-help:hover > span { color: #fff; border-color: #aaa; }
+	.rm-help[aria-expanded='true'] > span { color: #111; background: #e5e5e5; border-color: #e5e5e5; }
+	.rm-sub { margin: 0; padding: 10px 16px 0; font-size: 12.5px; line-height: 1.55; color: #b5b5b5; }
+	.rm-sub:empty { display: none; }
+	.rm-sub a { color: #e5e5e5; text-decoration: underline; }
+	.rm-sub a:hover { color: #fff; }
+	.rm-sub code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #e5e5e5; }
+	.rm-step { border-top: 1px solid #262626; padding: 6px 0 6px; outline: none; }
+	.rm-step-head { position: relative; z-index: 3; display: flex; align-items: center; gap: 12px; padding: 0 16px; font-size: 12.5px; font-weight: 600; color: #a3a3a3; min-height: 30px; }
+.rm-req { position: relative; }
+	.rm-code .rm-step .rm-req pre { padding-top: 2px; }
+	.rm-req-bar { margin: 0; padding: 2px 16px 8px; line-height: 1.5; font-size: 12.5px; font-weight: 500; color: #b5b5b5; text-wrap: pretty; }
+	.rm-fail { margin: 0; padding: 10px 16px 0; font-size: 12.5px; line-height: 1.5; color: #fbbf24; text-wrap: pretty; }
+	.rm-code[data-block='setup'] .rm-fail { color: #8a5a00; }
+	.rm-fail.hidden, .rm-req-bar.failing { display: none; }
+	.rm-step-head .rm-copy-quiet { margin-left: auto; }
+	.rm-copy.rm-copy-quiet { min-width: 76px; }
+	.rm-code .rm-copy.rm-copy-quiet { min-width: 0; }
+	@media (hover: hover) { .rm-copy.rm-copy-quiet:hover { color: #fff; border-color: #444; } }
+	.rm-copy-quiet.hidden { display: none; }
+
+.rm-step-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; min-width: 0; padding: 0 4px; margin: 0 -4px; color: #c8c8c8; font: inherit; text-align: left; white-space: nowrap; }
+	@container (max-width: 480px) { .rm-step-toggle { white-space: normal; } }
+	.rm-step-toggle:hover { color: #fff; }
+	.rm-step-toggle.hidden, .rm-step-static.hidden { display: none; }
+	.rm-step-static { display: inline-flex; align-items: center; min-height: 30px; color: #c8c8c8; font-weight: 600; padding-left: 19px; }
+	.rm-step:has(.rm-step-toggle.hidden) .rm-cue { color: #a3a3a3; padding: 4px 16px 8px; }
+	.rm-step:has(.rm-step-toggle.hidden) .rm-step-head { display: none; }
+	.rm-step-toggle .rm-chev { width: 13px; height: 13px; }
+	.rm-step-toggle[aria-expanded='true'] .rm-chev { transform: rotate(90deg); }
+	[data-recipe-testbody].hidden { display: none; }
+	.rm-cue { margin: 0; padding: 2px 16px 0; font-size: 12.5px; line-height: 1.5; color: #b5b5b5; }
+	.rm-cue:empty, .rm-req-bar.hidden { display: none; }
+	.rm-code .rm-step pre { padding: 6px 16px 8px; font-size: var(--code-size); }
+	.rm-code .nb { white-space: nowrap; }
+	@container (min-width: 721px) {
+		.rm-code .rm-step pre, .rm-code[data-block='setup'] pre { white-space: pre; overflow-wrap: normal; overflow-x: auto; }
+	}
+	@container (max-width: 720px) {
+		.rm-code .rm-step .rm-nw, .rm-code .nb { white-space: normal; }
+		.rm-code .rm-step .nb .wb::after { content: none; }
+	}
+	.rm-code .rm-step pre::-webkit-scrollbar, .rm-code[data-block='setup'] pre::-webkit-scrollbar { height: 4px; }
+	.rm-code .rm-step pre::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 2px; }
+	.rm-code[data-block='setup'] pre::-webkit-scrollbar-thumb { background: #cfcfca; border-radius: 2px; }
+	.rm-code .rm-step pre::-webkit-scrollbar-track, .rm-code[data-block='setup'] pre::-webkit-scrollbar-track { background: transparent; }
+	.rm-code .rm-step pre.scrolls, .rm-code[data-block='setup'] pre.scrolls { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+	@container (max-width: 480px) {
+		.rm-code .rm-step pre.scrolls, .rm-code[data-block='setup'] pre.scrolls { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent); }
+	}
+	.rm-code .rm-step pre.hidden, .rm-code[data-block='setup'] pre.hidden { display: none; }
+	.rm-code[data-block='setup'] pre.hidden + .rm-expand { padding-top: 10px; }
+	.rm-code[data-block='setup'] .rm-bar .rm-expand.in-bar { padding: 0 6px 0 2px; margin-left: -2px; min-height: 28px; font: inherit; color: inherit; }
+	#rm-bar-setup.hidden { display: none; }
+	.rm-code[data-block='setup'] pre.excerpt-setup { padding-bottom: 2px; }
+	.rm-code[data-block='setup'] pre.excerpt-setup + .rm-expand { padding-top: 2px; padding-bottom: 8px; }
+
+	.rm-expand-row { display: flex; align-items: center; padding: 0 10px 8px 0; }
+	.rm-code pre.clamped + .rm-expand-row { padding-top: 6px; }
+	.rm-code pre.excerpt, .rm-code pre.expanded { padding-bottom: 4px; }
+	.rm-expand-row:not(:has(button:not(.hidden))) { display: none; }
+	.rm-expand-row .rm-copy { margin-left: auto; }
+	.rm-expand-row .rm-copy.hidden { display: none; }
+	.rm-expand { position: relative; z-index: 3; display: block; padding: 6px 16px; text-align: left; font-size: 12px; font-weight: 500; color: #a3a3a3; }
+	[data-recipe-expand], [data-setup-expand] { display: inline-flex; align-items: center; gap: 6px; }
+	[data-recipe-expand].hidden, [data-setup-expand].hidden { display: none; }
+	[data-recipe-expand] .rm-chev, [data-setup-expand] .rm-chev { width: 13px; height: 13px; }
+	[data-recipe-expand][aria-expanded='true'] .rm-chev, [data-setup-expand][aria-expanded='true'] .rm-chev { transform: rotate(90deg); }
+	.rm-expand:hover { color: #fff; }
+	.rm-expand:focus-visible { outline-offset: -3px; }
+	.rm-expand.hidden { display: none; }
+	.rm-code pre.clamped { max-height: calc(1.6em * var(--clamp-lines, 12) + 12px); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.4em), rgba(0, 0, 0, 0.35)); mask-image: linear-gradient(to bottom, #000 calc(100% - 1.4em), rgba(0, 0, 0, 0.35)); }
+	.rm-gloss { margin: 0; padding: 10px 16px; list-style: none; font-size: 12.5px; line-height: 1.55; color: #c8c8c8; border-bottom: 1px solid #262626; display: grid; gap: 4px; }
+	.rm-gloss b { color: #fff; font-weight: 600; }
+	.rm-gloss { grid-template-columns: max-content minmax(0, 1fr); column-gap: 16px; }
+	.rm-gloss li { display: contents; }
+	@container (max-width: 480px) { .rm-gloss { grid-template-columns: minmax(0, 1fr); column-gap: 0; } .rm-gloss li { display: block; } .rm-gloss b::after { content: ': '; } }
+	.rm-gloss.hidden { display: none; }
+	.rm-bar > .rm-copy { margin-left: auto; }
+	.rm-bar-actions .rm-copy, .rm-bar > .rm-copy { min-width: 76px; }
+	.rm-bar-actions .rm-copy { background: #f2f2f2; color: #111; border-color: #f2f2f2; }
+	@media (hover: hover) { .rm-bar-actions .rm-copy:hover { background: #fff; color: #000; border-color: #fff; } }
+	.rm-copy { flex: none; font-size: 12px; font-weight: 600; color: #e5e5e5; border: 1px solid #555; border-radius: 6px; padding: 5px 12px; min-height: 30px; }
+	@media (hover: hover) { .rm-copy:hover { color: #fff; border-color: #999; } }
+	.rm-bar-actions .rm-copy:active, .rm-bar-actions .rm-copy:focus-visible { color: #000; }
+	.rm { --code-size: 13px; }
+	.rm-code pre { margin: 0; padding: 12px 16px 14px; font-size: var(--code-size); line-height: 1.6; color: #e2e8f0; white-space: pre; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+	.rm-code pre[data-serve-pre] { white-space: pre-wrap; overflow-wrap: break-word; }
+	.rm-code pre[data-serve-pre] .wb::after { content: '\200B'; }
+	.rm-code .ln { display: block; padding-left: var(--hang, 4ch); text-indent: calc(var(--ind, 0ch) - var(--hang, 4ch)); }
+	.rm-code .wb { font-style: normal; }
+	.rm-code .ln.grp { margin-top: 0.5em; }
+	.rm-code .tail { white-space: nowrap; }
+	.rm-code .id { color: #fff; font-weight: 600; }
+	.rm-code pre ::selection { background: rgba(163, 230, 53, 0.28); }
+	.rm-code[data-block='setup'] pre ::selection { background: rgba(90, 148, 0, 0.22); }
+	.rm-code pre[data-serve-pre] .ln.plumb { color: #b5b5b5; }
+	.rm-code .ln.ell { color: #94a3b8; min-height: 1lh; }
+	@media (max-height: 500px) {
+		.rm-head { padding: 10px 0 8px; }
+		.rm .grid { gap: 6px; }
+		.rm-seg button { padding-top: 5px; padding-bottom: 5px; }
+	}
+	@media (pointer: coarse) {
+		.rm-copy { min-height: 32px; padding: 5px 12px; position: relative; }
+		.rm-copy::after { content: ''; position: absolute; inset: -6px 0; }
+		.rm-more-line button { min-height: 28px; position: relative; }
+		.rm-more-line button::after { content: ''; position: absolute; inset: -8px 0; }
+		.rm-step-toggle { min-height: 44px; }
+		.rm-seg button { min-height: 36px; min-width: 64px; position: relative; }
+		.rm-seg button::after { content: ''; position: absolute; inset: -4px 0; }
+		.rm-seg[data-row='device'] button::after { content: none; }
+		.rm-expand { min-height: 44px; }
+		[data-recipe-close] { min-width: 44px; min-height: 44px; }
+		.rm-help { width: 44px; height: 44px; margin: -8px -4px -8px 0; }
+		.rm-bar:has(.rm-bar-actions) .rm-bar-main { padding-top: calc((32px - 1lh) / 2); }
+	}
+	@container (max-width: 720px) {
+		.rm .grid { --code-size: 12px; }
+		.rm-code pre { white-space: pre-wrap; overflow-wrap: break-word; }
+		.rm-code .wb::after { content: '\200B'; }
+		.rm-row { grid-template-columns: 1fr; gap: 6px; }
+		.rm-seg { display: flex; flex-wrap: wrap; justify-self: start; }
+
+		.rm-bar-actions { margin-left: auto; }
+	}
+	@container (max-width: 340px) {
+		.rm-more-line .rm-reset .rm-lbl-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+		.rm-more-line .rm-reset .rm-lbl-short { display: inline; }
+	}
+	@container (max-width: 240px) {
+		.rm-more-line .rm-lbl-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+		.rm-more-line .rm-lbl-short { display: inline; }
+	}
+	@container (max-width: 480px) {
+		.rm-code[data-block='setup'] pre.clamped { max-height: calc(1.6em * 3 + 8px); }
+		.rm-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 8px; row-gap: 0; }
+		.rm-bar:has(.rm-bar-actions) { grid-template-columns: auto auto minmax(0, 1fr) auto; }
+		.rm-bar-main { grid-column: 1; grid-row: 1; padding-top: calc((32px - 1lh) / 2); }
+		.rm-bar-actions { grid-column: 2 / -1; grid-row: 1; display: contents; }
+		.rm-bar-actions .rm-help { grid-column: 2; grid-row: 1; align-self: start; width: 32px; height: 32px; margin: 0 0 0 -6px; }
+		.rm-bar-actions .rm-help { position: relative; }
+		.rm-bar-actions .rm-help::after { content: ''; position: absolute; inset: -6px; }
+		.rm-bar-actions .rm-help.hidden { display: none; }
+		.rm-bar-actions .rm-copy { grid-column: 4; grid-row: 1; }
+		.rm-bar-sd:not(:empty) { display: block; grid-column: 1 / -1; grid-row: 2; }
+		.rm-bar:not(:has(.rm-bar-actions)) { align-items: center; }
+		.rm-sum-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+		.rm-sum-short { display: inline; }
+	}
+.rm-seg[data-row='device'].split { display: grid; grid-auto-flow: row; grid-template-columns: repeat(6, 1fr); justify-self: stretch; max-width: 420px; background: none; padding: 0; gap: 6px; }
+	.rm-seg[data-row='device'].split button { background: #f1f2ee; }
+	.rm-seg[data-row='device'].split button[aria-checked='true'] { background: #fff; }
+	@container (max-width: 280px) {
+		.rm-seg[data-row='device'].split button { padding: 8px 4px; font-size: 12.5px; }
+	}
+	.rm-seg[data-row='device'].split [data-platform='thor'] { grid-column: span 3; }
+	.rm-seg[data-row='device'].split [data-platform='orin'] { grid-column: span 2; }
+
+	.rm-seg[data-row='device'].split button { padding: 8px 6px; }
+	@container (max-width: 720px) {
+		.rm-seg[data-row='device']:not(.split) { display: flex; flex-wrap: nowrap; }
+		.rm-seg[data-row='device']:not(.split) button { padding-left: 12px; padding-right: 12px; }
+	}
+	@container (max-width: 480px) {
+		.rm-seg[data-row='engine'] { display: flex; flex-wrap: wrap; justify-self: start; }
+		.rm-seg .rm-lbl-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+		.rm-seg .rm-lbl-short { display: inline; }
+		.rm-seg[data-row='engine'] button { white-space: nowrap; }
+		.rm-seg[data-row='engine'] .wide { grid-column: 1 / -1; }
+		.rm-more-line { flex-wrap: nowrap; }
+		.rm-more-line:has(.rm-reset:not(.hidden))::after { display: none; }
+		.rm-reset { margin-left: auto; }
+		.rm [data-key] { scroll-margin-top: 0; }
+		.rm-head.scrolled { padding: 14px 0 10px; }
+		.rm-head h2 { line-height: 1.25; }
+		.rm-head.scrolled .rm-guide { display: none; }
+		.rm-head.scrolled h2 { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.rm-head.scrolled .rm-titles { flex-wrap: nowrap; }
+		.rm-head.scrolled [data-recipe-close] { margin-block: -8px; }
+		.rm-seg button { white-space: normal; padding: 8px 14px; min-width: 64px; }
+		.rm-seg[data-row='device'] button { min-width: 0; }
+		.rm-code pre { font-size: 12px; }
+	}
+</style>
+
+<script>
+	type Recipe = { engine: string; deviceId: string; quant: string | null; setup: string | null; command: string; checkpoint: string | null; sd: { method: string } | null; commandNoSd: string | null };
+	type Model = { slug: string; name: string; recipes: Recipe[]; defaults: Record<string, string> };
+	type Device = { id: string; label: string; platform: string; memory: string };
+
+	const ENGINE_LABEL: Record<string, string> = { 'Edge-LLM': 'Edge\u2011LLM' };
+	const engineLabel = (e: string) => ENGINE_LABEL[e] ?? e;
+	const GLOSSARY: Record<string, string> = {
+		vLLM: 'vLLM: a serving engine with an OpenAI-compatible API.',
+		'llama.cpp': 'llama.cpp: a lightweight engine for GGUF model files, with an OpenAI-compatible API.',
+		'Edge-LLM': 'Edge-LLM: NVIDIA’s TensorRT Edge-LLM, which compiles the model for Jetson, then serves it.',
+		'vLLM-Omni': 'vLLM-Omni: vLLM for models that take or produce images, audio or video.',
+		NVFP4: 'NVFP4: 4-bit floating-point weights; less memory.',
+		FP8: 'FP8: 8-bit floating-point weights.',
+		MXFP4: 'MXFP4: 4-bit floating-point weights in the OCP microscaling format.',
+		W4A16: 'W4A16: 4-bit weights with 16-bit math.',
+		BF16: 'BF16: the original 16-bit weights.',
+		GGUF: 'GGUF: the llama.cpp file format; Q4_K_M etc. name the quantization.',
+		original: 'Weights: this recipe does not specify a weights format.',
+	};
+	const SD_HOW: Record<string, string> = {
+		MTP: 'extra heads trained with the model guess the next few tokens',
+		DSpark: 'a small NVIDIA model guesses the next few tokens',
+		DFlash: 'a small drafter guesses a block of upcoming tokens',
+		'EAGLE-3': 'a small head guesses the next few tokens from the model’s internal state',
+		'Draft model': 'a smaller model of the same family guesses the next few tokens',
+	};
+
+	const data = JSON.parse(document.getElementById('recipe-data')!.textContent!);
+	const models: Model[] = data.models;
+	const devices: Device[] = data.devices;
+	const deviceLabel = (id: string) => devices.find((d) => d.id === id)?.label ?? id;
+	const root = document.getElementById('recipe-modal')!;
+	const inline = root.dataset.inline ?? '';
+	const panel = root.querySelector<HTMLElement>('.rm')!;
+	const q = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
+
+	let model: Model;
+	let dev = '';
+	let engine = '';
+	let wanted: string | null = null;
+	let quant: string | null = null;
+	let sdOn = true;
+	let expanded = false;
+	let showAll = false;
+	let testOpen = false;
+	let setupAll = false;
+	let setupFold = new WeakMap<object, boolean>();
+	let setupLong = false;
+	let setupFolded = false;
+	let pasteTimer = 0;
+	let defaultRoom: number | null = null;
+	let phonePreview = false;
+	let phoneLong = false;
+	let previewCut = false;
+	let opener: HTMLElement | null = null;
+	let picks = new Map<string, { quant: string | null; sdOn: boolean }>();
+	const remember = () => picks.set(`${dev}|${engine}`, { quant, sdOn });
+
+	const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+	const tokens = (line: string) => line.match(/(?:'[^']*'|"[^"]*"|[^\s'"]+)+/g) ?? [];
+
+	function tidy(cmd: string) {
+		return cmd.split('\n').map((line) => {
+			if (line.length <= 100 || line.trimEnd().endsWith('\\') || line.trim().startsWith('#')) return line;
+			const units: string[][] = [];
+			for (const t of tokens(line)) {
+				const last = units[units.length - 1];
+				if (!last || t.startsWith('-')) units.push([t]);
+				else if (last[0].startsWith('-') && last.length >= 2) units.push([t]);
+				else last.push(t);
+			}
+			const lines: string[] = [];
+			for (const u of units) {
+				const s = u.join(' ');
+				const prev = lines[lines.length - 1];
+				if (prev !== undefined && lines.length === 1 && prev.length + s.length < 60 && s.startsWith('-')) lines[0] = `${prev} ${s}`;
+				else lines.push(s);
+			}
+			return lines.map((l, i) => (i === 0 ? l : `  ${l}`)).join(' \\\n');
+		}).join('\n');
+	}
+
+	function highlight(txt: string, main: string | null = null, breaks = true) {
+		const wbr = (html: string) => !breaks ? html : html.split(/(<[^>]+>)/).map((part, i) => (i % 2 ? part : part.replace(/https?:\/\/\S+/g, (u) => u.replace(/\.(?=\w)/g, '.\u0001')).replace(/([/,:])(?=\S)/g, '$1<i class="wb"></i>').replace(/&quot;\w{20,}&quot;/g, (k) => k.replace(/_(?=\w)/g, '_<i class="wb"></i>')).replace(/\u0001/g, '<i class="wb"></i>'))).join('');
+		const lines = txt.split('\n');
+		const image = lines.findIndex((l, i) => i > 1 && /^ {2}[^\s-]/.test(l) && l.trim() !== '…' && /^\s+(-|…)/.test(lines[i - 1]));
+		const sd = lines.findIndex((l, i) => i > 0 && /^\s+(--speculative|--spec-|--draft-|-hfd\b|-ngld\b|-md\b|--model-draft\b)/.test(l));
+		const ind = (l: string | undefined) => (l && l.trim() ? l.match(/^ */)![0].length : 0);
+		const deepest = Math.min(4, Math.max(0, ...lines.map((l) => ind(l))));
+		let open = false;
+		const inQuote = lines.map((l) => { const was = open; if (!l.trim().startsWith('#')) open = ((l.match(/'/g)?.length ?? 0) % 2 === 1) !== open; return was; });
+		return lines.map((line, i) => {
+			const own = ind(line);
+			if (line.trim() === '…') return `<span class="ln ell" style="--ind:${own}ch;--hang:${own + 2}ch">…</span>`;
+			const hang = Math.max(own, deepest, / \\$/.test(line) ? ind(lines[i + 1]) : 0) + 2;
+			const startsCommand = i === 0 || (!/\\$/.test(lines[i - 1] ?? '') && !inQuote[i]);
+			return `<span class="ln${(i === image || i === sd) && lines[i - 1]?.trim() !== '…' ? ' grp' : ''}${image > 0 && i > 0 && i < image ? ' plumb' : ''}" style="--ind:${own}ch;--hang:${hang}ch">${wbr(hlLine(line.slice(own), main, startsCommand)) || ' '}</span>`;
+		}).join('');
+	}
+
+	const PROGRAMS = /^(sudo|docker|run|curl|wget|mkdir|chmod|read|echo|export|cd|pip3?|git|huggingface-cli|hf|bash|sh|python3?|uv|vllm|serve|llama-server|llama-cli|tar|cp|mv|rm|ls|source|apt(?:-get)?|install|nvidia-smi|umask|printf|unset)$/;
+	const SERVERS = /^(llama-server|llama-cli|vllm|python3?|bash|sh)$/;
+	const vars = (html: string) => html.replace(/\$\{?[A-Za-z_]\w*\}?/g, (v) => `<span class="hl-var">${v}</span>`);
+
+	function hlLine(line: string, main: string | null = null, startsCommand = true) {
+		if (line.trim().startsWith('#'))
+			return `<span class="hl-com">${esc(line).replace(/https:\/\/[^\s,]+?(?=[.,:;)]*(?:\s|$))/g, (u) => `<a href="${u}" target="_blank" rel="noopener" class="underline hover:text-white">${u}</a>`)}</span>`;
+		let out = '';
+		let cmd = startsCommand;
+		let prev = '';
+		const strHtml = (t: string) => {
+			const inner = esc(t).replace(/&quot;(?:[^&<]{1,28}|[\w-]+: [^&<\s]{1,24})&quot;/g, (m) => `<span class="nb">${m}</span>`);
+			return `<span class="hl-str">${vars(inner)}</span>`;
+		};
+		for (const m of line.matchAll(/(\s+)|('[^']*'?|"[^"]*"?)|([^\s'"]+(?:'[^']*'?|"[^"]*"?)?)/g)) {
+			const [tok, space, quoted, word] = m;
+			if (space) { out += space; continue; }
+			if (quoted) { out += strHtml(quoted); cmd = false; prev = quoted; continue; }
+			const lead = word!.startsWith('(') ? '(' : '';
+			const trail = /;$/.test(word!) ? ';' : '';
+			const w = word!.slice(lead.length, word!.length - trail.length);
+			if (lead) { out += lead; cmd = true; }
+			if (!w) { out += trail; continue; }
+			let html: string;
+			if (w === '\\') html = `<span class="tail">\\</span>`;
+			else if (w === '|' || w === '&&' || w === ';') { html = `<span class="hl-op">${esc(w)}</span>`; cmd = true; out += html; prev = w; continue; }
+			else if ((cmd || (!prev && SERVERS.test(w))) && PROGRAMS.test(w) || (prev === 'docker' && w === 'run') || (prev === 'vllm' && w === 'serve')) {
+				html = `<span class="hl-cmd">${esc(w)}</span>`;
+				if (w === 'sudo') { out += html; prev = w; continue; }
+			}
+			else if (/^--?[A-Za-z][\w.-]*(=|$)/.test(w)) {
+				const [, flag, rest] = w.match(/^(--?[A-Za-z][\w.-]*)(=.*)?$/s) ?? [, w, ''];
+				html = `<span class="hl-flag">${esc(flag!)}</span>${rest ? `=${/^=['"]/.test(rest) ? strHtml(rest.slice(1)) : vars(esc(rest.slice(1)))}` : ''}`;
+			}
+			else if (main && w === main) html = `<span class="id">${esc(w)}</span>`;
+			else if (/^[A-Za-z_]\w*=/.test(w)) { const i = w.indexOf('='); html = `<span class="hl-var">${esc(w.slice(0, i))}</span>=${/^['"]/.test(w.slice(i + 1)) ? strHtml(w.slice(i + 1)) : vars(esc(w.slice(i + 1)))}`; }
+			else if (/^(?:[\w.-]+\/)+[\w.-]+:[\w.-]+$/.test(w) || /^(?:ghcr\.io|nvcr\.io|docker\.io)\//.test(w)) {
+				const [, path, tag] = w.match(/^(.*?)(?::([\w.-]+))?$/)!;
+				html = `<span class="hl-img">${esc(path)}${tag ? `:<span class="rm-nw">${esc(tag)}</span>` : ''}</span>`;
+			}
+			else if (/^localhost:\S+/.test(w)) html = `<span class="hl-url rm-nw">${esc(w)}</span>`;
+			else if (/^https?:\/\//.test(w)) html = `<span class="hl-url">${vars(esc(w))}</span>`;
+			else if (/['"]/.test(w)) { const i = w.search(/['"]/); html = vars(esc(w.slice(0, i))) + strHtml(w.slice(i)); }
+			else html = vars(esc(w));
+			out += html + trail;
+			cmd = !!trail;
+			prev = w;
+			void tok;
+		}
+		out = out.replace(/ <span class="tail">\\<\/span>$/, '<span class="tail"> \\</span>');
+		return out.replace(/(<span class="hl-str"><span class="nb">&quot;[^<]*&quot;<\/span><\/span>) (\w{1,3})(?=\s|$)/g, '<span class="rm-nw">$1 $2</span>');
+	}
+
+	const onDevice = () => model.recipes.filter((r) => r.deviceId === dev);
+	const enginesHere = () => [...new Set(onDevice().map((r) => r.engine))];
+	const engineRecipes = () => onDevice().filter((r) => r.engine === engine);
+	const current = () => engineRecipes().find((r) => r.quant === quant) ?? engineRecipes()[0];
+	const serve = () => {
+		const r = current();
+		return tidy((!sdOn && r.commandNoSd) || r.command);
+	};
+
+	const serveShown = () => panel.clientWidth > 0 && panel.clientWidth < 480 ? serve().replace(/^(sudo docker run -it --rm) (--pull \S+) \\$/m, '$1 \\\n  $2 \\') : serve();
+
+	function checkpoint(): string | null {
+		const cmd = current().command;
+		const flag = (name: string) => cmd.match(new RegExp(`(?:^|\\s)${name}[ =]+([\\w.-]+\\/[\\w.:-]+)`))?.[1];
+		return flag('--model') ?? flag('-hf') ?? flag('--hf-repo') ?? cmd.match(/vllm serve ([\w.-]+\/[\w.-]+)/)?.[1] ??
+			tokens(cmd).find((t) => /^[A-Za-z0-9][\w.-]*\/[\w.-]+$/.test(t) && !/^(vllm|ghcr\.io)\//.test(t)) ?? null;
+	}
+
+	function served(): { port: string; name: string } | null {
+		const r = current();
+		const cmd = r.command;
+		const flag = (name: string) => cmd.match(new RegExp(`(?:^|\\s)${name}[ =]+(\\S+)`))?.[1]?.replace(/^['"]|['"]$/g, '');
+		let port: string;
+		let name: string | undefined;
+		if (r.engine === 'vLLM') {
+			port = flag('--port') ?? '8000';
+			name = flag('--served-model-name') ?? flag('--model') ?? cmd.match(/vllm serve ([\w.-]+\/[\w.-]+)/)?.[1] ??
+				tokens(cmd.replace(/\\\n/g, ' ')).find((t) => /^[A-Za-z0-9][\w.-]*\/[\w.-]+$/.test(t) && !/^(vllm|ghcr\.io)\//.test(t));
+		} else if (r.engine === 'llama.cpp') {
+			port = flag('--port') ?? '8080';
+			name = flag('--alias') ?? 'default';
+		} else if (r.engine === 'Edge-LLM') {
+			port = flag('--port') ?? '8000';
+			name = r.checkpoint ? 'default' : undefined;
+		} else return null;
+		return name ? { port, name } : null;
+	}
+
+	function testCommand(): string | null {
+		const s = served();
+		if (!s) return null;
+		const { port, name } = s;
+		return [
+			`curl localhost:${port}/v1/chat/completions \\`,
+			`  -H "Content-Type: application/json" \\`,
+			`  -d '{"model": "${name}",`,
+			`${panel.clientWidth > 0 && panel.clientWidth < 480 ? '    ' : '       '}"messages": [{"role": "user", "content": "Hello!"}]}'`,
+		].join('\n');
+	}
+
+	function loadEngine() {
+		const e = wanted ?? model.defaults[dev];
+		engine = onDevice().some((r) => r.engine === e) ? e : model.defaults[dev];
+		const p = picks.get(`${dev}|${engine}`);
+		quant = p && engineRecipes().some((r) => r.quant === p.quant) ? p.quant : engineRecipes()[0].quant;
+		sdOn = p?.sdOn ?? true;
+	}
+
+	type Item = { id: string; label: string; sub?: string; on: boolean; platform?: string; wide?: boolean; hint?: string };
+	function seg(row: string, items: Item[]) {
+		const el = q(`[data-row="${row}"]`);
+		el.setAttribute('role', 'radiogroup');
+		const focusable = items.find((i) => i.on) ?? items[0];
+		el.innerHTML = items.map((i) =>
+			`<button type="button" role="radio" data-v="${esc(i.id)}"${i.platform ? ` data-platform="${i.platform}"` : ''}${i.wide ? ' class="wide"' : ''}${i.hint ? ` aria-description="${esc(i.hint)}"` : ''} aria-checked="${i.on}" tabindex="${i === focusable ? 0 : -1}"` +
+			`><span class="rm-x">${esc(i.label)}</span>${i.sub ? `<small>${esc(i.sub)}</small>` : ''}</button>`
+		).join('');
+	}
+	const show = (key: string, on: boolean) => {
+		const el = q(`[data-key="${key}"]`);
+		if (on && el.classList.contains('hidden')) el.classList.add('rm-in');
+		el.classList.toggle('hidden', !on);
+		if (!on) el.classList.remove('rm-in');
+	};
+	const edgeFade = (el: HTMLElement) => el.classList.toggle('scrolls', !el.classList.contains('hidden') && el.scrollWidth > el.clientWidth + 1 && el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+	const store = {
+		get: () => { try { return localStorage.getItem('recipe-module'); } catch { return null; } },
+		set: (v: string) => { try { localStorage.setItem('recipe-module', v); } catch {  } },
+	};
+	let copyTimer = 0;
+	const hideFail = () => {
+		const f = q('[data-copy-fail]');
+		if (!f.classList.contains('hidden')) {
+			const sel = getSelection();
+			if (sel && sel.rangeCount && root.contains(sel.getRangeAt(0).commonAncestorContainer)) sel.removeAllRanges();
+		}
+		f.classList.add('hidden');
+		q('[data-req-bar]').classList.remove('failing');
+	};
+	function resetCopyLabels() {
+		clearTimeout(copyTimer);
+		root.querySelectorAll<HTMLButtonElement>('[data-recipe-copy]').forEach((b) => { b.textContent = b.dataset.label ?? 'Copy'; b.style.minWidth = ''; });
+	}
+
+	function render() {
+		const fa = document.activeElement as HTMLElement | null;
+		const keep = fa && root.contains(fa) ? { row: fa.closest<HTMLElement>('[data-row]')?.dataset.row, v: fa.dataset.v, copy: fa.dataset.recipeCopy } : null;
+		renderInner();
+		requestAnimationFrame(edgeBelow);
+		syncHead();
+		if (keep && !root.contains(document.activeElement)) {
+			const t = keep.row && keep.v ? root.querySelector<HTMLElement>(`[data-row="${keep.row}"] [data-v="${CSS.escape(keep.v)}"]`) : keep.copy ? root.querySelector<HTMLElement>(`[data-recipe-copy="${keep.copy}"]`) : null;
+			(t ?? panel).focus({ preventScroll: true });
+		}
+	}
+
+	let renderGen = 0;
+	let copyOp = 0;
+	function renderInner() {
+		renderGen++;
+		resetCopyLabels();
+		hideFail();
+		q('[data-paste]').classList.add('hidden');
+		seg('device', devices.filter((d) => model.recipes.some((r) => r.deviceId === d.id)).map((d) => (
+			{ id: d.id, label: d.label, sub: d.memory.replace(/(\d)GB/, '$1 GB'), on: d.id === dev, platform: d.platform }
+		)));
+
+		const here = enginesHere();
+		seg('engine', here.map((e) => ({ wide: engineLabel(e).length > 12, id: e, label: engineLabel(e), on: e === engine })));
+
+		const r = current();
+		if (r.sd) seg('sd', [{ id: 'off', label: 'Off', on: !sdOn, hint: 'Turn speculative decoding off' }, { id: 'on', label: r.sd.method, on: sdOn, hint: `Use ${r.sd.method} speculative decoding` }]);
+
+		const quants = engineRecipes();
+		const qLabel = (s: string | null) => (s ?? '').replace(/^GGUF /, '');
+		seg('quant', quants.map((x) => ({ id: x.quant ?? '', label: qLabel(x.quant) || 'Default', on: x === r })));
+
+		const hasSd = !!r.sd;
+		const hasMore = here.length > 1 || hasSd || quants.length > 1;
+		show('engine', expanded && here.length > 1);
+		show('sd', expanded && !!r.sd);
+		show('quant', expanded && quants.length > 1);
+		const toggle = q('[data-recipe-toggle]');
+		toggle.classList.toggle('hidden', !hasMore);
+		toggle.setAttribute('aria-expanded', String(expanded));
+		const onlyEngines = here.length > 1 && !hasSd && quants.length <= 1;
+		const what = onlyEngines ? 'engines' : here.length > 1 ? 'engines & options' : 'recipe options';
+		const inside = [here.length > 1 && 'engine', hasSd && 'speculative decoding', quants.length > 1 && 'weights'].filter(Boolean) as string[];
+		toggle.title = expanded ? '' : `Choose ${inside.length > 1 ? `${inside.slice(0, -1).join(', ')} and ${inside[inside.length - 1]}` : inside[0] ?? 'options'}`;
+		q('[data-recipe-toggle-label]').innerHTML = expanded
+			? `<span class="rm-lbl-long">Hide ${what}</span><span class="rm-lbl-short" aria-hidden="true">Hide options</span>`
+			: `<span class="rm-lbl-long">More ${what}</span><span class="rm-lbl-short" aria-hidden="true">More options</span>`;
+		const changed = engine !== model.defaults[dev] || (!!wanted && wanted !== model.defaults[dev]) || (!!r.sd && !sdOn) || r !== engineRecipes()[0] ||
+			[...picks].some(([key, pick]) => {
+				const [d, e] = key.split('|');
+				const first = model.recipes.find((x) => x.deviceId === d && x.engine === e);
+				return !pick.sdOn || (first && pick.quant !== first.quant);
+			});
+		q('[data-recipe-reset]').classList.toggle('hidden', !changed);
+		show('more', hasMore || changed);
+
+		const sdPart = r.sd && sdOn ? 'with speculative decoding' : '';
+		const full = sdPart ? `${engineLabel(r.engine)} ${sdPart}` : engineLabel(r.engine);
+		q('[data-recipe-summary]').textContent = engineLabel(r.engine);
+		q('[data-summary-end]').textContent = sdPart;
+		q('[data-summary-full]').dataset.summaryFull = full;
+		const shortSd = sdPart && 'With speculative decoding';
+		q('[data-summary-short]').innerHTML = esc(engineLabel(r.engine));
+		q('[data-summary-sd2]').innerHTML = shortSd;
+		const sumLong = q('.rm-sum-long');
+		sumLong.classList.remove('sd-break');
+		const endRects = q('[data-summary-end]').getClientRects();
+		if (sdPart && endRects.length && endRects[endRects.length - 1].top > q('[data-recipe-summary]').getBoundingClientRect().top + 2) sumLong.classList.add('sd-break');
+
+		const how = r.sd ? SD_HOW[r.sd.method] ?? 'a small drafter guesses the next few tokens' : '';
+		const gloss = [GLOSSARY[r.engine], r.sd && sdOn && `Speculative decoding: this recipe uses ${r.sd.method}: ${how}, and the model checks them all at once. Replies come faster, with the same quality.`].filter(Boolean) as string[];
+		q('[data-recipe-gloss]').innerHTML = gloss.map((g) => {
+			const i = g.indexOf(': ');
+			const def = g.slice(i + 2);
+			return `<li><b>${esc(g.slice(0, i))}</b><span>${esc(def.charAt(0).toUpperCase() + def.slice(1))}</span></li>`;
+		}).join('');
+		q('[data-recipe-help]').classList.toggle('hidden', !gloss.length);
+		const terms = gloss.map((g) => g.split(':')[0].replace(/^Speculative decoding$/, 'speculative decoding'));
+		const helpName = `Explain ${terms.length > 1 ? `${terms.slice(0, -1).join(', ')} and ${terms[terms.length - 1]}` : terms[0] ?? ''}`;
+		q('[data-recipe-help]').setAttribute('aria-label', helpName);
+		q('[data-recipe-help]').title = helpName;
+		if (!gloss.length) closeGloss();
+		const kinds = [here.length > 1 && 'an inference engine', hasSd && 'speculative decoding', quants.length > 1 && 'weights'].filter(Boolean) as string[];
+		q('[data-recipe-toggle-desc]').textContent = kinds.length ? `Choose ${kinds.join(', ').replace(/, ([^,]*)$/, ' or $1')}.` : '';
+
+		q('[data-block="setup"]').classList.toggle('hidden', !r.setup);
+		if (r.setup) {
+			q('[data-setup-prose]').innerHTML = setupProse(r.setup);
+			q('[data-code="setup"]').innerHTML = highlight(setupCommands(r.setup));
+			const sp = q('[data-setup-pre]');
+			sp.classList.remove('clamped', 'hidden');
+			const slh = parseFloat(getComputedStyle(sp).lineHeight) || 20;
+			const narrowSetup = panel.clientWidth > 0 && panel.clientWidth < 480;
+			const shown = !root.classList.contains('hidden');
+			let longSetup = shown && narrowSetup && sp.scrollHeight > slh * 6 + 24;
+			if (shown && !narrowSetup) {
+				const known = setupFold.get(r);
+				if (known !== undefined) longSetup = known;
+				else {
+					const pr = panel.getBoundingClientRect();
+					const card = sp.closest('.rm-code')!.getBoundingClientRect();
+					const top = card.top - pr.top + panel.scrollTop;
+					const runRows = Math.min(serve().split('\n').length, 12);
+					const runBottom = top + card.height + 12 + 52 + slh * runRows + 36 + 46;
+					longSetup = runBottom > panelMax();
+					setupFold.set(r, longSetup);
+				}
+			}
+			const scb = q<HTMLButtonElement>('[data-recipe-copy="setup"]');
+			scb.dataset.label = 'Copy setup';
+			if (!/Copied/.test(scb.textContent ?? '')) scb.textContent = scb.dataset.label;
+			setupLong = longSetup;
+			setupFolded = longSetup && !setupAll;
+			sp.classList.toggle('excerpt-setup', setupFolded);
+			sp.classList.toggle('hidden', setupFolded);
+			const nCmds = setupCommands(r.setup).split('\n').filter((l, i, a) => !/ \\$/.test(a[i - 1] ?? '') && l.trim()).length;
+			const sx = q('[data-setup-expand]');
+			sx.classList.toggle('hidden', !longSetup);
+			sx.innerHTML = `<svg class="rm-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>${longSetup && !narrowSetup ? `<span>First, one-time setup · ${nCmds > 1 ? `${nCmds} commands` : '1 command'}</span>` : setupAll ? 'Hide setup commands' : `Show ${nCmds > 1 ? `${nCmds} setup commands` : 'the setup command'}`}`;
+			if (longSetup && !narrowSetup) sx.setAttribute('aria-description', `${nCmds > 1 ? `${nCmds} commands` : 'One command'}, ${setupAll ? 'shown' : 'hidden'}`);
+			else sx.removeAttribute('aria-description');
+			sx.setAttribute('aria-expanded', String(setupAll));
+			sx.setAttribute('aria-controls', 'rm-setup-pre');
+			const sbar = q('[data-block="setup"] > .rm-bar');
+			if (longSetup && !narrowSetup) sbar.insertBefore(sx, q('[data-recipe-copy="setup"]'));
+			else sp.after(sx);
+			sx.classList.toggle('in-bar', longSetup && !narrowSetup);
+			q('#rm-bar-setup').classList.toggle('hidden', longSetup && !narrowSetup);
+		}
+		let shown = serveShown();
+		phonePreview = false;
+		phoneLong = false;
+		if (panel.clientWidth > 0 && panel.clientWidth < 480) {
+			const ls = shown.split('\n');
+			const img = ls.findIndex((l, i) => i > 1 && /^ {2}[^\s-]/.test(l) && /^\s+-/.test(ls[i - 1]));
+			phoneLong = ls.length > 6 && img > 2;
+			if (phoneLong && !showAll) {
+				shown = excerpt(ls, 0, true).join('\n');
+				phonePreview = true;
+			}
+		}
+		q('[data-code="serve"]').innerHTML = highlight(shown, checkpoint());
+		measurePreview();
+		const test = testCommand();
+		const ready = { vLLM: 'Application startup complete', 'vLLM-Omni': 'Application startup complete', 'llama.cpp': 'server is listening' }[r.engine as 'vLLM'];
+		q('[data-recipe-copy="test"]').classList.toggle('hidden', !test || !testOpen);
+		q('[data-recipe-testtoggle]').classList.toggle('hidden', !test);
+		q('[data-step-static]').classList.add('hidden');
+		q('[data-recipe-testbody]').classList.toggle('hidden', !testOpen && !!test);
+		q('[data-recipe-testtoggle]').setAttribute('aria-expanded', String(testOpen));
+		q('[data-code="test"]').closest('pre')!.classList.toggle('hidden', !test);
+		q('[data-code="test"]').innerHTML = test ? highlight(test) : '';
+		const tp = q('[data-code="test"]').closest('pre')!;
+		edgeFade(tp);
+		if (r.setup) edgeFade(q('[data-setup-pre]'));
+		q('[data-req-label]').innerHTML = `${ready ? `After “${ready}”,` : 'Once the server is up,'} run this in another terminal. Expect JSON with an assistant reply.`;
+		q('[data-req-bar]').classList.toggle('hidden', !test);
+
+		q('[data-recipe-cue]').textContent = test ? '' : ready ? `After “${ready}”, the server is ready.` : 'The server log shows when it is ready.';
+	}
+
+	const setupCommands = (setup: string) => tidy(setup.split('\n').filter((l) => !l.trim().startsWith('#')).join('\n').trim());
+	function setupProse(setup: string) {
+		const text = setup.split('\n').filter((l) => l.trim().startsWith('#')).map((l) => l.replace(/^\s*#\s?/, '')).join(' ');
+		return esc(text)
+			.replace(/(?:at |from )?(https:\/\/[^\s,]+?)(?=[.,:;)]*(?:\s|$)):?/g, (_, u: string) =>
+				/settings\/tokens/.test(u)
+					? `<a href="${u}" target="_blank" rel="noopener">a read token</a> when prompted.`
+					: `<a href="${u}" target="_blank" rel="noopener">the model license</a>`)
+			.replace(/^This model is gated\. /, '')
+			.replace(/Accept its license <a/, 'Accept <a')
+			.replace(/then paste a read token <a/, 'then paste <a');
+	}
+
+	function sdRows(src: string[]) {
+		const isSd = (l: string) => /^\s+(--speculative|--spec-|--draft-|-hfd\b|-ngld\b|-md\b|--model-draft\b)/.test(l);
+		const at = src.findIndex((l, i) => i > 0 && isSd(l));
+		if (at < 0) return 0;
+		let open = false, end = at;
+		for (let i = at; i < src.length; i++) {
+			if (i > at && !open && !isSd(src[i])) break;
+			open = ((src[i].match(/'/g) ?? []).length % 2 === 1) !== open;
+			end = i;
+		}
+		return end - at + 1;
+	}
+
+	function excerpt(full: string[], budget: number, phone = false, stretch = 0) {
+		let src = full;
+		const img = src.findIndex((l, i) => i > 1 && /^ {2}[^\s-]/.test(l) && /^\s+-/.test(src[i - 1]));
+		const ck = checkpoint();
+		const at = ck ? src.findIndex((l, i) => i > img && l.includes(ck)) : -1;
+		const isSd = (l: string) => /^\s+(--speculative|--spec-|--draft-|-hfd\b|-ngld\b|-md\b|--model-draft\b)/.test(l);
+		const sdAt = src.findIndex((l, i) => i > 0 && isSd(l));
+		let sdEnd = sdAt;
+		if (sdAt > 0) {
+			let open = false;
+			for (let i = sdAt; i < src.length; i++) {
+				if (i > sdAt && !open && !isSd(src[i])) break;
+				open = ((src[i].match(/'/g) ?? []).length % 2 === 1) !== open;
+				sdEnd = i;
+			}
+		}
+		const keep = new Set<number>([0]);
+		if (img > 0) for (let i = img; i <= Math.min(at > img && at <= img + 2 ? at : img + 1, src.length - 1); i++) keep.add(i);
+		if (sdAt > 0) {
+			if (phone) keep.add(sdAt);
+			else for (let i = sdAt; i <= sdEnd; i++) keep.add(i);
+		}
+		const build = (set: Set<number>) => {
+			const out: string[] = [];
+			let prev = -1;
+			for (const i of [...set].sort((a, b) => a - b)) {
+				if (i - prev - 1 > 2) out.push(`${src[prev + 1].match(/^ */)![0]}…`);
+				else for (let j = prev + 1; j < i; j++) out.push(src[j]);
+				out.push(src[i]);
+				prev = i;
+			}
+			if (src.length - 1 - prev > 2) { if (phone) out.push(`${src[prev + 1].match(/^ */)![0]}…`); }
+			else for (let j = prev + 1; j < src.length; j++) out.push(src[j]);
+			return out;
+		};
+		const r = current();
+		const n = !r.sd ? 0 : sdRows(tidy(r.command).split('\n'));
+		const reserve = sdAt > 0 || !r.sd ? 0 : n;
+		if (!phone && img > 0) {
+			const base = build(keep);
+			const headSet = new Set(keep);
+			for (let t = 1; t < img; t++) headSet.add(t);
+			const withHead = build(headSet);
+			if (withHead.length + reserve <= budget + stretch) return withHead;
+			return base;
+		}
+		for (let t = 1; !phone && t < src.length && !keep.has(t); t++) {
+			const trial = new Set(keep).add(t);
+			if (build(trial).length > budget - reserve) break;
+			keep.add(t);
+		}
+		return build(keep);
+	}
+
+	const panelMax = () => (window.visualViewport?.height ?? innerHeight) * 0.9;
+	const stepClosedH = () => (q('.rm-step-head').offsetHeight || q('[data-block="test"]').offsetHeight) + 12;
+
+	function measurePreview() {
+		const pre = q('[data-serve-pre]');
+		pre.classList.remove('clamped', 'excerpt', 'expanded');
+		if (!phonePreview && previewCut) q('[data-code="serve"]').innerHTML = highlight(serveShown(), checkpoint());
+		previewCut = false;
+		const lh = parseFloat(getComputedStyle(pre).lineHeight) || 20;
+		const vhAll = window.visualViewport?.height ?? innerHeight;
+		let room = vhAll * 0.9 - 330;
+		let tight = false;
+		let wholeFits: boolean | null = null;
+		if (!root.classList.contains('hidden')) {
+			let top = pre.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+			const line = q('.rm-more').getBoundingClientRect();
+			const first = [...root.querySelectorAll<HTMLElement>('.rm-code')].find((c) => c.offsetParent);
+			if (expanded && line.height && first) top -= first.getBoundingClientRect().top - line.bottom - 12;
+			const gl = q('[data-recipe-gloss]');
+			if (gl.offsetParent) top -= gl.getBoundingClientRect().height;
+			if (setupLong && setupAll && panel.clientWidth >= 480) {
+				const sp = q('[data-setup-pre]');
+				top -= sp.offsetHeight + (parseFloat(getComputedStyle(sp).marginTop) || 0) + (parseFloat(getComputedStyle(sp).marginBottom) || 0);
+			}
+			const after = stepClosedH() + 40 + 40;
+			room = Math.min(room, panelMax() - top - after);
+			defaultRoom = room;
+			const pb = parseFloat(getComputedStyle(panel).paddingBottom) || 0;
+			wholeFits = top + pre.scrollHeight + stepClosedH() + pb + 4 <= panelMax();
+		} else if (defaultRoom !== null) room = defaultRoom;
+		const vh = window.visualViewport?.height ?? innerHeight;
+		const narrowCard = panel.clientWidth > 0 && panel.clientWidth < 480;
+		const lines = Math.max(3, Math.min(vh < 700 ? 6 : narrowCard ? 8 : 14, Math.floor(room / lh)));
+		pre.style.setProperty('--clamp-lines', String(lines));
+		const pcs = getComputedStyle(pre);
+		const gaps = [...pre.querySelectorAll<HTMLElement>('.ln.grp')].reduce((n, el) => n + (parseFloat(getComputedStyle(el).marginTop) || 0), 0);
+		const rows = Math.round((pre.scrollHeight - parseFloat(pcs.paddingTop) - parseFloat(pcs.paddingBottom) - gaps) / lh);
+		let long = phonePreview || (narrowCard ? phoneLong : (root.classList.contains('hidden') ? serve().split('\n').length > 14 : (wholeFits === false || rows > lines)));
+		if (long && !showAll && !phonePreview) {
+			const top = parseFloat(getComputedStyle(pre).paddingTop) || 0;
+			const limit = top + lines * lh + 1;
+			const y0 = pre.getBoundingClientRect().top;
+			let k = 0, gap = 0;
+			for (const ln of pre.querySelectorAll<HTMLElement>('.ln')) {
+				if (ln.classList.contains('grp')) gap += parseFloat(getComputedStyle(ln).marginTop) || 0;
+				if (ln.getBoundingClientRect().bottom - y0 - gap > limit) break;
+				k++;
+			}
+			q('[data-code="serve"]').innerHTML = highlight(excerpt(serveShown().split('\n'), Math.max(tight ? 4 : 6, k), false, Math.max(0, Math.min(2, Math.floor(room / lh) - lines))).join('\n'), checkpoint());
+			previewCut = true;
+		}
+		pre.classList.toggle('excerpt', phonePreview || previewCut);
+		pre.classList.toggle('expanded', showAll);
+		if (phonePreview || previewCut) pre.setAttribute('aria-description', 'Shortened; Copy command copies the whole command.');
+		else pre.removeAttribute('aria-description');
+		const ex = q('[data-recipe-expand]');
+		ex.classList.toggle('hidden', !long);
+		ex.innerHTML = `<svg class="rm-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>${showAll ? 'Collapse command' : `Show full command · ${serveShown().split('\n').length} lines`}`;
+		ex.setAttribute('aria-expanded', String(showAll));
+		q('[data-recipe-copy="serve"]').setAttribute('aria-label', `${long && !showAll ? 'Copy full command' : 'Copy command'} for ${deviceLabel(dev)}`);
+		q('[data-for-jetson]').textContent = `For ${deviceLabel(dev)}.`;
+		const sc = q<HTMLButtonElement>('[data-recipe-copy="serve"]');
+		sc.dataset.label = long && !showAll ? 'Copy full command' : 'Copy command';
+		sc.classList.toggle('has-preview', long && !showAll);
+		if (!/Copied/.test(sc.textContent ?? '')) sc.textContent = sc.dataset.label;
+		q('[data-recipe-copy="serve"]').title = `${long && !showAll ? 'Copies the full command' : 'Copies the command'}, to run in a terminal on ${deviceLabel(dev)}`;
+		layoutDevices();
+	}
+
+	function layoutDevices() {
+		const seg = q('[data-row="device"]');
+		seg.classList.remove('split');
+		if (seg.scrollWidth > seg.parentElement!.clientWidth + 1 || seg.getBoundingClientRect().height > 80) seg.classList.add('split');
+	}
+
+	new ResizeObserver(() => edgeBelow()).observe(q('.rm .grid'));
+	function edgeBelow() {
+		const pb = parseFloat(getComputedStyle(panel).paddingBottom) || 0;
+		panel.classList.toggle('more-below', panel.scrollHeight - panel.scrollTop - panel.clientHeight > pb + 2);
+		const edge = Math.min(panel.getBoundingClientRect().bottom, innerHeight);
+		let cut = false;
+		const inline = panel.classList.contains('rm-inline');
+		root.querySelectorAll<HTMLElement>('.rm-code').forEach((c) => {
+			if (inline) return void c.classList.remove('cut');
+			const r = c.getBoundingClientRect();
+			const parts = [...c.querySelectorAll<HTMLElement>('pre, .rm-expand, .rm-step-head, [data-recipe-cue], .rm-req-bar')].filter((x) => x.offsetParent);
+			const on = r.top < edge - 40 && parts.some((x) => x.getBoundingClientRect().bottom > edge - 2);
+			c.classList.toggle('cut', on);
+			cut ||= on;
+		});
+		panel.classList.toggle('cut-card', cut);
+	}
+	const headH = () => panel.style.setProperty('--rm-head-h', `${q('.rm-head').offsetHeight}px`);
+	new ResizeObserver(headH).observe(q('.rm-head'));
+	function syncHead() {
+		q('.rm-head').classList.toggle('scrolled', panel.scrollTop > 0);
+		const hb = q('.rm-head').getBoundingClientRect().bottom;
+		const nm = root.querySelector<HTMLElement>('[data-row="device"] [aria-checked="true"] .rm-x');
+		const nameGone = !!nm && nm.getBoundingClientRect().top < hb - 1 && panel.clientWidth >= 480;
+		const d = devices.find((x) => x.id === dev);
+		q('[data-head-dev]').textContent = d ? `For ${deviceLabel(d.id)} · ${d.memory.replace(/(\d)GB/, '$1 GB')}` : '';
+		q('[data-head-dev-wrap]').classList.toggle('hidden', !nameGone);
+		const ho = q('[data-head-options]');
+		ho.textContent = 'Change Jetson';
+		ho.classList.toggle('hidden', !nameGone);
+		q('.rm-head').classList.toggle('show-dev', nameGone);
+		const fa = document.activeElement as HTMLElement | null;
+		if (fa && q('.rm-head').contains(fa) && !fa.offsetParent) {
+			const alt = [ho, root.querySelector<HTMLElement>('.rm-guide a, .rm-guide')].find((e) => e && e.offsetParent);
+			(alt ?? panel).focus({ preventScroll: true });
+		}
+		panel.classList.toggle('dev-gone', nameGone);
+		let stuck = false;
+		root.querySelectorAll<HTMLElement>('.rm-code > .rm-bar').forEach((bar) => {
+			const card = bar.parentElement!.getBoundingClientRect();
+			const on = card.top < hb - 1 && card.bottom > hb + bar.offsetHeight;
+			bar.classList.toggle('stuck', on);
+			stuck ||= on;
+		});
+		const mr = q('.rm-more').getBoundingClientRect();
+		q('.rm-head').classList.toggle('over-card', stuck || (mr.height > 0 && mr.top < hb + (panel.classList.contains('dev-gone') ? 72 : 16) && mr.bottom > hb));
+		edgeBelow();
+	}
+	panel.addEventListener('scroll', () => syncHead());
+	let lastWidth = 0;
+	new ResizeObserver(() => {
+		if (root.classList.contains('hidden') || panel.clientWidth === lastWidth) return;
+		lastWidth = panel.clientWidth;
+		render();
+	}).observe(panel);
+	document.fonts?.ready.then(() => !root.classList.contains('hidden') && measurePreview());
+	let lastHeight = innerHeight;
+	const onViewport = () => {
+		const h = window.visualViewport?.height ?? innerHeight;
+		if (root.classList.contains('hidden') || Math.abs(h - lastHeight) < 2) return;
+		lastHeight = h;
+		defaultRoom = null;
+		setupFold = new WeakMap();
+		render();
+	};
+	addEventListener('resize', onViewport);
+	window.visualViewport?.addEventListener('resize', onViewport);
+	function closeGloss() {
+		q('[data-recipe-gloss]').classList.add('hidden');
+		q('[data-recipe-help]').setAttribute('aria-expanded', 'false');
+	}
+
+	const setUrl = (slug: string | null) => {
+		const u = new URL(location.href);
+		if (slug) u.searchParams.set('run', slug);
+		else u.searchParams.delete('run');
+		history.replaceState(history.state, '', u);
+	};
+
+	function open(slug: string, from?: HTMLElement, viaKeyboard = false) {
+		const m = models.find((x) => x.slug === slug);
+		if (!m) return;
+		model = m;
+		opener = from ?? null;
+		const saved = store.get();
+		const fam = devices.find((d) => d.id === saved)?.platform;
+		const sameFamily = devices.filter((d) => d.platform === fam).map((d) => d.id).find((id) => m.recipes.some((r) => r.deviceId === id));
+		dev = m.recipes.some((r) => r.deviceId === saved) ? saved! : sameFamily ?? m.recipes[0].deviceId;
+		expanded = !!inline;
+		showAll = !!inline;
+		testOpen = !!inline;
+		setupAll = false;
+		defaultRoom = null;
+		setupFold = new WeakMap();
+		picks = new Map();
+		wanted = null;
+		loadEngine();
+		q('[data-recipe-title]').textContent = `Run ${m.name}`;
+		render();
+		root.classList.remove('hidden');
+		render();
+		if (inline) return;
+		document.body.style.overflow = 'hidden';
+		setInert(true);
+		closeGloss();
+		panel.scrollTop = 0;
+		setUrl(slug);
+		if (viaKeyboard) q<HTMLButtonElement>(`[data-recipe-copy="${current().setup ? 'setup' : 'serve'}"]`).focus();
+		else panel.focus({ preventScroll: true });
+	}
+
+	function close() {
+		if (inline || root.classList.contains('hidden')) return;
+		hideFail();
+		root.classList.add('hidden');
+		document.body.style.overflow = '';
+		setInert(false);
+		setUrl(null);
+		const fallback = [...document.querySelectorAll<HTMLElement>(`[data-recipe-run="${CSS.escape(model.slug)}"]`)].find((b) => b.offsetParent);
+		(opener ?? fallback)?.focus();
+	}
+
+	let inerted: Element[] = [];
+	function setInert(on: boolean) {
+		if (on) {
+			let el: Element | null = root;
+			while (el && el.parentElement) {
+				for (const sib of el.parentElement.children) if (sib !== el && !sib.hasAttribute('inert') && sib.tagName !== 'SCRIPT') { sib.setAttribute('inert', ''); inerted.push(sib); }
+				el = el.parentElement;
+				if (el === document.body) break;
+			}
+		} else {
+			inerted.forEach((x) => x.removeAttribute('inert'));
+			inerted = [];
+		}
+	}
+
+	const say = (msg: string) => (q('[data-recipe-status]').textContent = msg);
+
+	function choose(b: HTMLButtonElement) {
+		const row = b.parentElement!.dataset.row!;
+		const v = b.dataset.v!;
+		if (row === 'device') {
+			const keepSd = sdOn;
+			dev = v;
+			store.set(dev);
+			document.dispatchEvent(new CustomEvent('jal:jetson', { detail: dev }));
+			loadEngine();
+			if (!picks.has(`${dev}|${engine}`)) sdOn = keepSd;
+		} else if (row === 'engine') {
+			wanted = v;
+			loadEngine();
+		}
+		else if (row === 'sd') sdOn = v === 'on';
+		else if (row === 'quant') quant = v || null;
+		if (row === 'sd' || row === 'quant') remember();
+		render();
+		root.querySelector<HTMLElement>(`[data-row="${row}"] [data-v="${CSS.escape(v)}"]`)?.focus();
+		say(q('[data-summary-full]').dataset.summaryFull ?? '');
+	}
+
+	root.addEventListener('click', (e) => {
+		const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-row] button');
+		if (b) choose(b);
+	});
+	root.addEventListener('focusin', (e) => {
+		const el = e.target as HTMLElement;
+		if (el.closest('.rm-head') || !el.matches(':focus-visible')) return;
+		const r = el.getBoundingClientRect();
+		const hb = q('.rm-head').getBoundingClientRect().bottom + 8;
+		const bottom = panel.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(panel).paddingBottom) || 0);
+		let dy = 0;
+		if (r.top < hb) dy = r.top - hb;
+		else if (r.bottom > bottom && r.height < bottom - hb) dy = r.bottom - bottom;
+		if (dy) panel.scrollTop += dy;
+	});
+	root.addEventListener('focusout', (e) => {
+		const g = (e.target as HTMLElement).closest<HTMLElement>('[data-row]');
+		if (!g || g.contains(e.relatedTarget as Node)) return;
+		const all = [...g.querySelectorAll<HTMLButtonElement>('button')];
+		const home = all.find((x) => x.getAttribute('aria-checked') === 'true') ?? all[0];
+		all.forEach((x) => (x.tabIndex = x === home ? 0 : -1));
+	});
+	root.addEventListener('keydown', (e) => {
+		const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-row] button');
+		if (!b) return;
+		const step = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 } as Record<string, number>)[e.key];
+		const edge = e.key === 'Home' ? 'first' : e.key === 'End' ? 'last' : '';
+		if (!step && !edge) return;
+		e.preventDefault();
+		const all = [...b.parentElement!.querySelectorAll<HTMLButtonElement>('button')];
+		const t = edge === 'first' ? all[0] : edge === 'last' ? all[all.length - 1] : all[(all.indexOf(b) + step + all.length) % all.length];
+		all.forEach((x) => (x.tabIndex = x === t ? 0 : -1));
+		t.focus();
+		choose(t);
+	});
+
+	function land(el: HTMLElement, behavior: ScrollBehavior) {
+		const pt = panel.getBoundingClientRect().top;
+		const headH = q('.rm-head').offsetHeight;
+		let y = panel.scrollTop + el.getBoundingClientRect().top - pt - headH - 24;
+		const devBottom = panel.scrollTop + q('[data-key="device"]').getBoundingClientRect().bottom - pt - headH;
+		if (el !== q('[data-key="device"]') && y < devBottom) y = 0;
+		panel.scrollTo({ top: Math.max(0, y), behavior });
+	}
+	q('[data-head-options]').addEventListener('click', () => {
+		const target = root.querySelector<HTMLElement>('[data-row="device"] [aria-checked="true"]')!;
+		const anchor = q<HTMLElement>('[data-key="device"]');
+		land(anchor, matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+		target.focus({ preventScroll: true });
+	});
+	q('[data-recipe-toggle]').addEventListener('click', () => {
+		expanded = !expanded;
+		render();
+		const t = q<HTMLElement>('[data-recipe-toggle]');
+		t.focus({ preventScroll: true });
+		const gen = renderGen;
+		requestAnimationFrame(() => { if (gen === renderGen) t.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
+	});
+	q('[data-recipe-reset]').addEventListener('click', () => {
+		picks = new Map();
+		wanted = null;
+		loadEngine();
+		render();
+		(root.querySelector<HTMLElement>('[data-recipe-toggle]:not(.hidden)') ?? q<HTMLButtonElement>('[data-recipe-copy="serve"]')).focus();
+		say('Recommended options restored for all Jetsons');
+	});
+	root.querySelectorAll<HTMLButtonElement>('[data-recipe-copy]').forEach((btn) => btn.addEventListener('click', async () => {
+		const which = btn.dataset.recipeCopy;
+		const text = which === 'test' ? testCommand()! : which === 'setup' ? setupCommands(current().setup!) : serveShown();
+		hideFail();
+		const gen = renderGen;
+		const op = ++copyOp;
+		let ok = true;
+		try {
+			await navigator.clipboard.writeText(text);
+		} catch {
+			const ta = Object.assign(document.createElement('textarea'), { value: text });
+			panel.append(ta);
+			ta.select();
+			ok = document.execCommand('copy');
+			ta.remove();
+			if (ok) btn.focus({ preventScroll: true });
+		}
+		if (gen !== renderGen || op !== copyOp || root.classList.contains('hidden')) return;
+		resetCopyLabels();
+		if (!ok) {
+			const setup = which === 'setup';
+			if (setup && !setupAll && setupFolded) setupAll = true;
+			if (which !== 'test' && !setup && !showAll && (phonePreview || previewCut)) showAll = true;
+			render();
+			const pre = which === 'test' ? q('[data-code="test"]').closest('pre')! : setup ? q('[data-setup-pre]') : q('[data-serve-pre]');
+			const plat = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform;
+			const keys = /mac|iphone|ipad|ios/i.test(plat) ? '⌘C' : 'Ctrl+C';
+			const how = matchMedia('(pointer: coarse)').matches ? 'use your browser’s Copy' : `press ${keys}`;
+			const fail = q('[data-copy-fail]');
+			fail.textContent = `Copy blocked. ${which === 'test' ? 'Request' : setup ? 'Setup commands' : 'Command'} selected; ${how}.`;
+			if (which === 'test') pre.after(fail); else pre.closest('.rm-code')!.querySelector('.rm-bar')!.after(fail);
+			fail.classList.remove('hidden');
+			requestAnimationFrame(() => requestAnimationFrame(() => fail.scrollIntoView({ block: 'nearest' })));
+			pre.focus({ preventScroll: true });
+			getSelection()?.selectAllChildren(pre);
+			say(fail.textContent);
+			return;
+		}
+		btn.style.minWidth = `${btn.offsetWidth}px`;
+		btn.textContent = 'Copied';
+		say(which === 'serve' ? `Copied. Paste it in a terminal on ${deviceLabel(dev)}.` : which === 'setup' ? `Setup copied. Run it in a terminal on ${deviceLabel(dev)} first.` : `Request copied. Paste it in another terminal on ${deviceLabel(dev)}.`);
+		if (which === 'serve' || which === 'setup' || which === 'test') {
+			const ph = q('[data-paste]');
+			ph.textContent = `Paste on ${deviceLabel(dev)}${which === 'setup' ? ' first' : ''}`;
+			const host = btn.closest<HTMLElement>('.rm-bar, .rm-step-head') ?? panel;
+			if (ph.parentElement !== host) host.appendChild(ph);
+			const pr = host.getBoundingClientRect(), br = btn.getBoundingClientRect();
+			const sb = 0;
+			ph.classList.remove('hidden', 'chip');
+			ph.classList.toggle('on-light', which === 'setup');
+			const bar = btn.closest('.rm-bar, .rm-step-head');
+			const used = bar ? Math.max(0, ...[...bar.querySelectorAll<HTMLElement>('.rm-bar-main > *, .rm-bar > span, .rm-bar > .rm-expand, .rm-step-toggle, .rm-help, button')].filter((e) => e.offsetParent && e !== btn && !e.contains(btn) && e !== ph).map((e) => e.getBoundingClientRect().right).filter((x) => x < btn.getBoundingClientRect().left)) : 0;
+			const fits = br.left - 8 - ph.offsetWidth > used + 12;
+			if (fits) {
+				ph.style.top = `${br.top - pr.top + (br.height - ph.offsetHeight) / 2}px`;
+				ph.style.right = `${pr.right - br.left - sb + 8}px`;
+			} else {
+				ph.classList.add('chip');
+				ph.style.top = `${br.bottom - pr.top + 6}px`;
+				ph.style.right = `${pr.right - br.right - sb}px`;
+			}
+			clearTimeout(pasteTimer);
+			const hide = () => { if (!btn.matches(':hover, :focus-visible')) ph.classList.add('hidden'); else pasteTimer = window.setTimeout(hide, 1500); };
+			pasteTimer = window.setTimeout(hide, 4000);
+		}
+		clearTimeout(copyTimer);
+		copyTimer = window.setTimeout(resetCopyLabels, 1400);
+	}));
+	root.querySelectorAll('[data-recipe-close]').forEach((el) => el.addEventListener('click', close));
+	q('[data-serve-pre]').addEventListener('copy', (e) => {
+		if (!(phonePreview || previewCut)) return;
+		const sel = getSelection();
+		const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+		const lns = [...q('[data-serve-pre]').querySelectorAll<HTMLElement>('.ln')];
+		const whole = !!range && lns.length > 0 && range.intersectsNode(lns[0]) && range.intersectsNode(lns[lns.length - 1]);
+		if (!range || !(whole || lns.some((el) => el.textContent!.includes('…') && range.intersectsNode(el)))) return;
+		(e as ClipboardEvent).clipboardData?.setData('text/plain', serveShown());
+		e.preventDefault();
+	});
+	[q('[data-code="test"]').closest('pre')!, q('[data-setup-pre]')].forEach((el) => el.addEventListener('scroll', () => edgeFade(el)));
+	q('[data-setup-expand]').addEventListener('click', () => {
+		setupAll = !setupAll;
+		render();
+		q<HTMLElement>('[data-setup-expand]').focus();
+	});
+	q('[data-recipe-expand]').addEventListener('click', () => {
+		showAll = !showAll;
+		render();
+		q<HTMLElement>('[data-recipe-expand]').focus();
+	});
+	q('[data-recipe-testtoggle]').addEventListener('click', () => {
+		testOpen = !testOpen;
+		render();
+		q<HTMLElement>('[data-recipe-testtoggle]').focus();
+		if (testOpen) requestAnimationFrame(() => {
+			const pr = panel.getBoundingClientRect();
+			const pb = parseFloat(getComputedStyle(panel).paddingBottom) || 0;
+			const end = q('[data-block="test"]').getBoundingClientRect().bottom;
+			let y = panel.scrollTop + Math.max(0, end - (pr.bottom - pb));
+			if (y <= panel.scrollTop) return;
+			const headH = q('.rm-head').offsetHeight;
+			const dev = q('[data-key="device"]').getBoundingClientRect();
+			const devTop = panel.scrollTop + dev.top - pr.top, devBot = panel.scrollTop + dev.bottom - pr.top;
+			if (y + headH > devTop && y + headH < devBot + 14) {
+				const next = q('.rm-more').offsetParent ? q('.rm-more').getBoundingClientRect().top : dev.bottom + 12;
+				y = Math.max(y, panel.scrollTop + next - pr.top - headH - 14);
+				const max = panel.scrollHeight - panel.clientHeight;
+				if (y > max) {
+					const rowLeftAtMax = devBot - max - headH;
+					const gapAtMax = panel.scrollTop + next - pr.top - max - headH;
+					if (rowLeftAtMax <= 6 && gapAtMax <= 22) y = max;
+					else {
+						y = devTop - headH - 4;
+						if (y < panel.scrollTop + 8) return;
+					}
+				}
+			}
+			panel.scrollTo({ top: y, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+		});
+	});
+	q('[data-recipe-help]').addEventListener('click', () => {
+		const g = q('[data-recipe-gloss]');
+		const show = g.classList.contains('hidden');
+		g.classList.toggle('hidden', !show);
+		q('[data-recipe-help]').setAttribute('aria-expanded', String(show));
+	});
+	document.addEventListener('keydown', (e) => {
+		if (root.classList.contains('hidden')) return;
+		if (e.key === 'Escape') {
+			if (!q('[data-recipe-gloss]').classList.contains('hidden')) { closeGloss(); q<HTMLElement>('[data-recipe-help]').focus(); }
+			else close();
+		}
+		if (e.key === 'Tab' && !inline) {
+			const f = [...panel.querySelectorAll<HTMLElement>('button, pre, a[href]')].filter((el) => el.tabIndex >= 0 && el.offsetParent && !el.closest('.hidden, .invisible'));
+			const i = f.indexOf(document.activeElement as HTMLElement);
+			if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+			else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+		}
+	});
+	document.addEventListener('click', (e) => {
+		const b = (e.target as HTMLElement).closest<HTMLElement>('[data-recipe-run]');
+		if (b && !inline) open(b.dataset.recipeRun!, b, (e as MouseEvent).detail === 0);
+	});
+	const initial = new URLSearchParams(location.search).get('run');
+	if (inline) {
+		open(inline);
+	} else if (initial) open(initial);
+</script>

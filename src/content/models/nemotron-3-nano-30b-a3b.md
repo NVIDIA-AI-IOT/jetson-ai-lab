@@ -29,7 +29,6 @@ serving:
   entries:
     - engine: "vLLM"
       type: "Container"
-      # Demo: Orin Nano 8GB tab is gray for vLLM only; switch to Ollama to enable it.
       modules_supported:
         - thor_t5000
         - thor_t4000
@@ -59,10 +58,6 @@ one_shot_inference:
     - orin_nano_8
   run_command_orin: ollama run nemotron-3-nano
   run_command_thor: ollama run nemotron-3-nano
-benchmark_key: "Nemotron 3 30B-A3B"
-benchmark_series:
-  - "Nemotron Nano 9B V2"
-  - "Nemotron3 Nano 4B"
 ---
 
 **Note:** The Thor command requires a [Hugging Face access token](https://huggingface.co/settings/tokens) with access to the gated NVFP4 checkpoint. The Orin command uses a community AWQ checkpoint that does not require authentication. If you see *"Free memory on device … is less than desired GPU memory utilization"*, lower `--gpu-memory-utilization` in the Advanced options.
