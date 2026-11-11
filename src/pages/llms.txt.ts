@@ -47,6 +47,10 @@ const MODEL_SECTIONS: { name: string; families: string[] }[] = [
 		name: 'Liquid AI Models',
 		families: ['Liquid AI d1'],
 	},
+	{
+		name: 'Runway Models',
+		families: ['Runway Praxis'],
+	},
 ];
 
 /**
