@@ -2,7 +2,7 @@
 title: "Jetson AI Lab Discord Community & Research Group"
 description: "A global collective for advancing open-source Edge ML, open to anyone to join and collaborate with others from the community."
 seo_description: "Join the Jetson AI Lab Discord community for open-source edge AI, robotics, monthly research meetings, project collaboration, and NVIDIA Jetson support."
-discord_url: "https://discord.gg/BmqNSK4886"
+discord_url: "https://discord.com/invite/x7UkQmDGJ8"
 forum_url: "https://forums.developer.nvidia.com/c/agx-autonomous-machines/jetson-embedded-systems/jetson-projects/78"
 meeting_time: "9:00 AM PT / 12:00 PM ET"
 meeting_platform: "Microsoft Teams"
