@@ -1,11 +1,13 @@
 ---
-title: "Multi-Modal AI Studio on Jetson"
-description: "Run a conversational AI pipeline on Jetson Thor with on-device ASR, LLM/VLM, and TTS."
+title: "Voice AI Workbench on Jetson"
+description: "Build and measure a local conversational AI pipeline on Jetson Orin Nano, AGX Orin, or AGX Thor."
 category: "Applications"
 section: "Conversational AI"
 order: 1
-tags: ["multimodal", "speech-ai", "riva", "asr", "tts", "vlm", "vllm", "cosmos-reason2", "webrtc", "jetson-thor"]
+tags: ["multimodal", "speech-ai", "speaches", "gemma-4", "cosmos3", "nemotron", "asr", "tts", "realtime-api", "vlm", "webrtc", "jetson-orin", "jetson-thor"]
 isNew: true
+hero_image: "/images/tutorials/multi-modal-ai-studio/timeline-monitor.svg"
+hero_image_mode: "perspective"
 authors:
   - name: "Chitoku YATO"
     github: "tokk-nv"
@@ -17,314 +19,306 @@ import Note from '../../../components/admonition/Note.astro';
 import Tip from '../../../components/admonition/Tip.astro';
 import Warning from '../../../components/admonition/Warning.astro';
 
-[Multi-Modal AI Studio](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio) is a conversational AI interface for building and tuning voice AI systems. It supports NVIDIA Riva, OpenAI, and other backends; records sessions with full config snapshots; and provides a real-time timeline and latency analysis (TTFA, turn-taking) to compare and optimize setups.
+[Voice AI Workbench](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio), formerly **Multi-modal AI Studio (MMAS)**, helps developers give a robot a voice and a character. Compare independent ASR, LLM/VLM, and TTS services through standard APIs, tune the LLM's system prompt, and inspect recorded transcripts, latency, barge-in, audio playback, and device utilization. Optional vision input remains supported. The GitHub repository and existing session formats retain their original names; the recommended package and CLI name is now `voice-ai-workbench`.
 
-This tutorial demonstrates one configuration with the **NVIDIA RIVA SDK** for ASR/TTS and **Cosmos-Reason2** on vLLM for reasoning. The application is modular, so you can plug in other compatible ASR, LLM/VLM, or TTS backends that expose the supported APIs.
+For **Jetson AGX Thor**, start with NVIDIA open speech models and **Cosmos3-Edge**: Nemotron 3.5 ASR (Parakeet-family) → Cosmos3-Edge Reasoner → Magpie TTS. For **Jetson Orin Nano and AGX Orin**, use the smaller Speaches + Gemma 4 E2B quick start. Both paths use public model services through standard APIs, without installing the Riva SDK or requiring an NGC entitlement.
 
-## Prerequisites
+<Note title="Application and backend versions">
+  [Voice AI Workbench 0.2.0](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/releases/tag/v0.2.0) is available on [PyPI](https://pypi.org/project/voice-ai-workbench/0.2.0/). The GitHub release provides artifacts, checksums, and limitations. The independently versioned Speaches backend remains pinned to 0.9.0-rc.3; the workbench release does not make that backend a GA release. Use the REST path for the Speaches quick start; the NVIDIA speech services have a separate native Realtime ASR path.
+</Note>
 
-This tutorial is written for **Jetson AGX Thor** because it uses the **RIVA SDK** and Cosmos-Reason2-8B together on the same device. You can adapt the same application to other model backends if your Jetson has less memory.
+## Choose a deployment path
 
-<div style="overflow-x: auto; margin: 1.5rem 0;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Requirement</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Details</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Jetson device</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Jetson AGX Thor running JetPack 7</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">ASR service</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">NVIDIA RIVA ARM64 quick start initialized with the Parakeet ASR model</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">LLM / VLM service</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Cosmos-Reason2-8B weights available at <code>~/models/cosmos-reason2-8b</code> and served by vLLM</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">TTS service</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">NVIDIA RIVA ARM64 quick start initialized with the Magpie TTS model</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; font-weight: 500;">Client browser</td><td style="padding: 12px 16px;">A PC browser on the same network, or a browser on Jetson Thor, with microphone and camera access</td></tr>
-</tbody>
-</table>
+<div style="overflow-x: auto;">
+
+| Path | Devices | ASR | LLM / VLM | TTS | Best for |
+| --- | --- | --- | --- | --- | --- |
+| **Thor starting point** | AGX Thor | Nemotron 3.5 ASR (Parakeet-family) | Cosmos3-Edge Reasoner | Magpie | NVIDIA voice + vision pipeline without the Riva SDK |
+| **Orin quick start** | Orin Nano, AGX Orin; also usable on Thor | Faster-Whisper tiny.en | Gemma 4 E2B | Kokoro | Small local setup, hackathons, voice-agent prototypes |
+| **Further model comparisons** | Devices with sufficient memory | Multilingual Faster-Whisper or NVIDIA ASR | Gemma 4 12B or another compatible LLM/VLM | Qwen3-TTS, Kokoro, or Magpie | Compare accuracy, latency, and voice quality after a baseline works |
+
 </div>
 
-## Architecture
+![Voice AI Workbench showing a recorded NVIDIA Speech conversation, audio waveforms, and latency timeline on Jetson Thor](/images/tutorials/voice-ai-workbench-nvidia-speech.png)
 
-Multi-Modal AI Studio does not run the AI models by itself. It connects to model services through standard APIs, which makes the pipeline easy to swap and tune.
+This recorded session uses **Nemotron 3.5 ASR → Gemma 4 E2B → Magpie TTS** with the NVIDIA Speech — Realtime preset. The Thor instructions below replace Gemma with Cosmos3-Edge. The screenshot illustrates the shared review interface, not a controlled performance benchmark; the internal hostname and IP addresses are omitted.
 
-![Multi-Modal AI Studio architecture](https://raw.githubusercontent.com/NVIDIA-AI-IOT/multi_modal_ai_studio/main/docs/images/MMAS-arch.png)
+## Install the application
 
-## Step 1: Start NVIDIA RIVA SDK (ASR + TTS)
+- A Jetson Orin or Thor running a Jetson Linux release whose driver supports CUDA 13 containers
+- Docker with the NVIDIA container runtime
+- A Chromium-based browser on the Jetson or another computer on the same trusted network
+- Enough free storage for the selected container images and model cache
 
-RIVA provides the ASR and TTS services for the voice pipeline. This tutorial uses **Riva 2.24.0 Embedded (aarch64)**; see the [Riva support matrix](https://docs.nvidia.com/deeplearning/riva/user-guide/docs/support-matrix/support-matrix.html) for platform and model compatibility.
-
-Before running the commands below, install and initialize RIVA by following the [NVIDIA Riva setup for voice ASR/TTS](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/INSTALL.md#nvidia-riva-setup-for-voice-asrtts) instructions in the Multi-Modal AI Studio repository.
-
-After RIVA is installed and initialized, start it from the RIVA quick start directory:
-
-```bash
-cd riva_quickstart_arm64_v2.24.0
-bash riva_start.sh
-```
-
-Wait for the server to be ready. You can monitor the logs:
+Install the published application in an isolated Python 3.11+ environment. Clone the matching release only for the backend launcher scripts; the installed wheel supplies the Web UI and built-in presets.
 
 ```bash
-docker logs -f riva-speech
+python3 -m venv ~/voice-workbench-venv
+source ~/voice-workbench-venv/bin/activate
+python -m pip install voice-ai-workbench==0.2.0
+voice-ai-workbench --version
+
+git clone --branch v0.2.0 --depth 1 \
+  https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio.git \
+  ~/voice-workbench-backends
+cd ~/voice-workbench-backends
 ```
 
-Look for:
+The commands below run the backend scripts from `~/voice-workbench-backends`. The application is launched from outside that checkout so Python uses the installed wheel rather than importing source files from the current directory.
+
+If creating the environment fails because `ensurepip` is missing, install your OS's matching venv package, such as `sudo apt install python3-venv`. Browser audio does not require the optional PyAudio package. Keep earlier `multi-modal-ai-studio` installations in a separate environment; see the [upgrade instructions](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/development/releasing.md#upgrading-an-earlier-mmas-installation) before reusing one.
+
+## Thor: NVIDIA open speech models + Cosmos3-Edge
+
+This is the first configuration to try on **Jetson AGX Thor**. Keep the three services independent so each can be evaluated or replaced without rebuilding the application:
 
 ```text
-RIVA server listening on 0.0.0.0:50051
-All models loaded successfully
+browser microphone
+  -> Nemotron 3.5 ASR, Parakeet-family (:8081)
+  -> Cosmos3-Edge Reasoner, vLLM (:18087)
+  -> Magpie multilingual v2607 (:8082)
+  -> browser speaker
 ```
 
-This can take several minutes, especially the first time after boot.
+The ASR checkpoint's exact name is <code class="break-all">nvidia/nemotron-3.5-asr-streaming-0.6b</code>; its cache-aware encoder is from the Parakeet family. It is not the older Parakeet 1.1B Riva artifact. Cosmos3-Edge's **Reasoner** provides text and image understanding through Chat Completions; this tutorial does not run its video-generation or robot-action server.
 
-## Step 2: Start vLLM with Cosmos-Reason2
+“Open models” means publicly downloadable checkpoints with local inference here, not identical licenses for every component. Review each model's terms for your intended product.
 
-Next, start the LLM/VLM backend. RIVA uses ports `8000`, `8001`, and `8002`, so this tutorial serves vLLM on **port 8010**.
+### 1. Start NVIDIA ASR and TTS
 
-Use the [Cosmos Reason2 8B model page](/models/cosmos-reason2-8b/) for the latest serving commands, including NGC CLI setup if you have not configured it yet. The vLLM path uses the FP8 checkpoint from NGC, so download the model first and set `MODEL_PATH`:
+From the matching backend checkout created above:
 
 ```bash
-ngc registry model download-version "nim/nvidia/cosmos-reason2-8b:1208-fp8-static-kv8" \
-  --dest ~/.cache/huggingface/hub
-
-export MODEL_PATH="${HOME}/.cache/huggingface/hub/cosmos-reason2-8b_v1208-fp8-static-kv8"
+cd ~/voice-workbench-backends
+./scripts/nvidia_open_models_speech.sh doctor
+./scripts/nvidia_open_models_speech.sh build
+./scripts/nvidia_open_models_speech.sh start
+./scripts/nvidia_open_models_speech.sh verify
+cd ~
 ```
 
-Then serve the model on port `8010`:
+The first build and checkpoint downloads can take time. This launcher manages **speech only**; it does not start an LLM. It exposes REST and WebSocket Realtime APIs at ports 8081 and 8082. See the [NVIDIA speech setup guide](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/v0.2.0/docs/setup_open_models_jetson.md) for the qualified images, model revisions, storage, and restart commands.
+
+### 2. Serve the Cosmos3-Edge Reasoner
+
+Use the **vLLM Reasoner** deployment, not the vLLM-Omni Generator / Action deployment, on the [Cosmos3-Edge model page](/models/cosmos3-edge/). The following evaluated ARM64 image and model revision provide a reproducible starting point. Single-session settings shorten the context and leave shared-GPU memory for ASR and TTS; port 18087 also avoids replacing an existing E2B server:
 
 ```bash
-mkdir -p ~/.cache/vllm
-sudo sysctl -w vm.drop_caches=3
-
-sudo docker run -it --rm --runtime=nvidia --network host \
-  -v $MODEL_PATH:/models/cosmos-reason2-8b:ro \
-  -v ${HOME}/.cache/vllm:/root/.cache/vllm \
-  ghcr.io/nvidia-ai-iot/vllm:0.14.0-r38.3-arm64-sbsa-cu130-24.04 \
-  vllm serve /models/cosmos-reason2-8b \
-    --served-model-name nvidia/cosmos-reason2-8b-fp8 \
-    --max-model-len 8192 \
-    --gpu-memory-utilization 0.7 \
-    --reasoning-parser qwen3 \
-    --media-io-kwargs '{"video": {"num_frames": -1}}' \
-    --enable-prefix-caching \
-    --port 8010
+sudo docker run -it --rm --init --pull always \
+  --runtime=nvidia --network host \
+  -e PYTORCH_CUDA_ALLOC_CONF=backend:cudaMallocAsync \
+  -v $HOME/.cache/huggingface:/root/.cache/huggingface \
+  --entrypoint "" \
+  vllm/vllm-openai:cosmos3@sha256:34094f070375eb5328e302af58737a8928ba5d55ff9fa196a4b7cf5fb85edcc4 \
+  vllm serve nvidia/Cosmos3-Edge \
+    --revision 5b590285c565623fb8a47c123708d27866b0564a \
+    --host 127.0.0.1 --port 18087 \
+    --trust-remote-code --dtype bfloat16 \
+    --max-model-len 4096 --max-num-seqs 1 \
+    --gpu-memory-utilization 0.15 --kv-cache-memory-bytes 1073741824 --enforce-eager \
+    --limit-mm-per-prompt '{"image":1,"video":0}' \
+    --mm-processor-kwargs '{"do_resize":true,"min_pixels":4096,"max_pixels":262144}'
 ```
 
-Wait until the server is ready:
+Keep this terminal running. From another terminal, verify the model API:
+
+```bash
+curl --fail http://localhost:18087/v1/models
+```
+
+Warm up a short text response before starting voice. Model discovery alone does not test inference, and the first text or image request can include substantial initialization and kernel-compilation latency:
+
+```bash
+curl --fail --show-error --max-time 180 \
+  http://localhost:18087/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "nvidia/Cosmos3-Edge",
+    "messages": [{"role": "user", "content": "What is one plus one? Answer briefly."}],
+    "max_tokens": 32,
+    "chat_template_kwargs": {"enable_thinking": false}
+  }'
+```
+
+Wait for the answer, not just an HTTP connection. Warm up an image question too when enabling vision, then compare latency on subsequent turns.
+
+The model page is the reference for supported engines and hardware. This conservative single-session recipe uses asynchronous CUDA allocation, a 1 GiB KV-cache budget, and eager execution; it is not a peak-throughput benchmark or a claim that the same vLLM configuration fits an 8 GB Orin Nano. The KV budget is not a cap on total process memory. Do not start multiple full-size LLM servers unnecessarily.
+
+### 3. Connect the workbench
+
+Activate the installed application environment, then run it from outside the backend checkout:
+
+```bash
+source ~/voice-workbench-venv/bin/activate
+cd ~
+voice-ai-workbench \
+  --preset nvidia-open-models-realtime-speech-jetson \
+  --llm-api-base http://localhost:18087/v1 \
+  --llm-model nvidia/Cosmos3-Edge \
+  --llm-max-tokens 128 \
+  --port 8092
+```
+
+Open `https://<JETSON_IP>:8092` on a trusted network. Select the browser microphone and speaker for the first test. The NVIDIA preset retains the speech models and supplies <code class="break-all">chat_template_kwargs.enable_thinking=false</code> in **Extra Request Body**; Cosmos3-Edge otherwise enables thinking by default. In **LLM / VLM**, leave **Enable reasoning (chain-of-thought) through user prompt** off and use a short spoken-answer system prompt. That checkbox adds an application prompt; it is not a substitute for the server-side request setting. In **TTS**, turn **Start speaking before LLM finishes** off for the first baseline, then evaluate overlap separately.
+
+Try “What is one plus one?”, followed by “Explain the history of robotics.” While the assistant is speaking, say “Stop, what is two plus two?” Confirm that the old audio stops, the new answer is audible, and the saved session reopens correctly.
+
+For the file-based speech baseline, change only `--preset` to `nvidia-open-models-speech-jetson` and keep the same Cosmos endpoint and model overrides. This compares REST endpointing with native Realtime ASR without changing the LLM.
+
+<Note title="What streams in this configuration">
+  Nemotron Realtime ASR uses its cache-aware streaming model and can return partial transcripts while you speak. Magpie's Realtime adapter returns PCM delta events for completed text chunks; the current model path is phrase-level generation, not model-native incremental waveform synthesis. The workbench's early-TTS setting is a separate text-chunking choice.
+</Note>
+
+### 4. Add vision after voice works
+
+Enable vision under **Configuration → LLM / VLM**, select a browser camera under **Devices**, and begin with one small frame per turn. Ask a question whose answer depends on what the camera sees, then change the scene and repeat. See the [vision setup guide](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/v0.2.0/docs/vlm_guide.md) for optional camera dependencies and frame settings.
+
+This is a voice-and-vision assistant, not a robot control policy. Cosmos3's action-generation capabilities require a different serving path and embodiment-specific integration; the workbench does not turn a spoken answer into safe robot motion.
+
+## Orin quick start: Speaches + Gemma 4 E2B
+
+This smaller configuration is the starting point for Orin Nano and AGX Orin. It can also be used as a compact comparison on Thor.
+
+The starter pipeline is entirely local:
 
 ```text
-INFO:     Uvicorn running on http://0.0.0.0:8010
+browser microphone
+  -> Speaches Faster-Whisper (:18080)
+  -> Gemma 4 E2B llama.cpp (:8080)
+  -> Speaches Kokoro (:18080)
+  -> browser speaker
 ```
 
-Verify the OpenAI-compatible API:
+Speaches exposes OpenAI-compatible speech APIs. Gemma is a separate OpenAI-compatible Chat Completions service, so you can replace the LLM without restarting speech.
 
-```bash
-curl http://localhost:8010/v1/models
-```
-
-You should see `nvidia/cosmos-reason2-8b-fp8` in the response.
-
-<Warning title="⚠️ Port conflict with RIVA">
-  Do not use vLLM's default port when RIVA is running. Keep vLLM on `8010` or another unused port, then use the same port in Multi-Modal AI Studio's LLM API base URL.
+<Warning title="Orin Nano memory headroom">
+  On an 8 GB Orin Nano, stop unrelated GPU workloads before starting the pipeline. A 16 GB swap file is strongly recommended to absorb transient CPU-side allocations while the models load. Swap does not increase GPU memory; the default tiny ASR model, 2048-token Gemma context, and text-only `--no-mmproj` configuration keep the active pipeline small enough for this device.
 </Warning>
 
-## Step 3: Start Multi-Modal AI Studio
-
-In a **new terminal**, keep RIVA and vLLM running, then clone and install the application:
+### 1. Start and verify speech
 
 ```bash
-git clone https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio.git ~/multi_modal_ai_studio
-cd ~/multi_modal_ai_studio
-
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install -e .
+cd ~/voice-workbench-backends
+./scripts/speaches_speech.sh doctor
+./scripts/speaches_speech.sh start
+./scripts/speaches_speech.sh verify
 ```
 
-Launch the Studio server and point it at the local RIVA and vLLM services:
+The launcher pulls the pinned dual-architecture CUDA image and installs these starter models in a persistent Docker volume:
+
+<div style="overflow-x: auto;">
+
+| Stage | Model |
+| --- | --- |
+| ASR | `Systran/faster-whisper-tiny.en` |
+| TTS | `speaches-ai/Kokoro-82M-v1.0-ONNX-fp16` |
+| Default voice | `af_heart` |
+
+</div>
+
+`verify` synthesizes a short sample through the TTS API and transcribes it through the ASR API. Do not continue until it prints `Speech API smoke test passed`.
+
+### 2. Start and verify Gemma 4
 
 ```bash
-multi-modal-ai-studio --port 8092 \
-  --asr-server localhost:50051 \
-  --tts-server localhost:50051 \
-  --llm-api-base http://localhost:8010/v1 \
-  --llm-model nvidia/cosmos-reason2-8b-fp8
+./scripts/gemma4_llm.sh doctor
+./scripts/gemma4_llm.sh start
+./scripts/gemma4_llm.sh verify
 ```
 
-## Step 4: Open the Web Interface
+The launcher selects the Jetson Orin or Thor llama.cpp image automatically and serves `unsloth/gemma-4-E2B-it-GGUF:Q4_K_S`. It enables Gemma's MTP draft, disables hidden reasoning for lower time to first speech, limits context to 2048 tokens, and skips the multimodal projector because this starter configuration uses Gemma as a text LLM.
 
-From your client PC browser, open:
+### 3. Start the workbench
+
+```bash
+cd ~
+voice-ai-workbench --preset speaches-jetson --port 8092
+```
+
+Open the URL printed by the server, normally:
 
 ```text
 https://<JETSON_IP>:8092
 ```
 
-Accept the self-signed certificate by clicking **Advanced** and continuing to the site. HTTPS is required because browsers restrict microphone and camera access on insecure origins.
-
-When prompted, allow microphone and camera permissions.
-
-## Step 5: Configure and Run a Voice + Vision Session
-
-Click **New Voice Chat** to open the configuration panel. First configure the tabs below, then click **Start Session** and speak naturally.
-
-![Multi-Modal AI Studio session interface](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/raw/main/docs/images/screenshot_example_2.png)
-
-<details>
-<summary><strong>1. ASR Tab → Select "RIVA Speech"</strong></summary>
-
-<div style="overflow-x: auto; margin: 1.5rem 0;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Setting</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Value</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Server Address</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>localhost:50051</code></td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">ASR Language</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>en-US</code></td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; font-weight: 500;">ASR Model</td><td style="padding: 12px 16px;"><code>parakeet-1.1b-en-US-asr-streaming-silero-vad-sortformer</code></td></tr>
-</tbody>
-</table>
-</div>
-
-The Silero VAD variant detects when you start and stop speaking, so the system knows when to begin transcription and when your turn is over.
-
-</details>
-
-<details>
-<summary><strong>2. LLM/VLM Tab</strong></summary>
-
-<div style="overflow-x: auto; margin: 1.5rem 0;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Setting</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Value</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">API Base URL</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>http://localhost:8010/v1</code></td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Model</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>nvidia/cosmos-reason2-8b-fp8</code></td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Utility Model</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>nvidia/cosmos-reason2-8b-fp8</code></td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Enable Streaming Responses</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Checked</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Include Conversation History</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Checked</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Enable Vision (VLM)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>Video Input</code></td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; font-weight: 500;">System Prompt</td><td style="padding: 12px 16px;">See below</td></tr>
-</tbody>
-</table>
-</div>
-
-Suggested system prompt for concise vision responses:
+After verifying that the address belongs to your Jetson on a trusted network, accept its local development certificate, allow microphone access, select **Check servers**, and start a session. Try these short prompts:
 
 ```text
-You are a vision assistant. Give one short sentence answers only. Be direct. No explanations. Use plain text only.
+Hi, can you hear me?
+What is one plus one?
+Tell me one short safety rule for a home robot.
 ```
 
-<Note title="📝 Why these settings?">
-  - **Streaming Responses** lets TTS start speaking before the full LLM response is generated, reducing perceived latency.
-  - **Conversation History** gives the LLM context from previous turns, enabling follow-up questions.
-  - **Vision (Video Input)** captures frames from the camera and includes them in the LLM prompt.
-  - **System Prompt** shapes the AI's behavior. Shorter responses mean faster TTS and a more conversational feel.
+While the assistant is speaking, test interruption with:
+
+```text
+Stop. What is one plus one?
+```
+
+When you stop the session, select it in the left sidebar to review the transcript, audio waveforms, pipeline timeline, time-to-first-audio measurements, and Jetson system information.
+
+
+### From a browser test to a robot's audio devices
+
+Start with the **Browser / WebRTC** microphone and speaker selections in the **Devices** tab. They use the computer that opened the page, while model inference runs on Jetson. This is the simplest way to compare models, adjust the system prompt, and measure responsiveness without attaching audio hardware to the robot.
+
+For Linux **Server USB** audio, the ALSA device path uses `arecord` and `aplay`. If these commands are missing, install them with `sudo apt install alsa-utils`. This path does not require the PyAudio extra; see the [0.2.0 device dependencies](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/v0.2.0/INSTALL.md#1-optional-device-system-dependencies) for other device types.
+
+Once the conversation works, connect a USB microphone and speaker to Jetson and select the **Server USB** devices instead. Save a separate preset with those device choices so the robot uses its own audio hardware, not the laptop's. Recheck capture, playback, and barge-in: acoustic echo, device sample rates, and microphone levels differ between the two paths. A speakerphone with acoustic echo cancellation or a headset is useful during testing.
+
+The CLI also offers experimental headless operation using a saved configuration. See the [device and headless setup instructions](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/INSTALL.md) before deploying without a browser; a successful browser test alone does not qualify the server-local device path.
+
+### REST and Realtime speech paths
+
+The default `speaches-jetson` preset uses REST transcription and speech APIs. The workbench detects speech boundaries locally and sends each completed utterance as a WAV request. Its Realtime ASR adapter instead sends microphone audio over a WebSocket and consumes the backend's speech-boundary and transcription events. Realtime ASR does not require Realtime TTS; the Speaches Realtime ASR preset keeps Kokoro on the REST speech API.
+
+<Warning title="Speaches Realtime evaluation">
+  Concurrent ASR, LLM, and TTS testing on Orin Nano exposed errors and delayed interruption with the pinned public Speaches 0.9.0-rc.3 image. Follow-up tests passed with a locally corrected backend, but that corrected image is not yet published. Updating Voice AI Workbench alone does not install those server fixes. Keep the REST preset for the recommended public quick start; the Realtime command below is an optional diagnostic path, not equivalent qualification of the public image.
+</Warning>
+
+To evaluate the Realtime ASR path against a suitable backend, stop the current workbench process with **Ctrl+C** in its terminal, then restart it with the alternate preset. Keep the model services running:
+
+```bash
+cd ~
+voice-ai-workbench --preset speaches-realtime-asr-jetson --port 8092
+```
+
+Speaches emits Realtime session and speech-boundary events, then transcribes each completed speech segment with Faster-Whisper. This is not token-by-token model-native Faster-Whisper decoding, so partial transcript deltas may not be available.
+
+## Stop the demo
+
+Stop the foreground workbench process with **Ctrl+C** in its terminal. Closing the browser or ending a conversation does not stop the model services. Stop only the services you started for this tutorial.
+
+For the Orin Speaches + Gemma path:
+
+```bash
+cd ~/voice-workbench-backends
+./scripts/gemma4_llm.sh stop
+./scripts/speaches_speech.sh stop
+```
+
+For the Thor path, stop the foreground Cosmos vLLM process with **Ctrl+C** in its terminal, then stop the speech services:
+
+```bash
+cd ~/voice-workbench-backends
+./scripts/nvidia_open_models_speech.sh stop
+```
+
+The launcher stop commands preserve the model caches. Use the corresponding `start` and `verify` commands above when you return to the demo.
+
+## Compare other models after the baseline
+
+The services are independent. Keep the same input, room, and device settings, change one backend at a time, and compare recognition accuracy, first-text latency, first-audio latency, playback gaps, and recovery after interruption.
+
+- **Multilingual Whisper:** the Orin quick start's `tiny.en` is English-only. For a multilingual comparison, download `Systran/faster-whisper-small` into Speaches, reload the ASR model list, and select the matching input language. Larger variants such as `large-v3-turbo` are comparison candidates, not guaranteed latency improvements.
+- **Gemma:** keep E2B as the small text baseline, or compare [Gemma 4 12B](/models/gemma4-12b/) with its matching multimodal projector for image understanding. The E2B quick start deliberately disables the projector; enabling vision requires a vision-capable serving configuration as well as the workbench setting.
+- **Qwen3-TTS:** [1.7B CustomVoice](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice) can be served through an OpenAI-compatible speech endpoint, for example with [vLLM-Omni](https://docs.vllm.ai/projects/vllm-omni/en/latest/). Select **OpenAI REST API**, the model endpoint, and a supported voice such as `ryan`. Start without early TTS, then compare overlap.
+
+<Note title="Qwen3-TTS streaming and future voice controls">
+  In the evaluated vLLM-Omni setup, an explicit provider streaming request returned PCM before synthesis finished. VAW 0.2.0's generic REST adapter does not send that provider-specific `stream` field, and the same server buffered that request. Do not attribute native streaming timing to the released application. Dedicated instructions, VoiceDesign, and reference-voice cloning controls remain separate 0.3.0 development work.
 </Note>
 
-</details>
-
-<details>
-<summary><strong>3. TTS Tab</strong></summary>
-
-<div style="overflow-x: auto; margin: 1.5rem 0;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Setting</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Value</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">RIVA Server</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>localhost:50051</code></td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">TTS Model</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>magpie_tts_ensemble_Magpie-Multilingual</code></td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Language</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">English (US)</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Sample Rate (Hz)</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>22050</code></td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Quality</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">High (Better)</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Start speaking before LLM finishes</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Checked</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; font-weight: 500;">Words before first speech</td><td style="padding: 12px 16px;"><code>10</code></td></tr>
-</tbody>
-</table>
-</div>
-
-"Start speaking before LLM finishes" is key for low latency. TTS begins synthesizing after the first 10 words arrive from the LLM, rather than waiting for the complete response.
-
-</details>
-
-<details>
-<summary><strong>4. Devices Tab</strong></summary>
-
-<div style="overflow-x: auto; margin: 1.5rem 0;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Setting</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Value</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Camera Device</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>Default (browser)</code></td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Microphone Device</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;"><code>Default (browser)</code></td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; font-weight: 500;">Speaker Device</td><td style="padding: 12px 16px;"><code>Default (browser)</code></td></tr>
-</tbody>
-</table>
-</div>
-
-These devices are selected from the client browser. If you open the UI on a laptop, the laptop microphone, camera, and speakers are used even though the AI services run on Jetson.
-
-</details>
-
-<details>
-<summary><strong>5. App Tab</strong></summary>
-
-<div style="overflow-x: auto; margin: 1.5rem 0;">
-<table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
-<thead>
-<tr style="background: #e2e8f0; color: #1e293b;">
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Setting</th>
-<th style="padding: 12px 16px; text-align: left; font-weight: 600;">Value</th>
-</tr>
-</thead>
-<tbody>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Start sessions with microphone muted</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Unchecked</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Barge-in</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Unchecked</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; font-weight: 500;">Session Directory</td><td style="padding: 12px 16px;">Default (<code>sessions</code>)</td></tr>
-</tbody>
-</table>
-</div>
-
-Once the basic session is working, enable barge-in to test interruption behavior.
-
-</details>
-
-After the session starts, watch the timeline at the bottom of the interface. It shows when each stage starts and finishes:
-
-- **ASR** transcribes your speech.
-- **LLM/VLM** generates the assistant response.
-- **TTS** synthesizes and plays audio.
-
-Try prompts that require both speech and vision:
-
-```text
-What object am I holding?
-```
-
-```text
-Describe what changed in the scene.
-```
-
-```text
-Is there a person visible? Answer yes or no.
-```
-
-When you are finished, click the red stop button. Select the session from the history sidebar to review the transcript, timeline, and latency metrics.
+For model installation and lifecycle details, see the [Speaches guide](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/v0.2.0/docs/setup_speaches_jetson.md) and [NVIDIA open speech guide](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/v0.2.0/docs/setup_open_models_jetson.md).
 
 ## Tuning for Lower Latency
 
@@ -340,11 +334,11 @@ The best settings depend on your model, microphone, room noise, and use case. Th
 </thead>
 <tbody>
 <tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Short system prompt</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Reduces prompt tokens and encourages concise responses</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Streaming responses</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Allows TTS to start before the full response is complete</td></tr>
-<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Words before first speech</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Lower values start speech earlier, but can sound less natural</td></tr>
+<tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Streaming responses + early TTS</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Can start speech before the full response is complete; compare against waiting for completion if playback has gaps</td></tr>
+<tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Units before first speech</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Lower values can start speech earlier, but shorter chunks can sound less natural</td></tr>
 <tr style="background: #ffffff;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">VAD sensitivity</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Improves turn detection in noisy rooms</td></tr>
 <tr style="background: #f8fafc;"><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">Max model length</td><td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">Reduces KV cache memory pressure</td></tr>
-<tr style="background: #ffffff;"><td style="padding: 12px 16px; font-weight: 500;">GPU memory utilization</td><td style="padding: 12px 16px;">Leaves headroom for RIVA and the app</td></tr>
+<tr style="background: #ffffff;"><td style="padding: 12px 16px; font-weight: 500;">GPU memory utilization</td><td style="padding: 12px 16px;">Leaves headroom for ASR, TTS, and the app</td></tr>
 </tbody>
 </table>
 </div>
@@ -356,14 +350,42 @@ The best settings depend on your model, microphone, room noise, and use case. Th
 ## Troubleshooting
 
 <details>
-<summary><code>multi-modal-ai-studio: command not found</code></summary>
+<summary>Speaches reports <code>No models found</code></summary>
+
+Confirm the service and installed models, then rerun the idempotent start command if either starter model is missing:
+
+```bash
+cd ~/voice-workbench-backends
+./scripts/speaches_speech.sh status
+./scripts/speaches_speech.sh models
+./scripts/speaches_speech.sh start
+```
+
+</details>
+
+<details>
+<summary>Gemma or Kokoro fails to load on an 8 GB Orin Nano</summary>
+
+Stop unrelated GPU containers, keep the default tiny ASR model and 2048-token Gemma context, and confirm that swap is active:
+
+```bash
+docker ps
+free -h
+swapon --show
+```
+
+The recommended configuration was qualified with a 16 GB swap file. Swap helps with transient CPU allocations during loading, but it does not increase GPU memory. If memory pressure continues, use a smaller OpenAI-compatible LLM while keeping the same speech service.
+
+</details>
+
+<details>
+<summary><code>voice-ai-workbench: command not found</code></summary>
 
 Activate the Python virtual environment before launching:
 
 ```bash
-cd ~/multi_modal_ai_studio
-source .venv/bin/activate
-multi-modal-ai-studio --help
+source ~/voice-workbench-venv/bin/activate
+voice-ai-workbench --help
 ```
 
 </details>
@@ -371,18 +393,20 @@ multi-modal-ai-studio --help
 <details>
 <summary>Port <code>8092</code> is already in use</summary>
 
-Stop the existing process and restart:
+Identify the listener before stopping anything:
 
 ```bash
-fuser -k 8092/tcp
+ss -ltnp 'sport = :8092'
 ```
+
+If it is your existing workbench process, stop it with **Ctrl+C** in its terminal. Otherwise, leave that service running and choose another port, for example `voice-ai-workbench --preset speaches-jetson --port 8101`, from outside the backend checkout.
 
 </details>
 
 <details>
 <summary>vLLM fails to start because ports are busy</summary>
 
-Do not use vLLM's default port when RIVA is running. Use `--port 8010` or another unused port, then update the Studio LLM API base URL to match.
+Use an unused port, such as `--port 18087` in the Thor example, and match it in the workbench's LLM API base URL. Check `docker ps` and `ss -ltnp` before stopping an existing service.
 
 </details>
 
@@ -395,7 +419,7 @@ Make sure you opened the HTTPS URL:
 https://<JETSON_IP>:8092
 ```
 
-Accept the self-signed certificate and allow browser permissions for microphone and camera.
+Verify the Jetson address before accepting its self-signed development certificate, then allow browser permissions for microphone and camera.
 
 </details>
 
@@ -409,11 +433,14 @@ The ASR stream can time out if it stops receiving audio for an extended period. 
 <details>
 <summary>GPU memory is not released after stopping vLLM</summary>
 
-After stopping the vLLM container, clear cached memory:
+Check whether another model process or container is still running:
 
 ```bash
-sudo sysctl -w vm.drop_caches=3
+docker ps
+free -h
 ```
+
+Stop only the model services you no longer need. Linux page-cache reclamation does not release memory held by a live inference process; do not use `vm.drop_caches` as a GPU-memory fix.
 
 </details>
 
@@ -421,13 +448,19 @@ sudo sysctl -w vm.drop_caches=3
 
 - Change the system prompt to create a different assistant personality.
 - Enable barge-in and test interrupting the assistant while it is speaking.
+- Compare REST ASR with the Realtime transcription preset after checking the backend limitation above.
+- Try Nemotron 3.5 ASR and Magpie TTS through the NVIDIA open model services.
+- Try another OpenAI-compatible TTS backend, voice, language, or speaking speed.
 - Try a USB camera connected directly to Jetson.
 - Compare latency with vision enabled and disabled.
 - Save your favorite configuration as a preset.
-- Swap the vLLM model or RIVA voices to evaluate different pipeline combinations.
+- Compare Cosmos3-Edge with another independently served LLM/VLM while keeping the speech models fixed.
 
 ## Resources
 
-- [Multi-Modal AI Studio GitHub repository](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio)
-- [Cosmos Reason2 on Jetson](/tutorials/cosmos-reason2-vlm/)
+- [Voice AI Workbench GitHub repository (legacy repository name)](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio)
+- [Speaches on Jetson quick-start reference](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_speaches_jetson.md)
+- [NVIDIA open speech models on Jetson](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/setup_open_models_jetson.md)
+- [Speech API backend matrix](https://github.com/NVIDIA-AI-IOT/multi_modal_ai_studio/blob/main/docs/api_backends.md)
+- [Cosmos3-Edge on Jetson](/models/cosmos3-edge/)
 - [Live VLM WebUI](/tutorials/live-vlm-webui/)
