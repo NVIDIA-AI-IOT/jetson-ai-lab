@@ -14,10 +14,10 @@ Mjölnir ("Thor's hammer") is an open-source serving stack for edge GPUs built a
 
 - **A decode-attention kernel per chip** — a CuTe DSL kernel on Jetson AGX Thor's `tcgen05` tensor cores (TMA + TMEM pipeline, occupancy-pinned split-KV), an `mma.sync` kernel in the FlashAttention-2 style on Jetson Orin's Ampere SMs — each written for its exact memory hierarchy.
 - **A 6-bit `e2m3` KV cache for vLLM** — 25% fewer bytes than fp8 at near-fp8 accuracy, read directly by the MMA (`kind::f8f6f4`), holding ~31% more tokens of context in the same memory.
-- **A patched vLLM 0.33 image** (`narandill/mjolnir-vllm`) that carries the kernel, the fp8 lm-head and a 64K-draft MTP drafter — run it with `--attention-backend MJOLNIR` or the `mjolnir` CLI.
+- **A patched vLLM image** (`narandill/mjolnir-vllm`) that carries the kernel, the fp8 lm-head and a 64K-draft MTP drafter — run it with `--attention-backend MJOLNIR` or the `mjolnir` CLI.
 - **A CLI that benchmarks every claim** — `mjolnir serve / bench / verify / calibrate / plot`, with raw JSON behind every number and per-model configs as YAML ("models as code").
 
-### Measured results (Qwen3.8-27B, same-run A/B vs the official `vllm-openai:v0.33.0` image)
+### Measured results (`Qwen3.8-27B`, same-run A/B vs the official `vllm-openai:v0.33.0` image)
 
 | | Jetson AGX Thor | Jetson AGX Orin |
 |---|---|---|
@@ -28,7 +28,7 @@ Mjölnir ("Thor's hammer") is an open-source serving stack for edge GPUs built a
 | Kernel vs FlashInfer (geomean, L = 128…256K) | **1.21×** (2.17× vs FA4 hd256) | **1.13×** |
 | Accuracy | tool calling within ±3.6 pts of stock | 48/48 correctness checks |
 
-Full case studies, per-context tables and reproducible commands: [Thor](https://github.com/GoBrrr-ai/mjolnir/blob/main/docs/platforms/thor/README.md) and [Orin](https://github.com/GoBrrr-ai/mjolnir/blob/main/docs/platforms/orin/README.md), with interactive charts at [GoBrrr-ai.github.io/mjolnir](https://gobrrr-ai.github.io/mjolnir/).
+Full case studies, per-context tables and reproducible commands: [Thor](https://github.com/GoBrrr-ai/mjolnir/blob/main/docs/platforms/thor/README.md) and [Orin](https://github.com/GoBrrr-ai/mjolnir/blob/main/docs/platforms/orin/README.md).
 
 The kernel itself is grown by an **autoresearch loop**: coding agents propose, implement and benchmark kernel experiments overnight against a fixed harness, and every attempt — kept, discarded or crashed — lands on a public ledger. See the tutorial [Mjolnir: Autoresearch of vLLM Jetson specific kernel](/tutorials/mjolnir-autoresearch/).
 
