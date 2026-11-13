@@ -30,7 +30,7 @@ Mjölnir ("Thor's hammer") is an open-source serving stack for edge GPUs built a
 
 Full case studies, per-context tables and reproducible commands: [Thor](https://github.com/GoBrrr-ai/mjolnir/blob/main/docs/platforms/thor/README.md) and [Orin](https://github.com/GoBrrr-ai/mjolnir/blob/main/docs/platforms/orin/README.md).
 
-The kernel itself is grown by an **autoresearch loop**: coding agents propose, implement and benchmark kernel experiments overnight against a fixed harness, and every attempt — kept, discarded or crashed — lands on a public ledger. See the tutorial [Mjolnir: Autoresearch of vLLM Jetson specific kernel](/tutorials/mjolnir-autoresearch/).
+The kernel itself is grown by an **autoresearch loop**: coding agents propose, implement and benchmark kernel experiments overnight against a fixed harness, and every attempt — kept, discarded or crashed — lands on a public ledger. See the tutorial [Mjolnir Autoresearch: an agent loop for Jetson vLLM kernels](/tutorials/mjolnir-autoresearch/).
 
 ### Resources
 
