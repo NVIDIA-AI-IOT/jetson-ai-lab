@@ -1,5 +1,5 @@
 ---
-title: "voice-containers"
+title: "Voice Containers"
 description: "Production-ready speech containers for Jetson: 10 recognition and 5 synthesis engines, one Docker image each, OpenAI-compatible /v1/audio APIs and Wyoming streaming — with sm_87 + sm_110a cubins baked side by side for AGX Orin and AGX Thor."
 author: "Mieszko Syty"
 date: "2026-11-13"
