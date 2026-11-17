@@ -13,7 +13,7 @@
     "start": "astro dev",
     "prebuild": "npm run check:model-metadata && npm run test:model-freshness",
     "build": "astro build",
-    "postbuild": "npm run check:llms-full",
+    "postbuild": "npm run test:llms-full && npm run check:llms-full",
     "preview": "astro preview",
     "check:model-metadata": "node scripts/check-model-catalog-metadata.mjs",
     "check:llms-full": "node scripts/check-llms-full-output.mjs",
@@ -24,7 +24,8 @@
     "benchmark:layered-shaders": "node scripts/benchmark-layered-model-shaders.mjs",
     "benchmark:all-model-shaders": "npm run benchmark:model-shaders && npm run benchmark:layered-shaders",
     "test:models-ui": "node scripts/test-model-catalog.mjs",
-    "astro": "astro"
+    "astro": "astro",
+    "test:llms-full": "node --test scripts/test-llms-full-output.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.0.0",
