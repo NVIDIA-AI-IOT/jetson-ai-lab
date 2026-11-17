@@ -181,7 +181,7 @@ The [companion toolkit](https://github.com/explicitcontextualunderstanding/jetso
 
 ## NVRAM Slot Surgery
 
-When the ESC menu will not save, reset the boot-slot flags from the shell instead. Slot health lives in NVRAM under NVIDIA's public variable GUID (`781e084c-a330-417c-b678-38e696380cb9`, specified in the [NVIDIA UEFI Adaptation Guide](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html)):
+Diagnose slot health and boot mode from NVRAM. The slot state lives under NVIDIA's public variable GUID (`781e084c-a330-417c-b678-38e696380cb9`, specified in the [NVIDIA UEFI Adaptation Guide](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html)):
 
 ```text
 Shell> dmpstore RootfsStatusSlotA
@@ -189,18 +189,14 @@ Shell> dmpstore L4TDefaultBootMode
 ```
 
 - `RootfsStatusSlotA` / `RootfsStatusSlotB`: `0x00000000` = Normal, `0x000000FF` = Unbootable. A wedged recovery loop usually shows `0xFF`.
-- `L4TDefaultBootMode`: `0x00000000` = boot GRUB, `0x00000001` = normal kernel and DTB from the filesystem (the direct/ExtLinux path), `0x00000002` = normal kernel and DTB from partitions, `0x00000003` = recovery kernel and DTB from partitions—a recovery loop persists with this value (per the [official variable table](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html#uefi-variables)).
+- `L4TDefaultBootMode`: `0x00000000` = boot GRUB, `0x00000001` = normal kernel and DTB from the filesystem (the direct/ExtLinux path), `0x00000002` = normal kernel and DTB from partitions, `0x00000003` = recovery kernel and DTB from partitions—a recovery loop persists with this value (per the [official boot mode table](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html#customizing-the-default-boot-mode-in-the-configuration-file)).
 
-Clear a wedged flag with an empty `setvar` assignment (deleting the variable restores its default):
-
-```text
-Shell> setvar RootfsStatusSlotA -guid 781e084c-a330-417c-b678-38e696380cb9 =
-```
-
-<div class="admonition danger">
-  <p class="admonition-title">🚫 If setvar returns EFI_WRITE_PROTECTED</p>
-  <p>Some JetPack builds restrict NVRAM writes at runtime, and stock 7.2.x can when Secure Boot or variable locks are active. Do not loop on it: use the ESC setup menu instead, or fall back to recovery flashing. Once a variable is confirmed written, verify with <code>dmpstore</code> and power-cycle before concluding success.</p>
+<div class="admonition warning">
+  <p class="admonition-title">⚠️ Do not delete variables with setvar</p>
+  <p>Do not attempt to clear flags by deleting the variable with an empty <code>setvar</code> assignment (<code>setvar RootfsStatusSlotA ... =</code>). In <code>L4TLauncher</code>, rootfs validation (<code>ValidateRootfsStatus</code>) requires the variable to exist with a valid value; missing variables produce <code>EFI_NOT_FOUND</code> and fail validation. Furthermore, runtime variable locks frequently cause <code>setvar</code> to fail with <code>EFI_WRITE_PROTECTED</code> from the shell.</p>
 </div>
+
+To restore normal boot, use NVIDIA's documented methods: the **ESC Setup menu** (Device Manager → NVIDIA Configuration → L4T Configuration, as shown above) or the in-band **`efivarfs`** procedure below.
 
 Inside the Linux recovery shell (`bash-5.1#` on serial after a rootfs fallback), the same flags are resettable in-band through `efivarfs` without needing the UEFI Shell or ESC menu. The complete procedure—per NVIDIA's [official recovery-exit procedure](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/SD/Bootloader/UEFI.html#set-the-system-to-normal-boot-from-the-recovery-kernel-boot)—resets the slot status **and restores `L4TDefaultBootMode`**: clearing the slot alone can leave the device booting the recovery partition again on the next boot.
 
