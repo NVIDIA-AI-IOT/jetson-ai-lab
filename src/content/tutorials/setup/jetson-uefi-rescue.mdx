@@ -251,13 +251,7 @@ RunPreIsoInstaller: Capsule staged 5 times but version not bumped, aborting to p
 L4TLauncher: Iso boot loop detected, halting
 ```
 
-The ISO arms a QSPI firmware capsule on every boot, but the firmware version never advances (see NVIDIA's [Capsule Update documentation](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Library/FmpDeviceLib/CapsuleUpdateJetson.md))—typically NVRAM write protection, or a newer PCN-revision module (PCN 211461/211462, introduced in [Jetson Linux r36.4.0](https://developer.nvidia.com/embedded/jetson-linux-r3640)) sitting on pre-r36.4.0 firmware. Remedy: bump QSPI out-of-band from a Linux host in Force Recovery.⚠️ **`--erase-all` erases the data on the entire boot media you flash to, not only QSPI**—back up the target storage first if it holds anything you need, and follow NVIDIA's [official flashing instructions](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/IN/QuickStart.html):
-
-```bash
-sudo ./l4t_initrd_flash.sh --erase-all jetson-orin-nano-devkit-super internal
-```
-
-Then verify the banner reports `39.2.x` and boot the ISO again.
+The ISO arms a QSPI firmware capsule on every boot, but the firmware version never advances (see NVIDIA's [Capsule Update documentation](https://github.com/NVIDIA/edk2-nvidia/blob/r39.2.1/Silicon/NVIDIA/Library/FmpDeviceLib/CapsuleUpdateJetson.md))—typically NVRAM write protection, or a newer PCN-revision module (PCN 211461/211462, introduced in [Jetson Linux r36.4.0](https://developer.nvidia.com/embedded/jetson-linux-r3640)) sitting on pre-r36.4.0 firmware. Remedy: bump QSPI out-of-band from a Linux host in Force Recovery, and let NVIDIA's tooling do the flashing instead of a hand-typed command. ⚠️ **`--erase-all` erases the data on the entire boot media you flash to, not only QSPI**—back up the target storage first if it holds anything you need. The [`jetson-flash-image` skill](https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills) (in the [Jetson Agent Skills](/tutorials/jetson-agent-skills) catalog) resolves the board conf, drives RCM entry, runs the `0955:7X23` preflight gate, and invokes the right `flash.sh` / `l4t_initrd_flash.sh` flow; for the manual equivalent, follow NVIDIA's [official flashing instructions](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/IN/QuickStart.html). Either way, verify the firmware banner reports `39.2.x`, then boot the ISO again.
 
 ### Install aborts at Step 9/13 ("Updating boot firmware")
 
@@ -275,13 +269,7 @@ RCM is the escalation for layer-1 failures—when the firmware itself cannot exe
 1. Disconnect power. Jumper the **FORCE_RECOVERY_N** pin (Pin 10) to GND (Pin 9) on the J14 button header of the Orin Nano Developer Kit carrier (per the [Orin Nano Developer Kit User Guide](https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/howto.html#force-recovery-mode)).
 2. Connect USB to the host, reconnect power, remove the jumper (the state latches on reset release).
 3. Confirm the host sees the device: `lsusb -d 0955:` must report an APX device at the T23x/Orin recovery VID:PID—match the trailing `23`, for example `0955:7523 NVIDIA Corp. APX` on Orin Nano 8 GB and `0955:7623` on 4 GB. A literal single-PID check misses valid module variants.
-4. Flash from an Ubuntu host. ⚠️ **`--erase-all` erases the data on the entire boot media you flash to, not only QSPI.** Back up the NVMe/SD first if it holds anything you need, and follow NVIDIA's [official flashing instructions](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/IN/QuickStart.html):
-
-```bash
-sudo ./l4t_initrd_flash.sh --erase-all jetson-orin-nano-devkit-super internal
-```
-
-Host-side entry can also be driven from a flashed BSP with the in-tree automation instead of the jumper: `<Linux_for_Tegra>/tools/board_automation/boardctl -t topo recovery` (list the targets your BSP advertises with `<boardctl> -h`; `topo` is NVIDIA's recommended one when present). NVIDIA's [`jetson-flash-image` skill](https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills) in the [Jetson Agent Skills](/tutorials/jetson-agent-skills) catalog automates this leg: RCM entry, the `0955:7X23` preflight gate, and the `flash.sh` / `l4t_initrd_flash.sh` invocation.
+4. Delegate the flash itself. ⚠️ **`--erase-all` erases the data on the entire boot media you flash to, not only QSPI.** Back up the NVMe/SD first if it holds anything you need. Use NVIDIA's [`jetson-flash-image` skill](https://github.com/NVIDIA-AI-IOT/jetson-bsp-skills) from the [Jetson Agent Skills](/tutorials/jetson-agent-skills) catalog: it resolves the board conf, re-enters RCM through the in-tree `boardctl` (`<Linux_for_Tegra>/tools/board_automation/boardctl -t topo recovery`; list your BSP's targets with `<boardctl> -h`) or the manual jumper you just used, runs the `0955:7X23` preflight gate, and invokes the correct `flash.sh` / `l4t_initrd_flash.sh` flow. The manual equivalent is in NVIDIA's [official flashing instructions](https://docs.nvidia.com/jetson/archives/r39.2.1/DeveloperGuide/IN/QuickStart.html). Verify the firmware banner reports `39.2.x` after flashing.
 
 <details class="nv-details">
 <summary>Bench-validating rescue media before it touches the board</summary>
@@ -289,7 +277,7 @@ Host-side entry can also be driven from a flashed BSP with the in-tree automatio
 
 A rescue stick can be boot-tested end-to-end on a workstation with QEMU and AAVMF (Debian's TianoCore EDK2 build for AArch64—the same firmware family as Jetson's): build a byte-faithful replica of the stick, attach it as USB mass storage to `qemu-system-aarch64 -M virt`, and require both a visible GRUB entry and the kernel reaching `Linux version` on the console.
 
-The validity is asymmetric: a GRUB-layer failure under AAVMF is diagnostic for the Jetson (same EDK2 family, same GRUB semantics), but a success proves only the GRUB layer—it says nothing about `L4tLauncher` probe order, Tegra USB/NVMe enumeration, QSPI/NVRAM state, or ext4 driver behavior. Always finish with one boot on real hardware before trusting the stick. There is no Tegra234 machine model in QEMU and no public FVP from NVIDIA, so this substitute-firmware point is the only available one. Full procedure: the companion runbook, Tier 2.
+The validity is asymmetric: a GRUB-layer failure under AAVMF is diagnostic for the Jetson (same EDK2 family, same GRUB semantics), but a success proves only the GRUB layer—it says nothing about `L4tLauncher` boot-mode branching, Tegra USB/NVMe enumeration, QSPI/NVRAM state, or ext4 driver behavior. Always finish with one boot on real hardware before trusting the stick. There is no Tegra234 machine model in QEMU and no public FVP from NVIDIA, so this substitute-firmware point is the only available one. Full procedure: the companion runbook, Tier 2.
 
 </div>
 </details>
