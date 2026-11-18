@@ -1,6 +1,6 @@
 ---
-title: "Build a Video AI Pipeline with D1 and Cosmos on Jetson Thor"
-description: "Use D1-2B to find traffic queues in recorded video, then verify the selected clips with Cosmos and VSS on Jetson AGX Thor."
+title: "Build a Video AI Pipeline Using VSS with D1 and Cosmos"
+description: "Use NVIDIA Video Search and Summarization, D1-2B, and Cosmos to find traffic queues and review selected clips on Jetson AGX Thor."
 category: "Applications"
 section: "Vision Language Models"
 tags: ["vss", "jetson-thor", "decision-models", "video-analytics", "vlm"]
@@ -10,9 +10,25 @@ authors:
     github: "hmoustafanvidia"
 ---
 
+NVIDIA [Video Search and Summarization (VSS)](https://docs.nvidia.com/vss) is an open-source blueprint for building video AI applications. The source code is available in the [VSS GitHub repository](https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization). VSS can ingest live or recorded video, search it with natural-language queries, and summarize the events it finds.
+
+VSS also provides a [Real-Time Alerts workflow](https://docs.nvidia.com/vss/vision-agent/agent-workflows/real-time-alerts). On Jetson AGX Thor, start the VSS Alerts developer profile and describe what you want to detect in plain language, such as stopped vehicles or a dropped box. The real-time VLM checks the RTSP stream and creates an alert when it finds a match. You can review the alert in the VSS UI, ask the agent about it, or generate a report.
+
+## Example: Traffic camera analysis
+
 ![On Jetson AGX Thor, D1-2B scores two recordings. If every check meets the cutoff, VIOS stores the clip and Cosmos reviews it. Otherwise the clip skips review.](/images/vss-with-jetson/decision-to-review.png)
 
 A traffic camera can record for hours while the evidence you need lasts seconds. In this tutorial, you’ll build a pipeline on Jetson AGX Thor that looks for queued traffic and asks Cosmos to review the clips that meet a trigger.
+
+This tutorial builds a custom two-stage pipeline rather than using the stock VSS Alerts profile. D1 first decides whether a clip meets the traffic condition, then VSS sends qualifying clips to Cosmos for review.
+
+## Overview
+
+![VSS traffic monitor showing live D1 queue detection, saved event clips, Cosmos verification, and follow-up chat.](/images/vss-with-jetson/vss-traffic-monitor.png)
+
+[D1-2B](https://huggingface.co/LiquidAI/d1-2B) answers a yes/no question for each window of video. A short Python script applies the trigger. Only a recording that meets the cutoff on all three checks reaches [Cosmos3 Nano Reasoner through VSS RT-VLM](https://docs.nvidia.com/vss/system-components/vision-microservices/real-time-vlm). Cosmos returns a verdict and explains the visible evidence.
+
+VSS Video I/O and Storage (VIOS) keeps the selected clip so you can ask follow-up questions about the same evidence. The walkthrough runs D1 and Cosmos in sequence on the same Thor, using the public VSS 3.3.0 release and the VSS CLI.
 
 ## Run the streaming example
 
@@ -42,14 +58,6 @@ To build the two-stage pipeline yourself with two local recordings, follow the s
 
 ---
 
-## Overview
-
-[D1-2B](https://huggingface.co/LiquidAI/d1-2B) answers a yes/no question for each window of video. A short Python script applies the trigger. Only a recording that meets the cutoff on all three checks reaches [Cosmos3 Nano Reasoner through VSS RT-VLM](https://docs.nvidia.com/vss/system-components/vision-microservices/real-time-vlm). Cosmos returns a verdict and explains the visible evidence.
-
-VSS Video I/O and Storage (VIOS) keeps the selected clip so you can ask follow-up questions about the same evidence. The walkthrough runs D1 and Cosmos in sequence on the same Thor, using the public VSS 3.3.0 release and the VSS CLI.
-
----
-
 ## Getting Started
 
 ### Step 1. Set up the workspace
@@ -68,13 +76,15 @@ printf '%s' "$NGC_CLI_API_KEY" | \
   docker login nvcr.io --username '$oauthtoken' --password-stdin
 ```
 
+Expected result: `vss --version` prints the installed CLI version and Docker reports `Login Succeeded`.
+
 Copy your recordings into `$TRAFFIC_DIR` as `flowing.mp4` and `queued.mp4`.
 
 ### Step 2. Score both recordings with D1
 
 Extract eight frames at one frame per second from each window. Start the windows at 0, 2, and 4 seconds. The first and last sampled frames in each window are seven seconds apart.
 
-![The three windows sample video times 0–7, 2–9, and 4–11 seconds. Each contains eight frames. The clip goes to review if each yes score is at least 85 percent.](/images/vss-with-jetson/scoring-windows.png)
+![The three windows sample video times 0 to 7, 2 to 9, and 4 to 11 seconds. Each contains eight frames. The clip goes to review if each yes score is at least 85 percent.](/images/vss-with-jetson/scoring-windows.png)
 
 ```bash
 ffmpeg_bin="$(uv run --no-project --with imageio-ffmpeg==0.8.1 \
@@ -152,6 +162,8 @@ docker run --rm --runtime=nvidia --ipc=host \
     Pillow==12.3.0 huggingface-hub==1.31.0 && python score.py'
 ```
 
+Expected result: the script prints three D1 confidence scores for each recording and writes every clip that passes all three checks to `candidates.txt`. The exact scores depend on your footage.
+
 ### Step 3. Start VIOS and Cosmos
 
 Once the D1 container exits, start the VIOS and RT-VLM services. The Compose overlay binds the published ports to loopback.
@@ -198,6 +210,8 @@ vss configure --base-url http://127.0.0.1:7777
 vss configure check
 ```
 
+Expected result: `traffic_vss ps` shows the VSS services running, and `vss configure check` confirms that the local VSS endpoint is reachable. Model downloads can make the first startup take several minutes.
+
 ---
 
 ## Review the Results
@@ -219,6 +233,8 @@ cd "$TRAFFIC_DIR"
   done < candidates.txt
 )
 ```
+
+Expected result: Cosmos returns one verdict for each selected clip, followed by an explanation based on visible evidence. If `candidates.txt` is empty, this command does not submit any clips.
 
 Compare the verdict with the footage. When neither recording meets the trigger, the empty candidate list produces no reviews.
 
@@ -262,6 +278,8 @@ ln -s "$TRAFFIC_DIR/vss/skills/vss-build-vision-ai" \
 
 Open your coding agent from the VSS checkout and ask it to use Build Vision AI to add an RTSP input, score rolling windows, and retrieve a clip from VIOS when the rule fires. Then add a VSS UI panel for live scores, saved clips, and Cosmos verdicts. Test each stage with both the flowing and queued recordings before switching to a live source.
 
-- [D1-2B model card](https://huggingface.co/LiquidAI/d1-2B)
+## References
+
+- [VSS GitHub repository](https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization)
 - [VSS RT-VLM configuration](https://docs.nvidia.com/vss/system-components/vision-microservices/real-time-vlm)
 - [Build Vision AI skill guide](https://docs.nvidia.com/vss/vision-agent/build-vision-ai-skill)
