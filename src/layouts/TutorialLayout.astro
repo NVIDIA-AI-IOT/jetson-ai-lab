@@ -33,6 +33,7 @@ const headings = rendered?.headings ?? [];
 const githubRepo = 'https://github.com/NVIDIA-AI-IOT/jetson-ai-lab';
 const sourceUrl = tutorial ? `${githubRepo}/blob/main/src/content/tutorials/${tutorial.id}` : '#';
 const issuesUrl = `${githubRepo}/issues`;
+const perspectiveHero = tutorial?.data.hero_image_mode === 'perspective';
 ---
 
 <Layout title={tutorial?.data.title ?? 'Tutorial Not Found'} description={tutorial?.data.description ?? 'The requested tutorial could not be found.'}>
@@ -51,7 +52,7 @@ const issuesUrl = `${githubRepo}/issues`;
 		<>
 		<!-- Hero Section -->
 		<div class="bg-slate-900 text-white border-b border-slate-800 relative overflow-hidden">
-			{tutorial.data.hero_image && (
+			{tutorial.data.hero_image && !perspectiveHero && (
 				<>
 					<!-- Background Image with Gradient Overlay -->
 					<div class="absolute inset-y-0 right-0 w-3/5 overflow-hidden">
@@ -65,6 +66,17 @@ const issuesUrl = `${githubRepo}/issues`;
 					<div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/90 via-60% to-transparent"></div>
 				</>
 			)}
+			{tutorial.data.hero_image && perspectiveHero && (
+				<div class="hero-perspective-stage absolute inset-y-0 -right-[6%] hidden lg:flex w-[64%] items-center justify-end pointer-events-none" aria-hidden="true">
+					<img
+						src={tutorial.data.hero_image}
+						alt=""
+						width="1316"
+						height="704"
+						class="hero-perspective-image max-h-[98%] object-contain object-right"
+					/>
+				</div>
+			)}
 
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 relative">
 				<!-- Background pattern (subtle when image present) -->
@@ -77,7 +89,7 @@ const issuesUrl = `${githubRepo}/issues`;
 					tutorial.data.hero_image ? "bg-blue-500/5" : "bg-blue-500/10"
 				]}></div>
 
-				<div class="relative z-10 max-w-3xl">
+				<div class:list={["relative z-10 max-w-3xl", perspectiveHero && "lg:max-w-[54%]"]}>
 					<div class="flex items-center gap-4 mb-6 text-sm font-medium text-nvidia-green">
 						<a href="/tutorials" class="hover:text-white transition-colors flex items-center gap-1">
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -191,6 +203,23 @@ const issuesUrl = `${githubRepo}/issues`;
 </Layout>
 
 <style>
+	.hero-perspective-stage {
+		perspective: 1050px;
+		perspective-origin: 78% 48%;
+		overflow: visible;
+	}
+
+	.hero-perspective-image {
+		width: 138%;
+		max-width: none;
+		opacity: 0.78;
+		transform-origin: 82% 50%;
+		transform: rotateY(-58deg) rotateX(1.5deg) translateZ(0) scale(1.18);
+		filter: brightness(0.86) saturate(0.9) drop-shadow(34px 32px 25px rgb(2 6 23 / 0.42));
+		-webkit-mask-image: linear-gradient(to right, rgb(0 0 0 / 0.96) 0%, #000 58%, rgb(0 0 0 / 0.82) 78%, transparent 100%);
+		mask-image: linear-gradient(to right, rgb(0 0 0 / 0.96) 0%, #000 58%, rgb(0 0 0 / 0.82) 78%, transparent 100%);
+	}
+
 	/* Custom scrollbar for code blocks */
 	.prose pre::-webkit-scrollbar {
 		height: 8px;
