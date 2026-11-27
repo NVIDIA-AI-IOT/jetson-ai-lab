@@ -79,7 +79,7 @@ team_members:
     expertise: ["NVIDIA AI Ambassador", "Personal Assistants"]
   - name: "Mieszko Syty"
     role: "AI/ML Engineer"
-    org: "FutureProofHomes"
+    org: "GoBrrr-AI"
     location: "Warsaw, Poland"
     image: "/images/research/Mieszko_Syty.jpg"
     linkedin: "https://www.linkedin.com/in/mieszkosyty/"
