@@ -5,7 +5,7 @@ author: "Mieszko Syty"
 date: "2026-11-13"
 source: "GitHub"
 link: "https://github.com/GoBrrr-ai/mjolnir"
-image: "https://raw.githubusercontent.com/GoBrrr-ai/mjolnir/main/assets/hero.jpg"
+image: "https://raw.githubusercontent.com/GoBrrr-ai/mjolnir/main/assets/hero.webp"
 jetson: ["Jetson Thor", "Jetson AGX Orin"]
 tags: ["LLM", "vLLM", "CUDA", "Inference", "Quantization", "Agentic AI"]
 ---
