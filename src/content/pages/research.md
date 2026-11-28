@@ -305,7 +305,7 @@ team_members:
     role: "Chief Cybernetic Survival Officer"
     org: "Rosso LLC"
     location: "San Francisco, CA"
-    image: "https://media.licdn.com/dms/image/v2/C4E03AQGHhD6YlSPnJA/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1516237879564?e=1793232000&v=beta&t=6CQ0_HPsYwavmCYKynIjVaqo-k2l72jmgxmwT1i10kg"
+    image: "https://media.licdn.com/dms/image/v2/C4E03AQGHhD6YlSPnJA/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1516237879564?e=2147483647&v=beta&t=Le12Ce3yxinsrUOvbWt5VMB6srPTdTEJf69RgW0aVGM"
     linkedin: "https://www.linkedin.com/in/kieran/"
     expertise: ["AI", "Innovation"]
   - name: "Aditya Sahu"
@@ -313,6 +313,7 @@ team_members:
     org: "NVIDIA"
     location: "Santa Clara, CA"
     image: "https://developer-blogs.nvidia.com/wp-content/uploads/2026/04/cropped-image5-3-540x540.webp"
+    linkedin: "https://www.linkedin.com/in/adityasahuvns/"
     github: "https://github.com/adsahu-nv"
     expertise: ["AI", "Innovation"]
   - name: "Khalil Ben Khaled"
